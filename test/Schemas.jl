@@ -1,7 +1,7 @@
 module TestSchemas 
 
 using Test
-using Catlab.Schemas
+using ACSets.Schemas
 
 bsch = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)],[:Weight],[(:weight,:E,:Weight)])
 tsch = typelevel(bsch)

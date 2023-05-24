@@ -2,7 +2,7 @@ module TestColumns
 using Test
 using Base: OneTo
 
-using Catlab.Columns, Catlab.ColumnImplementations
+using ACSets.Columns, ACSets.ColumnImplementations
 
 # Columns
 #########

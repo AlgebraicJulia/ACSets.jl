@@ -14,5 +14,6 @@ include("ACSetInterface.jl")
 include("DenseACSets.jl")
 
 @reexport using .ColumnImplementations: AttrVar
+@reexport using .DenseACSets
 
 end

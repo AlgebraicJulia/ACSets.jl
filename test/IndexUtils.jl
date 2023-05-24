@@ -1,7 +1,7 @@
 module TestIndexUtils
-
 using Test
-using Catlab.IndexUtils 
+
+using ACSets.IndexUtils
 
 x = [1,3,5]
 insertsorted!(x, 2)

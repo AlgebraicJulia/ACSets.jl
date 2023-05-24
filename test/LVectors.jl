@@ -1,7 +1,7 @@
 module TestLVectors
 using Test
 
-using Catlab.LVectors
+using ACSets.LVectors
 
 x = LVector{(:a,:b,:c)}([3,5,7])
 @test eltype(x) == Int

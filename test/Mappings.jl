@@ -1,7 +1,7 @@
 module TestMappings
 
 using Test
-using Catlab.Columns, Catlab.Mappings
+using ACSets.Columns, ACSets.Mappings
 
 # VecMap-specific tests
 
