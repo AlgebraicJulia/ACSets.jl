@@ -4,10 +4,4 @@
 #
 # First we want to load our package with `using`
 
-using AlgebraicTemplate
-
-# ## Using `hello()`
-#
-# We provide the `hello(string)` method which prints "Hello, `string`!"
-
-hello("World")
+using ACSets

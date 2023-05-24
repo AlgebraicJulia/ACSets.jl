@@ -1,7 +1,7 @@
-# AlgebraicTemplate.jl
+# ACSets.jl
 
 ```@meta
-CurrentModule = AlgebraicTemplate
+CurrentModule = ACSets
 ```
 
-`AlgebraicTemplate.jl` is a Julia library for...
+`ACSets.jl` is a Julia library for...

@@ -1,7 +1,22 @@
 using Test
 
-using AlgebraicTemplate
+@testset "Utilities" begin
+  include("IndexUtils.jl")
+  include("LVectors.jl")
+end
 
-@testset "Core" begin
-  include("core.jl")
+@testset "Mappings" begin
+  include("Mappings.jl")
+end
+
+@testset "Columns" begin
+  include("Columns.jl")
+end
+
+@testset "Schemas" begin
+  include("Schemas.jl")
+end
+
+@testset "DataStructures" begin
+  include("CSetDataStructures.jl")
 end
