@@ -7,10 +7,7 @@ using Tables
 # Discrete dynamical systems
 ############################
 
-@present SchDDS(FreeSchema) begin
-  X::Ob
-  Φ::Hom(X,X)
-end
+SchDDS = BasicSchema([:X], [(:Φ,:X,:X)])
 
 @abstract_acset_type AbstractDDS
 @acset_type DDS(SchDDS, index=[:Φ]) <: AbstractDDS
@@ -156,25 +153,17 @@ end
 # in order to be valid dendrograms, there must be no nontrivial cycles and the
 # `height` map must satisfy `compose(parent, height) ≥ height` pointwise.
 
-@present SchDendrogram(FreeSchema) begin
-  X::Ob
-  R::AttrType
-  parent::Hom(X,X)
-  height::Attr(X,R)
-end
+SchDendrogram = BasicSchema([:X], [(:parent,:X,:X)], [:R], [(:height,:X,:R)])
 
 @abstract_acset_type AbstractDendrogram
-
 @acset_type Dendrogram(SchDendrogram, index=[:parent]) <: AbstractDendrogram
 
 @test Dendrogram <: AbstractDendrogram
 @test Dendrogram <: ACSet
 @test Dendrogram{Real} <: AbstractDendrogram{S,Tuple{Real}} where {S}
 
-@present SchLDendrogram <: SchDendrogram begin
-  L::Ob
-  leafparent::Hom(L,X)
-end
+SchLDendrogram = BasicSchema([:X,:L], [(:parent,:X,:X),(:leafparent,:L,:X)],
+                             [:R], [(:height,:X,:R)])
 
 @acset_type LDendrogram(SchLDendrogram, index=[:parent, :leafparent]) <: AbstractDendrogram
 
@@ -208,14 +197,15 @@ for (dgram_maker, ldgram_maker) in dgram_makers
   @test incident(d, 5, [:parent, :parent]) == [1,2,3,4,5]
   @test incident(d, 10, [:parent, :height]) == [1,2,3]
 
-  X, parent, height = SchDendrogram[[:X, :parent, :height]]
-  @test subpart(d, 3, parent) == 4
-  @test subpart(d, 3, compose(parent, height)) == 10
-  @test subpart(d, 3, id(X)) == 3
-  @test incident(d, 10, compose(parent, height)) == [1,2,3]
-  @test subpart(d, parent) == [4,4,4,5,5]
-  @test subpart(d, id(X)) == 1:5
-  @test subpart(d, compose(parent, height)) == [10,10,10,20,20]
+  # TODO: Migrate these tests to Catlab.
+  #X, parent, height = SchDendrogram[[:X, :parent, :height]]
+  #@test subpart(d, 3, parent) == 4
+  #@test subpart(d, 3, compose(parent, height)) == 10
+  #@test subpart(d, 3, id(X)) == 3
+  #@test incident(d, 10, compose(parent, height)) == [1,2,3]
+  #@test subpart(d, parent) == [4,4,4,5,5]
+  #@test subpart(d, id(X)) == 1:5
+  #@test subpart(d, compose(parent, height)) == [10,10,10,20,20]
 
   # Indexing syntax.
   @test d[3, :parent] == 4
@@ -288,10 +278,7 @@ end
 
 # A set together with a subset, with unique indexing for fast membership checks.
 
-@present SchSubset(FreeSchema) begin
-  (Set, Sub)::Ob
-  ι::Hom(Sub,Set)
-end
+SchSubset = BasicSchema([:Set,:Sub], [(:ι,:Sub,:Set)])
 
 @acset_type Subset(SchSubset, unique_index=[:ι])
 
@@ -314,12 +301,7 @@ rem_part!(B, :Set, 1)
 ##############
 
 # The simplest example of a C-set with a data attribute, to test data indexing.
-
-@present SchLabeledSet(FreeSchema) begin
-  X::Ob
-  Label::AttrType
-  label::Attr(X,Label)
-end
+SchLabeledSet = BasicSchema([:X], [], [:Label], [(:label,:X,:Label)])
 
 # Labeled sets with index
 #------------------------
@@ -401,15 +383,9 @@ end
 # @acset and @acset_transformation(s) macros
 #-------------
 
-@present SchDecGraph(FreeSchema) begin
-  E::Ob
-  V::Ob
-  src::Hom(E,V)
-  tgt::Hom(E,V)
+SchDecGraph = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)],
+                          [:X], [(:dec,:E,:X)])
 
-  X::AttrType
-  dec::Attr(E,X)
-end
 @acset_type DecGraph(SchDecGraph, index=[:src,:tgt])
 
 g = @acset DecGraph{String} begin
@@ -488,9 +464,8 @@ h2 = map(g, X = f)
 @test typeof(h1).super.parameters[2] == Tuple{Int}
 @test subpart(h1,:dec) == f.(["a","b","c","d"])
 
-@present SchLabeledDecGraph <: SchDecGraph begin
-  label::Attr(V,X)
-end
+SchLabeledDecGraph = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)],
+                                 [:X], [(:dec,:E,:X),(:label,:V,:X)])
 
 @acset_type LabeledDecGraph(SchLabeledDecGraph, index=[:src,:tgt])
 

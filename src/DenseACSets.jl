@@ -2,20 +2,17 @@
 These are ACSets where the set associated to each object is of the form `1:n`
 """
 module DenseACSets
-export @acset_type, @abstract_acset_type, @declare_schema, FreeSchema,
-  StructACSet, StructCSet, DynamicACSet, SimpleACSet, AnonACSet, StructCSet, ACSetTableType,
-  AnonACSetType
+export @acset_type, @abstract_acset_type, @acset,
+  StructACSet, StructCSet, DynamicACSet, SimpleACSet, AnonACSet,
+  ACSetTableType, AnonACSetType
 
-using MLStyle
-using Reexport
+using MLStyle: @match
 using CompTime
 import Tables
 
-@reexport using ..ACSetInterface
-@reexport using ..Schemas
-using ..Columns
-using ..ColumnImplementations
 using ..LVectors
+using ..Columns, ..ColumnImplementations
+using ..ACSetInterface, ..Schemas
 
 # StructACSet Struct Generation
 ###############################
