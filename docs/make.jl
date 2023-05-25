@@ -42,7 +42,7 @@ makedocs(
   pages=Any[
     "ACSets.jl"=>"index.md",
     "Examples"=>Any[
-      "generated/literate_example.md",
+      "generated/json_serialization.md",
     ],
     "Library Reference"=>"api.md",
   ]
