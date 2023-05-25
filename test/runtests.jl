@@ -20,3 +20,7 @@ end
 @testset "DataStructures" begin
   include("CSetDataStructures.jl")
 end
+
+@testset "JSON" begin
+  include("JSONACSets.jl")
+end
