@@ -5,8 +5,8 @@
 [![Code Coverage](https://codecov.io/gh/AlgebraicJulia/ACSets.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/AlgebraicJulia/ACSetse.jl)
 [![CI/CD](https://github.com/AlgebraicJulia/ACSets.jl/actions/workflows/julia_ci.yml/badge.svg)](https://github.com/AlgebraicJulia/ACSets.jl/actions/workflows/julia_ci.yml)
 
-ACSets ("attributed C-sets") are a family of data structures generalizing both
-graphs and data frames. They are an in-memory implementation of a
+Acsets ("attributed C-sets") are a family of data structures generalizing both
+graphs and data frames. They are an efficient in-memory implementation of a
 category-theoretic formalism for relational databases.
 
 This lightweight package provides
