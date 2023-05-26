@@ -5,79 +5,44 @@
 [![Code Coverage](https://codecov.io/gh/AlgebraicJulia/ACSets.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/AlgebraicJulia/ACSetse.jl)
 [![CI/CD](https://github.com/AlgebraicJulia/ACSets.jl/actions/workflows/julia_ci.yml/badge.svg)](https://github.com/AlgebraicJulia/ACSets.jl/actions/workflows/julia_ci.yml)
 
-A template repository for making a new AlgebraicJulia package.
+ACSets ("attributed C-sets") are a family of data structures generalizing both
+graphs and data frames. They are an in-memory implementation of a
+category-theoretic formalism for relational databases.
 
-## 🛠️ Usage
+This lightweight package provides
 
-1. Use the "Use this template" dropdown to select "Create a new repository"
-2. In the new page select "AlgebraicJulia" as the owner, give the repository a name such as "AlgebraicX.jl", and create a new repository from the template
-3. Set up Codecov credentials for code coverage (If you have trouble, reach out to an AlgebraicJulia organization owner to help with this)
+- data structures for acset schemas, acsets, and tabular columns
+- serialization of acset schemas and acsets
 
-   1. Log into [Codecov](https://codecov.io) with your GitHub account (this requires that you are a member of the AlgebraicJulia organization)
-   2. Navigate to the [AlgebraicJulia organization](https://app.codecov.io/gh/AlgebraicJulia)
-   3. Select your new repository from the list (e.x. "AlgebraicX")
-   4. Note down the `CODECOV_TOKEN` value (It may be in the "Settings" tab if it doesn't show up immediately)
-   5. Navigate back to your new GitHub repository and go to the Settings tab
-   6. Go to "Security", "Secrets and variables", and "Actions" and click the "New repository secret" button
-   7. Give the secret name `CODECOV_TOKEN` and the Secret value is the value you noted from the Codecov settings
-   8. Click "Add secret"
+[Catlab.jl](https://github.com/AlgebraicJulia/Catlab.jl) extends this package to
+offer many more features, beginning with homomorphisms between acsets and
+including limits and colimits of acsets, functorial data migration, and
+automated homomorphism finding.
+[AlgebraicRewriting.jl](https://github.com/AlgebraicJulia/AlgebraicRewriting.jl)
+goes further still to provide declarative rewriting for acsets.
 
-4. Clone the new repository, for example in the terminal:
-   ```sh
-   git clone https://github.com/AlgebraicJulia/AlgebraicX.jl.git
-   cd AlgebraicX.jl
-   ```
-5. Rename the file `src/ACSets.jl` to match the name of your new package (e.x. "AlgebraicX")
-   ```sh
-   mv src/ACSets.jl src/AlgebraicX.jl
-   ```
-6. Replace all instances of the word "ACSets" with your new package name (e.x. "AlgebraicX")
-   ```sh
-   # On linux
-   git grep -l 'ACSets' | xargs sed -i 's/ACSets/AlgebraicX/g'
-   # On Mac OS X
-   git grep -l 'ACSets' | xargs sed -i '' -e 's/ACSets/AlgebraicX/g'
-   ```
-7. Generate a new random version 4 UUID (you can get one here: https://www.uuidgenerator.net/version4)
-   - We will assume for this example that your new UUID is `<UUID>`
-8. Replace all instances of the template's UUID, "b66562e1-fa90-4e8b-9505-c909188fab76", with your new UUID (e.x. "<UUID>")
-   ```sh
-   # On linux
-   git grep -l 'b66562e1-fa90-4e8b-9505-c909188fab76' | xargs sed -i 's/b66562e1-fa90-4e8b-9505-c909188fab76/<UUID>/g'
-   # On Mac OS X
-   git grep -l 'b66562e1-fa90-4e8b-9505-c909188fab76' | xargs sed -i '' -e 's/b66562e1-fa90-4e8b-9505-c909188fab76/<UUID>/g'
-   ```
-9. Commit these new changes to your repository
-   ```sh
-   git commit -am "Set up skeleton for AlgebraicX.jl"
-   git push
-   ```
-10. Go back to your repository and wait until the tests have passed, you can check the status by going to the "Actions" tab in the repository
+## Learning
 
-### 📔 Set Up GitHub Pages (Public Repos Only)
+Graphs, and their generalization as C-sets, are introduced with minimal
+prerequisites in a series of blog posts on the [AlgebraicJulia
+blog](https://blog.algebraicjulia.org/):
 
-1. Follow the Usage steps above to set up a new template, make sure all initial GitHub Actions have passed
-2. Navigate to the repository settings and go to "Code and automation", "Pages"
-3. Make sure the "Source" dropdown is set to "Deploy from a branch"
-4. Set the "Branch" dropdown to "gh-pages", make sure the folder is set to "/ (root)", and click "Save"
-5. Go back to the main page of your repository and click the gear to the right of the "About" section in the right side column
-6. Under "Website" check the checkbox that says "Use your GitHub Pages website" and click "Save changes"
-7. You will now see a URL in the "About" section that will link to your package's documentation
+1. [Graphs and C-sets I](https://blog.algebraicjulia.org/post/2020/09/cset-graphs-1/):
+   What is a graph?
+2. [Graphs and C-sets II](https://blog.algebraicjulia.org/post/2020/09/cset-graphs-2/):
+   Half-edges and rotation systems
+3. [Graphs and C-sets III](https://blog.algebraicjulia.org/post/2021/04/cset-graphs-3/):
+   Reflexive graphs and C-set homomorphisms
+4. [Graphs and C-sets IV](https://blog.algebraicjulia.org/post/2021/09/cset-graphs-4/):
+   The propositional logic of subgraphs and sub-C-sets
 
-### 🛡️ Set Up Branch Protection (Public Repos Only)
+These blog posts use Catlab.jl in addition to ACSets.jl.
 
-1. Follow the Usage steps above to set up a new template, make sure all initial GitHub Actions have passed
-2. Navigate to the repository settings and go to "Code and automation", "Branches"
-3. Click "Add branch protection rule" to start adding branch protection
-4. Under "Branch name pattern" put `main`, this will add protection to the main branch
-5. Make sure to set the following options:
-   - Check the "Require a pull request before merging"
-   - Check the "Request status checks to pass before merging" and make sure the following status checks are added to the required list:
-     - CI / Documentation
-     - CI / Julia 1 - ubuntu-latest - x64 - push
-     - CI / Julia 1 - ubuntu-latest - x86 - push
-     - CI / Julia 1 - windows-latest - x64 - push
-     - CI / Julia 1 - windows-latest - x86 - push
-     - CI / Julia 1 - macOS-latest - x64 - push
-   - Check the "Restrict who can push to matching branches" and add `algebraicjuliabot` to the list of people with push access
-6. Click "Save changes" to enable the branch protection
+## Citation
+
+The ideas behind this package are described in the paper:
+
+> Patterson, Lynch, Fairbanks. Categorical data structures for technical
+> computing. *Compositionality* 4, 5 (2022).
+> [arXiv:2106.04703](https://arxiv.org/abs/2106.04703).
+> [DOI:10.32408/compositionality-4-5](https://doi.org/10.32408/compositionality-4-5).
