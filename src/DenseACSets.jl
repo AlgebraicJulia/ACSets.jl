@@ -2,9 +2,8 @@
 These are ACSets where the set associated to each object is of the form `1:n`
 """
 module DenseACSets
-export @acset_type, @abstract_acset_type, @acset,
-  StructACSet, StructCSet, DynamicACSet, SimpleACSet, AnonACSet,
-  ACSetTableType, AnonACSetType
+export @acset_type, @abstract_acset_type, StructACSet, StructCSet,
+  DynamicACSet, SimpleACSet, AnonACSet, ACSetTableType, AnonACSetType
 
 using MLStyle: @match
 using CompTime
@@ -744,7 +743,7 @@ Base.propertynames(row::ACSetRow{T,ob}) where {T,ob} = outgoing(parent(row), ob)
 
 Tables.columnnames(row::ACSetRow) = Base.propertynames(row)
 
-# ACSet Macro
+# Acset macro
 #############
 
 @ct_enable function _make_acset(@ct(S), T, rows::NamedTuple{names}) where {names}
@@ -761,42 +760,10 @@ Tables.columnnames(row::ACSetRow) = Base.propertynames(row)
   acs
 end
 
-function make_acset(T::Type{<:StructACSet{S}}, rows::NamedTuple) where {S}
+ACSetInterface.make_acset(T::Type{<:StructACSet{S}}, rows::NamedTuple) where {S} =
   _make_acset(Val{S}, T, rows)
-end
 
-"""
-This provides a shorthand for constructing an acset by giving its parts and
-subparts
-
-Usage:
-
-@acset WeightedGraph{String} begin
-  V = 2
-  E = 1
-  src = [1]
-  tgt = [2]
-  weight = ["fig"]
-end
-"""
-macro acset(head, body)
-  tuplized_body = @match body begin
-    Expr(:block, lines...) => begin
-      params = []
-      map(lines) do line
-        @match line begin
-          Expr(:(=), x, y) => push!(params, Expr(:kw, x, y))
-          _ => nothing
-        end
-      end
-      Expr(:tuple, Expr(:parameters, params...))
-    end
-    _ => error("expected block")
-  end
-  esc(quote
-    $(GlobalRef(DenseACSets, :make_acset))($head, $tuplized_body)
-  end)
-end
+# TODO: Support dynamic acsets with `@acset!` macro?
 
 # Mapping
 #########
@@ -808,9 +775,9 @@ function Base.map(acs::ACSet; kwargs...)
   mapped_attrs = intersect(attrs(s; just_names=true), keys(fns))
   mapped_attrtypes = intersect(attrtypes(s), keys(fns))
   mapped_attrs_from_attrtypes = [a for (a,d,c) in attrs(s) if c ∈ mapped_attrtypes]
-  attrs_accounted_for = sortunique!(Symbol[mapped_attrs; mapped_attrs_from_attrtypes])
+  attrs_accounted_for = unique!(sort!(Symbol[mapped_attrs; mapped_attrs_from_attrtypes]))
 
-  affected_attrtypes = sortunique!(map(a -> codom(s,a), attrs_accounted_for))
+  affected_attrtypes = unique!(sort!(map(a -> codom(s,a), attrs_accounted_for)))
   needed_attrs = sort!([a for (a,d,c) in attrs(s) if c ∈ affected_attrtypes])
 
   unnaccounted_for_attrs = filter(a -> a ∉ attrs_accounted_for, needed_attrs)
@@ -850,12 +817,6 @@ function Base.map(acs::ACSet; kwargs...)
   end
 
   new_acs
-end
-
-function sortunique!(x)
-  sort!(x)
-  unique!(x)
-  x
 end
 
 end

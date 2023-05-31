@@ -3,14 +3,17 @@ export ACSet, acset_schema, acset_name, dom_parts, subpart_type,
   nparts, parts, has_part, has_subpart, subpart, incident,
   add_part!, add_parts!, set_subpart!, set_subparts!, clear_subpart!,
   rem_part!, rem_parts!, cascading_rem_part!, cascading_rem_parts!,
-  copy_parts!, copy_parts_only!, disjoint_union, tables, pretty_tables,
-  @acset, @acset_transformation, @acset_transformations
+  copy_parts!, copy_parts_only!, disjoint_union, tables, pretty_tables, @acset
 
+using MLStyle: @match
 using StaticArrays: StaticArray
+using Tables
+using PrettyTables: pretty_table
+
 using ..Schemas: types
 
-using PrettyTables: pretty_table
-using Tables
+# Core interface
+################
 
 abstract type ACSet end
 
@@ -372,5 +375,43 @@ end
 
 collect_nonvector(v::AbstractVector) = v
 collect_nonvector(v) = collect(v)
+
+# Acset macro
+#############
+
+"""
+This provides a shorthand for constructing an acset by giving its parts and
+subparts
+
+Usage:
+
+@acset WeightedGraph{String} begin
+  V = 2
+  E = 1
+  src = [1]
+  tgt = [2]
+  weight = ["fig"]
+end
+"""
+macro acset(head, body)
+  tuplized_body = @match body begin
+    Expr(:block, lines...) => begin
+      params = []
+      map(lines) do line
+        @match line begin
+          Expr(:(=), x, y) => push!(params, Expr(:kw, x, y))
+          _ => nothing
+        end
+      end
+      Expr(:tuple, Expr(:parameters, params...))
+    end
+    _ => error("expected block")
+  end
+  esc(quote
+    $(GlobalRef(ACSetInterface, :make_acset))($head, $tuplized_body)
+  end)
+end
+
+function make_acset end
 
 end
