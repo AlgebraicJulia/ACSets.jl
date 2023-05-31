@@ -17,8 +17,8 @@ end
   include("Schemas.jl")
 end
 
-@testset "DataStructures" begin
-  include("CSetDataStructures.jl")
+@testset "ACSets" begin
+  include("ACSets.jl")
 end
 
 @testset "JSON" begin

@@ -262,7 +262,6 @@ for (dgram_maker, ldgram_maker) in dgram_makers
   @test d′ == d
 end
 
-
 # Subsets
 #########
 
@@ -351,7 +350,8 @@ end
 
 lset_makers = [
   T -> UniqueIndexedLabeledSet{T}(),
-  T -> DynamicACSet("UniqueIndexedLabeledSet", SchLabeledSet; type_assignment=Dict(:Label=>T), unique_index=[:label])
+  T -> DynamicACSet("UniqueIndexedLabeledSet", SchLabeledSet;
+                    type_assignment=Dict(:Label=>T), unique_index=[:label])
 ]
 
 for lset_maker in lset_makers
@@ -370,8 +370,8 @@ for lset_maker in lset_makers
   @test_throws Exception set_subpart!(lset, 1, :label, :bar)
 end
 
-# @acset and @acset_transformation(s) macros
-#-------------
+# Acset macro
+#------------
 
 SchDecGraph = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)],
                           [:X], [(:dec,:E,:X)])
