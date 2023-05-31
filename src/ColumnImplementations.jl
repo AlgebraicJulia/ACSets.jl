@@ -57,18 +57,6 @@ struct DenseInjectiveFinColumn{V<:AbstractVector{Int}} <: Column{Int,Int}
   pc::InjectiveCache{Int, Int, VecMap{Int, Vector{Int}}}
 end
 
-# Compatibility hack to support unique_index
-function Columns.preimage(dom, c::DenseInjectiveFinColumn, y::Int, ::UnboxInjectiveFlag)
-  # @warn "using old convention for preimage of unique-indexed homomorphisms"
-  get(c.pc.inverse, y, 0)
-end
-
-function Columns.preimage_multi(dom, c::DenseInjectiveFinColumn, ys, ::UnboxInjectiveFlag)
-  # @warn "using old convention for preimage of unique-indexed homomorphisms"
-  view_with_default(c.pc.inverse, ys, DefaultVal{0})
-end
-
-
 """
 A column for a dict-backed unindexed hom with key type K
 """
@@ -120,19 +108,6 @@ A column for a vec-backed unindexed attr
 struct DenseInjectiveColumn{T, V<:AbstractVector{T}} <: Column{Int,T}
   m::VecMap{T,V}
   pc::InjectiveCache{Int,T,DictMap{T,Int,Dict{T,Int}}}
-end
-
-# Compatibility hack
-function Columns.preimage(dom, c::DenseInjectiveColumn{T}, y::T, ::UnboxInjectiveFlag) where {T}
-  # @warn "using old convention for preimage of unique-indexed attributes"
-  get(c.pc.inverse.d, y, 0)
-end
-
-function Columns.preimage_multi(dom, c::DenseInjectiveColumn, ys, ::UnboxInjectiveFlag)
-  # @warn "using old convention for preimage of unique-indexed attributes"
-  broadcast(ys) do y
-    get(c.pc.inverse.d, y, 0)
-  end
 end
 
 """

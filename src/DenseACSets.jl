@@ -401,12 +401,8 @@ end
   parts(acs, @ct dom(s, f))
 end
 
-@inline function ACSetInterface.incident(acs::SimpleACSet, part, f::Symbol; unbox_injective=true) 
-  if !unbox_injective
-    return preimage(dom_parts(acs, f), acs.subparts[f], part)
-  else
-    return preimage(dom_parts(acs, f), acs.subparts[f], part, UnboxInjectiveFlag())
-  end
+@inline function ACSetInterface.incident(acs::SimpleACSet, part, f::Symbol)
+  preimage(dom_parts(acs, f), acs.subparts[f], part)
 end 
 
 """
@@ -415,21 +411,21 @@ equivalent to concatenating the results of incident on each part, i.e.
 `[incident(G,1,:src), incident(G,2,:src)]`.
 """
 @inline function ACSetInterface.incident(acs::SimpleACSet, 
-    parts::Union{AbstractVector,UnitRange}, f::Symbol; unbox_injective=true) 
-  T = isempty(parts) ? Vector{Int} : typeof(incident(acs, first(parts), f; unbox_injective=unbox_injective))
-  res = T[incident(acs, part, f; unbox_injective=unbox_injective) for part in parts]
+    parts::Union{AbstractVector,UnitRange}, f::Symbol)
+  T = isempty(parts) ? Vector{Int} : typeof(incident(acs, first(parts), f))
+  res = T[incident(acs, part, f) for part in parts]
   return res # FIXME: update preimage_multi to work on attrs for better performance
 end 
 
-@inline ACSetInterface.incident(acs::StructACSet{S}, ::Colon, f::Symbol; unbox_injective=true) where {S} =
-  _incident(acs, Val{S}, :, Val{f}, unbox_injective)
+@inline ACSetInterface.incident(acs::StructACSet{S}, ::Colon, f::Symbol) where {S} =
+  _incident(acs, Val{S}, :, Val{f})
 
-ACSetInterface.incident(acs::DynamicACSet, ::Colon, f::Symbol; unbox_injective=true) =
-  runtime(_incident, acs, acs.schema, :, f, unbox_injective)
+ACSetInterface.incident(acs::DynamicACSet, ::Colon, f::Symbol) =
+  runtime(_incident, acs, acs.schema, :, f)
 
-@ct_enable function _incident(acs::SimpleACSet, @ct(S), ::Colon, @ct(f), unbox_injective)
+@ct_enable function _incident(acs::SimpleACSet, @ct(S), ::Colon, @ct(f))
   @ct s = Schema(S)
-  incident(acs, parts(acs, @ct(codom(s, f))), @ct(f); unbox_injective)
+  incident(acs, parts(acs, @ct(codom(s, f))), @ct(f))
 end
 
 @inline ACSetInterface.set_subpart!(acs::StructACSet{S,Ts}, part::Int, f::Symbol, subpart) where {S,Ts} =
@@ -466,10 +462,10 @@ ACSetInterface.rem_part!(acs::DynamicACSet, type::Symbol, part::Int) =
   last_part = acs.parts[@ct ob]
 
   @ct_ctrl for hom in in_homs
-    incoming_to_part = copy(incident(acs, part, @ct hom; unbox_injective=false))
+    incoming_to_part = copy(incident(acs, part, @ct hom))
     clear_subpart!(acs, incoming_to_part, @ct hom)
 
-    incoming_to_last_part = copy(incident(acs, last_part, @ct hom; unbox_injective=false))
+    incoming_to_last_part = copy(incident(acs, last_part, @ct hom))
     set_subpart!(acs, incoming_to_last_part, (@ct hom), part)
   end
 

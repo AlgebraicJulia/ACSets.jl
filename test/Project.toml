@@ -1,5 +1,6 @@
 [deps]
 ACSets = "227ef7b5-1206-438b-ac65-934d6da304b8"
 JSONSchema = "7d188eb4-7ad8-530c-ae41-71a32a6d4692"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

@@ -1,8 +1,10 @@
 module TestCSetDataStructures
 using Test
 
-using ACSets
+using StaticArrays: StaticVector
 using Tables
+
+using ACSets
 
 # Discrete dynamical systems
 ############################
@@ -271,7 +273,7 @@ SchSubset = BasicSchema([:Set,:Sub], [(:ι,:Sub,:Set)])
 
 @acset_type Subset(SchSubset, unique_index=[:ι])
 
-Base.in(x, X::Subset) = incident(X, x, :ι) != 0
+Base.in(x, X::Subset) = !isempty(incident(X, x, :ι))
 
 A = Subset()
 add_parts!(A, :Set, 2)
@@ -358,14 +360,15 @@ for lset_maker in lset_makers
   lset = lset_maker(Symbol)
   add_parts!(lset, :X, 2, label=[:foo, :bar])
   @test subpart(lset, :, :label) == [:foo, :bar]
-  @test incident(lset, :foo, :label) == 1
-  @test incident(lset, [:foo,:bar], :label) == [1,2]
-  @test incident(lset, :nonkey, :label) == 0
+  @test incident(lset, :foo, :label) isa StaticVector
+  @test incident(lset, :foo, :label) == [1]
+  @test incident(lset, [:foo,:bar], :label) == [[1],[2]]
+  @test isempty(incident(lset, :nonkey, :label))
 
   set_subpart!(lset, 1, :label, :baz)
   @test subpart(lset, 1, :label) == :baz
-  @test incident(lset, :baz, :label) == 1
-  @test incident(lset, :foo, :label) == 0
+  @test incident(lset, :baz, :label) == [1]
+  @test isempty(incident(lset, :foo, :label))
 
   @test_throws Exception set_subpart!(lset, 1, :label, :bar)
 end
