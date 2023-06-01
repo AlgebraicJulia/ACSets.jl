@@ -273,7 +273,7 @@ SchSubset = BasicSchema([:Set,:Sub], [(:ι,:Sub,:Set)])
 
 @acset_type Subset(SchSubset, unique_index=[:ι])
 
-Base.in(x, X::Subset) = !isempty(incident(X, x, :ι))
+Base.in(x::Integer, X::Subset) = !isempty(incident(X, x, :ι))
 
 A = Subset()
 add_parts!(A, :Set, 2)
@@ -283,6 +283,9 @@ add_parts!(B, :Set, 2)
 add_part!(B, :Sub, ι=2)
 @test 1 ∈ A && 2 ∉ A
 @test 1 ∉ B && 2 ∈ B
+@test incident(A, :, :ι) == [[1], []]
+@test incident(B, :, :ι) == [[], [1]]
+
 rem_part!(A, :Set, 2)
 @test 1 ∈ A
 rem_part!(B, :Set, 1)

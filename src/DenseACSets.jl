@@ -412,9 +412,8 @@ equivalent to concatenating the results of incident on each part, i.e.
 """
 @inline function ACSetInterface.incident(acs::SimpleACSet, 
     parts::Union{AbstractVector,UnitRange}, f::Symbol)
-  T = isempty(parts) ? Vector{Int} : typeof(incident(acs, first(parts), f))
-  res = T[incident(acs, part, f) for part in parts]
-  return res # FIXME: update preimage_multi to work on attrs for better performance
+  # FIXME: update preimage_multi to work on attrs for better performance
+  AbstractVector{Int}[incident(acs, part, f) for part in parts]
 end 
 
 @inline ACSetInterface.incident(acs::StructACSet{S}, ::Colon, f::Symbol) where {S} =
