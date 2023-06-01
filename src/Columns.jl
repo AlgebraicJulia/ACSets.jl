@@ -1,7 +1,6 @@
 module Columns
 export Mapping, PreimageCache, preimage, preimage_multi, add_mapping!, remove_mapping!,
-  Column, preimage, preimage_multi, undefine!,
-  UnboxInjectiveFlag
+  Column, preimage, preimage_multi, undefine!
 
 using MLStyle
 using StructEquality
@@ -55,14 +54,6 @@ function Base.setindex!(c::Column, y, x)
   assign!(c.pc, y, x)
   c.m[x] = y
 end
-
-# This is to maintain compatibility with old convention for unique_indexing
-struct UnboxInjectiveFlag end
-
-# This is overloaded for specific columns to enable the old convention
-preimage(dom, c::Column, y, ::UnboxInjectiveFlag) = preimage(dom, c, y)
-
-preimage_multi(dom, c::Column, ys, ::UnboxInjectiveFlag) = preimage_multi(dom, c, ys)
 
 preimage(dom, c::Column, y) = preimage(dom, c.m, c.pc, y)
 
