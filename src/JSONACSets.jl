@@ -24,7 +24,7 @@ Inverse to [`parse_json_acset`](@ref).
 function generate_json_acset(X::ACSet)
   result = Iterators.map(pairs(tables(X))) do (ob, table)
     ob => map(parts(X, ob), Tables.rowtable(table)) do id, row
-      merge((_id=id,), row)
+      merge((_id=id,), map(attr_to_json, row))
     end
   end |> OrderedDict{Symbol,Any}
   for attrtype in attrtypes(acset_schema(X))
@@ -32,6 +32,9 @@ function generate_json_acset(X::ACSet)
   end
   return result
 end
+
+attr_to_json(var::AttrVar) = (_var = var.val,)
+attr_to_json(val) = val
 
 """ Parse JSON-able object or JSON string representing an ACSet.
 
@@ -58,8 +61,8 @@ function _parse_json_acset(cons, input::AbstractDict)
         end
         is_attr = k ∈ attrs(acset_schema(out); just_names=true)
         vtype = is_attr ? attr_type(out, k) : Int
-        v = v isa AbstractDict && haskey(v, "val") ?
-          AttrVar(v["val"]) : vtype(v)
+        v = v isa AbstractDict && haskey(v, "_var") ?
+          AttrVar(v["_var"]) : vtype(v)
         set_subpart!(out, rownum, k, v)
       end
     end
