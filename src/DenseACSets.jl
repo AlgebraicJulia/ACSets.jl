@@ -376,8 +376,10 @@ end
   end
 end
 
-@inline ACSetInterface.subpart(acs::SimpleACSet, f::Symbol) =
+@inline Base.view(acs::SimpleACSet, f::Symbol) =
   view_with_default(acs.subparts[f], dom_parts(acs, f), default_value(acs, f))
+
+@inline ACSetInterface.subpart(acs::SimpleACSet, f::Symbol) = identity.(view(acs,f))
 
 @inline ACSetInterface.subpart(acs::SimpleACSet, part::Int, f::Symbol) =
   get(acs.subparts[f], part, default_value(acs, f))

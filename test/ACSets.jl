@@ -5,6 +5,7 @@ using StaticArrays: StaticVector
 using Tables
 
 using ACSets
+using ACSets.Columns: ColumnView
 
 # Discrete dynamical systems
 ############################
@@ -59,6 +60,10 @@ for dds_maker in dds_makers
   # Deletion.
   dds = dds_maker()
   add_parts!(dds, :X, 3, Φ=[2,3,3])
+  dds[1:2,:Φ] isa Vector{Int}
+  dds[:Φ] isa Vector{Int}
+  view(dds,1:2,:Φ) isa ColumnView
+  view(dds,:Φ) isa ColumnView
   rem_part!(dds, :X, 2)
   @test nparts(dds, :X) == 2
   @test subpart(dds, :Φ) == [0,2]
