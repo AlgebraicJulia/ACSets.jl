@@ -43,6 +43,7 @@ for dds_maker in dds_makers
   @test add_part!(dds, :X, Φ=1) == 3
   @test subpart(dds, :Φ) == [1,1,1]
   @test subpart(dds, [2,3], :Φ) == [1,1]
+  @test subpart(dds, Bool[0,1,1], :Φ) == [1,1]
   @test incident(dds, 1, :Φ) == [1,2,3]
 
   @test has_part(dds, :X)
@@ -62,6 +63,8 @@ for dds_maker in dds_makers
   add_parts!(dds, :X, 3, Φ=[2,3,3])
   dds[1:2,:Φ] isa Vector{Int}
   dds[:Φ] isa Vector{Int}
+  dds[[:Φ,:Φ]] isa Vector{Int}
+  dds[1:2, [:Φ,:Φ]] isa Vector{Int}
   view(dds,1:2,:Φ) isa ColumnView
   view(dds,:Φ) isa ColumnView
   rem_part!(dds, :X, 2)

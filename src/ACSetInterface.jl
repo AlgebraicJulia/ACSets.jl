@@ -102,13 +102,8 @@ function subpart(acs, part, names::AbstractVector{Symbol})
   end
 end
 
-subpart(acs, names::AbstractVector{Symbol}) =
-  subpart(acs, Int[subpart(acs, names[1])...], names[2:end])
-
 Base.getindex(acs::ACSet, part, name) = subpart(acs, part, name)
 Base.getindex(acs::ACSet, name) = subpart(acs, name)
-Base.view(acs::ACSet, name) = view(acs,name)
-Base.view(acs::ACSet, part, name) = view(acs,name)[part]
 
 
 """ Get superparts incident to part in acset.

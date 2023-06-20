@@ -376,15 +376,21 @@ end
   end
 end
 
+Base.view(acs::SimpleACSet, part, f) = view_with_default(acs.subparts[f], part, default_value(acs, f))
+Base.view(acs::SimpleACSet, part::AbstractVector{Bool}, f) = view(acs, f)[part]
+Base.view(acs::SimpleACSet, ::Colon, f) = view(acs, dom_parts(acs,f), f)
+
 @inline Base.view(acs::SimpleACSet, f::Symbol) =
   view_with_default(acs.subparts[f], dom_parts(acs, f), default_value(acs, f))
 
-@inline ACSetInterface.subpart(acs::SimpleACSet, f::Symbol) = identity.(view(acs,f))
+@inline ACSetInterface.subpart(acs::SimpleACSet, f::Symbol) = subpart(acs, dom_parts(acs, f), f)
+@inline ACSetInterface.subpart(acs::SimpleACSet, f::Vector{Symbol}) = subpart(acs, dom_parts(acs, first(f)), f)
+@inline ACSetInterface.subpart(acs::ACSet, part::Union{Colon,AbstractVector,UnitRange}, name::Symbol) = identity.(view(acs, part, name))
 
 @inline ACSetInterface.subpart(acs::SimpleACSet, part::Int, f::Symbol) =
   get(acs.subparts[f], part, default_value(acs, f))
 
-@inline ACSetInterface.has_subpart(acs::StructACSet{S}, f::Symbol) where {S} =
+@inline ACSetInterface.has_subpart(::StructACSet{S}, f::Symbol) where {S} =
   _has_subpart(Val{S}, Val{f})
 
 ACSetInterface.has_subpart(acs::DynamicACSet, f::Symbol) =
