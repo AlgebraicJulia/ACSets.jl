@@ -385,7 +385,16 @@ Base.view(acs::SimpleACSet, ::Colon, f) = view(acs, dom_parts(acs,f), f)
 
 @inline ACSetInterface.subpart(acs::SimpleACSet, f::Symbol) = subpart(acs, dom_parts(acs, f), f)
 @inline ACSetInterface.subpart(acs::SimpleACSet, f::Vector{Symbol}) = subpart(acs, dom_parts(acs, first(f)), f)
-@inline ACSetInterface.subpart(acs::ACSet, part::Union{Colon,AbstractVector,UnitRange}, name::Symbol) = identity.(view(acs, part, name))
+@inline ACSetInterface.subpart(acs::ACSet, part::Union{Colon,AbstractVector}, name::Symbol) =
+  collect_column(view(acs, part, name))
+
+function collect_column(x::AbstractVector)
+  if isempty(x)
+    Base.typesplit(eltype(x), AttrVar)[]
+  else
+    map(identity, x)
+  end
+end
 
 @inline ACSetInterface.subpart(acs::SimpleACSet, part::Int, f::Symbol) =
   get(acs.subparts[f], part, default_value(acs, f))
