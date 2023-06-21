@@ -58,7 +58,7 @@ for dds_maker in dds_makers
   @test_throws Exception incident(dds, 1, :nonsuppart)
   @test_throws Exception set_subpart!(dds, 1, :nonsubpart, 1)
 
-  # Deletion.
+  # Types of subset-ed columns.
   dds = dds_maker()
   add_parts!(dds, :X, 3, Φ=[2,3,3])
   dds[1:2,:Φ] isa Vector{Int}
@@ -67,6 +67,8 @@ for dds_maker in dds_makers
   dds[1:2, [:Φ,:Φ]] isa Vector{Int}
   view(dds,1:2,:Φ) isa ColumnView
   view(dds,:Φ) isa ColumnView
+
+  # Deletion.
   rem_part!(dds, :X, 2)
   @test nparts(dds, :X) == 2
   @test subpart(dds, :Φ) == [0,2]
