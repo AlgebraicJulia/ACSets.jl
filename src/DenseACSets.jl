@@ -634,13 +634,11 @@ ACSetInterface.copy_parts_only!(to::ACSet, from::ACSet, parts::NamedTuple) =
   @ct_ctrl for (a,d,c) in relevant_attrs
     for (part, val) in zip(newparts[@ct d], subpart(from, parts[@ct d], @ct(a)))
       if !(val isa AttrVar)
-        v = val 
-      elseif !haskey(newparts, @ct(c))
-        v = AttrVar(0)
-      else
+        set_subpart!(to, part, @ct(a), val)
+      elseif haskey(newparts, @ct(c))
         v = AttrVar(newparts[@ct c][findfirst(==(val.val), parts[@ct c])])
+        set_subpart!(to, part, @ct(a), v)
       end
-      set_subpart!(to, part, @ct(a), v)
     end
   end
 
