@@ -635,9 +635,11 @@ ACSetInterface.copy_parts_only!(to::ACSet, from::ACSet, parts::NamedTuple) =
     for (part, val) in zip(newparts[@ct d], subpart(from, parts[@ct d], @ct(a)))
       if !(val isa AttrVar)
         set_subpart!(to, part, @ct(a), val)
-      elseif haskey(newparts, @ct(c))
-        v = AttrVar(newparts[@ct c][findfirst(==(val.val), parts[@ct c])])
-        set_subpart!(to, part, @ct(a), v)
+      else
+        newindex = findfirst(==(val.val), get(parts, @ct(c), []))
+        if !isnothing(newindex)
+          set_subpart!(to, part, @ct(a), AttrVar(newparts[@ct c][newindex]))
+        end
       end
     end
   end
