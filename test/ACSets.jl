@@ -188,7 +188,8 @@ dgram_makers = [
 for (dgram_maker, ldgram_maker) in dgram_makers
   d = dgram_maker(Int)
   add_parts!(d, :X, 3, height=0)
-  add_parts!(d, :X, 2, height=[10,20])
+  add_parts!(d, :R, 2)
+  add_parts!(d, :X, 2, height=[10,AttrVar(add_part!(d,:R))])
   set_subpart!(d, 1:3, :parent, 4)
   set_subpart!(d, [4,5], :parent, 5)
 
@@ -201,7 +202,7 @@ for (dgram_maker, ldgram_maker) in dgram_makers
   @test has_subpart(d, :height)
   @test subpart(d, [1,2,3], :height) == [0,0,0]
   @test subpart(d, 4, :height) == 10
-  @test subpart(d, :, :height) == [0,0,0,10,20]
+  @test subpart(d, :, :height) == [0,0,0,10,AttrVar(3)]
 
   # Chained accessors.
   @test subpart(d, 3, [:parent, :parent]) == 5
@@ -212,7 +213,7 @@ for (dgram_maker, ldgram_maker) in dgram_makers
   # Indexing syntax.
   @test d[3, :parent] == 4
   @test d[3, [:parent, :height]] == 10
-  @test d[3:5, [:parent, :height]] == [10,20,20]
+  @test d[3:5, [:parent, :height]] == [10,AttrVar(3),AttrVar(3)]
   @test d[:, :parent] == [4,4,4,5,5]
   d2 = copy(d)
   d2[1, :parent] = 1
@@ -223,15 +224,15 @@ for (dgram_maker, ldgram_maker) in dgram_makers
 
   # Copying parts.
   d2 = dgram_maker(Int)
-  copy_parts!(d2, d, X=[4,5])
+  copy_parts!(d2, d, X=[4,5], R=[3])
   @test nparts(d2, :X) == 2
   @test subpart(d2, [1,2], :parent) == [2,2]
-  @test subpart(d2, [1,2], :height) == [10,20]
+  @test subpart(d2, [1,2], :height) == [10, AttrVar(1)]
 
   du = disjoint_union(d, d2)
   @test nparts(du, :X) == 7
   @test subpart(du, :parent) == [4,4,4,5,5,7,7]
-  @test subpart(du, :height) == [0,0,0,10,20,10,20]
+  @test subpart(du, :height) == [0,0,0,10,AttrVar(3),10,AttrVar(4)]
 
   # Pretty printing of data attributes.
   s = sprint(show, d)
