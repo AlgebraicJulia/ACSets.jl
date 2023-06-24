@@ -23,3 +23,7 @@ end
 @testset "JSON" begin
   include("JSONACSets.jl")
 end
+
+@testset "ADTs" begin
+  include("ADTs.jl")
+end
