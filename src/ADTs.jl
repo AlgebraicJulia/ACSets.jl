@@ -25,7 +25,7 @@ end
 
 """    to_string(s::ACSetSpec)
 
-generates a human readable string of the ACSetSpec (or any sub-term).
+generates a human readable string of the `ACSetSpec` (or any sub-term).
 """
 function to_string(s)
   let ! = to_string
@@ -38,6 +38,11 @@ function to_string(s)
   end
 end
 
+"""    to_dict(s::ACSetSpec)
+
+generates a dictionary representation the `ACSetSpec` (or any sub-term).
+This dict should be serializable with `JSON.json`.
+"""
 function to_dict(s)
   let ! = to_dict
     @match s begin
