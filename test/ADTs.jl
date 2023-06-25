@@ -33,8 +33,8 @@ SchLabeledGraph = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)],
           Statement(:E, [Value(2), Value(3)])
       ]
   )
-  println(to_string(gspec))
-  @show generate_expr(gspec)
+  @test to_string(gspec) isa String
+  @test generate_expr(gspec) isa Expr
 end
 
 
@@ -54,7 +54,6 @@ end
   @test nparts(g, :V) == 3
   @test nparts(g, :E) == 2
 
-  println("h is ")
   hspec = acsetspec(:(LabeledGraph{Symbol}),quote
       V(label=a)
       V(label=b)
@@ -77,8 +76,21 @@ end
 
 using JSON
 @testset "to_dict" begin
-  JSON.json(to_dict(gspec))
-  #JSON.print(to_dict(gspec), 2)
+  gspec = ACSetSpec(
+      :(LabeledGraph{Symbol}),
+      [
+          Statement(:V, [Kwarg(:label, Value(:a))])
+          Statement(:V, [Kwarg(:label, Value(:b))])
+          Statement(:V, [Kwarg(:label, Value(:c))])
+          Statement(:E, [Kwarg(:src, Value(1)), Kwarg(:tgt, Value(3))])
+          Statement(:E, [Kwarg(:src, Value(2)), Kwarg(:tgt, Value(3))])
+      ]
+  )
+
+  @test to_dict(gspec) isa AbstractDict
+  @test JSON.json(to_dict(gspec)) isa String
+  @test JSON.Parser.parse(JSON.json(to_dict(gspec))) isa AbstractDict
+  @test JSON.Parser.parse(JSON.json(to_dict(gspec))) == symb2string(to_dict(gspec))
 end
 
 @testset "Labeled Vertices" begin
@@ -91,8 +103,7 @@ end
       Statement(:E, [Kwarg(:src, Value(:a)), Kwarg(:tgt, Value(:c))])
       Statement(:E, [Kwarg(:src, Value(:b)), Kwarg(:tgt, Value(:c))])
   ])
-  println(to_string(gspec))
-  label2index(gspec) |> to_string |> println
+  @test label2index(gspec) isa ACSetSpec
   gl = construct(LabeledGraph{Symbol}, label2index(gspec))
   @test gl[:label] == [:a, :b, :c]
   @test gl[:src] == [1,2]

@@ -195,4 +195,16 @@ function label2index(s::ACSetSpec)
   ACSetSpec(s.acstype, newbody)
 end
 
+symb2string(d) = begin
+  let ! = symb2string
+    @match d begin
+      s::String => s
+      s::Symbol => string(s)
+      d::Dict => Dict(!k => !(d[k]) for k in keys(d))
+      d::Vector => map(!, d)
+      v => v
+    end
+  end
+end
+
 end
