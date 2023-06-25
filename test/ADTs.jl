@@ -1,11 +1,16 @@
 using ACSets
 using ACSets.ADTs
 using MLStyle
-using Catlab
-using Catlab.CategoricalAlgebra
-using Catlab.Graphs
-using Catlab.Graphs.BasicGraphs
 using Test
+
+import ACSets.ADTs: symb2string
+
+
+
+SchLabeledGraph = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)],
+                          [:L], [(:label,:V,:L)])
+
+@acset_type LabeledGraph(SchLabeledGraph, index=[:src,:tgt])
 
 @testset "Basic Constructions" begin
   s = Statement(:E, [Value(2), Value(3)])

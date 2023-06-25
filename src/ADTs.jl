@@ -99,7 +99,7 @@ function construct!(X, b::Statement)
       Kwarg(k, v) => (k => v._1)
     end
   end
-  add_part!(X, b.table; args...)
+  ACSetInterface.add_part!(X, b.table; args...)
 end
 
 """    construct(T::Type, sp::ACSetSpec)
