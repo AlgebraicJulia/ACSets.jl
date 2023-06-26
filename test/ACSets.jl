@@ -203,6 +203,7 @@ for (dgram_maker, ldgram_maker) in dgram_makers
   @test subpart(d, [1,2,3], :height) == [0,0,0]
   @test subpart(d, 4, :height) == 10
   @test subpart(d, :, :height) == [0,0,0,10,AttrVar(3)]
+  @test subpart_type(d,:R) == Int
 
   # Chained accessors.
   @test subpart(d, 3, [:parent, :parent]) == 5
