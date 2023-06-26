@@ -261,6 +261,7 @@ for (dgram_maker, ldgram_maker) in dgram_makers
   @test subpart(d, [1,2,3], :height) == [0,0,0]
   @test subpart(d, 4, :height) == 10
   @test subpart(d, :, :height) == [0,0,0,10,A]
+  @test subpart_type(d,:R) == Int
 
   # Chained accessors.
   @test subpart(d, 3, [:parent, :parent]) == 5
@@ -396,11 +397,16 @@ for lset_maker in lset_makers
   @test incident(lset, [:foo,:baz], :label) == [[3],[1]]
   set_subpart!(lset, 3, :label, :biz)
   @test incident(lset, :foo, :label) == []
-
+  @test subpart_type(lset, :label) == Symbol
+  @test subpart_type(lset, :Label) == Symbol
+  @test_throws Exception subpart_type(lset, :abel)
+  
   # Labeled set with compound label (tuple).
   lset = lset_maker(Tuple{Int,Int})
   add_parts!(lset, :X, 2, label=[(1,1), (1,2)])
   @test incident(lset, (1,2), :label) == [2]
+  @test subpart_type(lset, :label) == Tuple{Int,Int}
+  @test subpart_type(lset, :Label) == Tuple{Int,Int}
 
   # Deletion with indexed data attribute.
   lset = lset_maker(Symbol)
