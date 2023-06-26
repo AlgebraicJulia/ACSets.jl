@@ -198,6 +198,16 @@ datatypes(x::DynamicACSet) = x.type_assignment
 constructor(X::DynamicACSet) = ()->DynamicACSet(X.name,X.schema,
   type_assignment=X.type_assignment, 
   index=indices(X), unique_index=unique_indices(X))
+function ACSetInterface.subpart_type(x::DynamicACSet,s::Symbol) 
+  try
+    if s in [a[1] for a in x.schema.attrs]
+      attr_type(x,s)
+    else attrtype_type(x,s)
+    end
+  catch e
+    error("$s is not a valid attr/attrtype.")
+  end
+end
 
 """Cast StructACSet into a DynamicACSet"""
 function DynamicACSet(X::StructACSet{S}) where S 
@@ -271,6 +281,17 @@ attrtype_type(::StructACSet{S,Ts}, D::Symbol) where {S,Ts} = attrtype_instantiat
 attr_type(X::StructACSet{S}, f::Symbol) where {S} = attrtype_type(X, codom(S, f))
 datatypes(::StructACSet{S,Ts}) where {S,Ts} = Dict(zip(attrtypes(S),Ts.parameters))
 constructor(X::StructACSet) = typeof(X)
+function ACSetInterface.subpart_type(x::StructACSet{S}, s::Symbol) where {S}
+  try 
+    if s in [a[1] for a in Schema(S).attrs]
+      attr_type(x,s)
+    else
+      attrtype_type(x,s)
+    end
+  catch e
+    error("$s is not a valid attr/attrtype.")
+  end
+end
 
 function ACSetTableSchema(s::Schema{Symbol}, ob::Symbol)
   attrs = filter(Schemas.attrs(s)) do (f,d,c)
