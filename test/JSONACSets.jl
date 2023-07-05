@@ -12,7 +12,7 @@ function roundtrip_json_acset(x::T) where T <: ACSet
   mktempdir() do dir
     path = joinpath(dir, "acset.json")
     write_json_acset(x, path)
-    read_json_acset(T, path)
+    read_json_acset(x isa DynamicACSet ? x : T, path)
   end
 end
 
@@ -34,6 +34,13 @@ g = WeightedGraph{Float64}()
 add_parts!(g, :V, 3)
 add_parts!(g, :E, 2, src=[1,2], tgt=[2,3], weight=[0.5,1.5])
 @test roundtrip_json_acset(g) == g
+
+g = DynamicACSet("WG", SchWeightedGraph; type_assignment=Dict(:Weight=>Float64), 
+                 index=[:src,:tgt])
+add_parts!(g, :V, 3)
+add_parts!(g, :E, 2, src=[1,2], tgt=[2,3], weight=[0.5,1.5])
+@test roundtrip_json_acset(g) == g
+
 
 SchLabeledDDS = BasicSchema([:X], [(:Φ,:X,:X)], [:Label], [(:label,:X,:Label)])
 @acset_type LabeledDDS(SchLabeledDDS, index=[:Φ])

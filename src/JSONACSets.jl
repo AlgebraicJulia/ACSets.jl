@@ -11,7 +11,7 @@ import Pkg
 import Tables
 
 using ..ACSetInterface, ..Schemas, ..DenseACSets
-using ..DenseACSets: attr_type
+using ..DenseACSets: attr_type, constructor
 using ..ColumnImplementations: AttrVar # TODO: Move this.
 
 # ACSet serialization
