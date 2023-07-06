@@ -24,3 +24,7 @@ end
 @testset "JSON" begin
   include("JSONACSets.jl")
 end
+
+@testset "Nauty" begin
+  include("NautyInterface.jl")
+end
