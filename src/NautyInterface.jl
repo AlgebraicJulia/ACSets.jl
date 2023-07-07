@@ -88,22 +88,23 @@ function CanonicalCSet(g::T) where T<:ACSet
   CanonicalCSet("", emp, CPerm[], 1, emp, g)
 end
 
-"""
-Make shell command to dreadnaut and collect output.
-"""
-function call_nauty(g::ACSet)
-  S = acset_schema(g)
+"""Compute CanonicalCSet from an ACSet."""
+call_nauty(g::ACSet)::CanonicalCSet = parse_res(nauty_res(g), g)
+
+"""Make shell command to dreadnaut (nauty) and collect stdout text."""
+function nauty_res(g::ACSet)::String
   if isempty(g) return NautyRes(g) end
-  all(o -> nparts(g, o) == 0, attrtypes(S)) || error("VarACSets not yet supported")
-
-  m, oinds, _ = to_adj(g) # convert g to matrix
-
-  # Run nauty and collect output as a string
-  inp = dreadnaut(g)
+  all(o -> nparts(g, o) == 0, attrtypes(acset_schema(g))
+     ) || error("VarACSets not yet supported")
   tmp = tempname()
-  cmd = "echo \"$inp\" | $(nauty_jll.dreadnaut_path) > $tmp"
-  bashit(cmd)
-  res = open(f->read(f, String), tmp)
+  bashit("echo \"$(dreadnaut(g))\" | $(nauty_jll.dreadnaut_path) > $tmp")
+  return open(f->read(f, String), tmp)
+end
+
+"""Parse nauty stdout text"""
+function parse_res(res::String, g::ACSet)::CanonicalCSet
+  m, oinds, _ = to_adj(g) # convert g to matrix
+  S = acset_schema(g)
 
   # regexes
   reg_cycle = r"\(([^)]+)\)"
@@ -120,7 +121,8 @@ function call_nauty(g::ACSet)
     return idx => map(split(mtch[1][2:end],"\n(")) do cyc_str
       cycs = eachmatch(reg_cycle, "("*cyc_str)
       perm = filter(x->maximum(x) <= max_n,
-                    [[parse(Int,x)+1 for x in split(only(m.captures)," ")] for m in cycs])
+                    [[parse(Int,x)+1 for x in split(only(mch.captures),r"\s+")] 
+                     for mch in cycs])
       is = Set(vcat(perm...))
       Permutation([perm;[[i] for i in 1:max_n if i ∉ is]])
     end

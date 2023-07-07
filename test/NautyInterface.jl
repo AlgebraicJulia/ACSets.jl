@@ -22,14 +22,32 @@ SchGraph = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)])
 
 @acset_type Graph(SchGraph, index=[:src,:tgt])
 
-G = @acset Graph begin V=5; E=7; src=[1,2,3,2,3,1,4]; tgt=[2,3,1,1,2,3,5] end
-H = @acset Graph begin V=5; E=7; src=[2,3,1,3,1,2,5]; tgt=[3,1,2,2,3,1,4] end
+"""
+Add a graph with 5 vertices and 7 edges to an existing graph. This is one 
+of two isomorphic graphs, controlled by the boolean argument.
+"""
+function addV5E7!(G::Graph=Graph(), flag::Bool=true)
+  vs = add_parts!(G,:V, 5)
+  s,t = flag ? ([1,2,3,2,3,1,4],[2,3,1,1,2,3,5]) : ([2,3,1,3,1,2,5],[3,1,2,2,3,1,4])
+  add_parts!(G, :E, 7; src=vs[s], tgt=vs[t])
+  G
+end
+
+G = addV5E7!()
+H = addV5E7!(Graph(), false)
 
 cG, cH = call_nauty.([G,H])
 @test canon(cG) == canon(cH)
 @test iso(G,cG) && iso(H,cH)
 # calling `all_autos` confirms the # of automorphisms = # that nauty computes
 @test all(h->iso(G, G, h), all_autos(G, generators(cG)))
+
+# Try 4x-sized graphs
+GHGH = addV5E7!(addV5E7!(addV5E7!(addV5E7!(),false)),false)
+HGHG = addV5E7!(addV5E7!(addV5E7!(addV5E7!(Graph(),false)),false))
+cG, cH = call_nauty.([GHGH,HGHG])
+@test canon(cG) == canon(cH)
+@test iso(GHGH,cG) && iso(HGHG,cH)
 
 # 8 symmetries of D₄
 sqr = @acset Graph begin V=4;E=8;src=[1,2,3,4,1,2,3,4];
