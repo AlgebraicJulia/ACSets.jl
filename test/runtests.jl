@@ -25,6 +25,8 @@ end
   include("JSONACSets.jl")
 end
 
-@testset "Nauty" begin
-  include("NautyInterface.jl")
+if !Sys.iswindows()
+  @testset "Nauty" begin
+    include("NautyInterface.jl")
+  end
 end

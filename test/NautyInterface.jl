@@ -3,6 +3,7 @@ module TestNautyInterface
 using Test
 using ACSets
 using Permutations
+using nauty_jll
 
 # Helper function
 #################

@@ -7,9 +7,6 @@ using ..DenseACSets, ..ACSetInterface
 using DataStructures: OrderedSet, DefaultDict
 using Permutations 
 using StructEquality
-using nauty_jll
-
-bashit(str) = run(`bash -c "$str"`)
 
 # Permutations
 ###############
@@ -88,18 +85,9 @@ function CanonicalCSet(g::T) where T<:ACSet
   CanonicalCSet("", emp, CPerm[], 1, emp, g)
 end
 
-"""Compute CanonicalCSet from an ACSet."""
-call_nauty(g::ACSet)::CanonicalCSet = parse_res(nauty_res(g), g)
 
-"""Make shell command to dreadnaut (nauty) and collect stdout text."""
-function nauty_res(g::ACSet)::String
-  if isempty(g) return NautyRes(g) end
-  all(o -> nparts(g, o) == 0, attrtypes(acset_schema(g))
-     ) || error("VarACSets not yet supported")
-  tmp = tempname()
-  bashit("echo \"$(dreadnaut(g))\" | $(nauty_jll.dreadnaut_path) > $tmp")
-  return open(f->read(f, String), tmp)
-end
+"""Compute CanonicalCSet from an ACSet."""
+function call_nauty end 
 
 """Parse nauty stdout text"""
 function parse_res(res::String, g::ACSet)::CanonicalCSet
