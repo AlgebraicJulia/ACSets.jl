@@ -195,7 +195,7 @@ end
 attrtype_type(x::DynamicACSet, D::Symbol) = x.type_assignment[D]
 attr_type(x::DynamicACSet, f::Symbol) = attrtype_type(x,codom(x.schema, f))
 datatypes(x::DynamicACSet) = x.type_assignment
-constructor(X::DynamicACSet) = ()->DynamicACSet(X.name,X.schema,
+ACSetInterface.constructor(X::DynamicACSet) = ()->DynamicACSet(X.name,X.schema,
   type_assignment=X.type_assignment, 
   index=indices(X), unique_index=unique_indices(X))
 
@@ -270,7 +270,7 @@ end
 attrtype_type(::StructACSet{S,Ts}, D::Symbol) where {S,Ts} = attrtype_instantiation(S, Ts, D)
 attr_type(X::StructACSet{S}, f::Symbol) where {S} = attrtype_type(X, codom(S, f))
 datatypes(::StructACSet{S,Ts}) where {S,Ts} = Dict(zip(attrtypes(S),Ts.parameters))
-constructor(X::StructACSet) = typeof(X)
+ACSetInterface.constructor(X::StructACSet) = typeof(X)
 
 function ACSetTableSchema(s::Schema{Symbol}, ob::Symbol)
   attrs = filter(Schemas.attrs(s)) do (f,d,c)
