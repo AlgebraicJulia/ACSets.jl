@@ -33,7 +33,7 @@ dds_makers = [
 ]
 
 for dds_maker in dds_makers
-  dds_maker = BSDDS #DynamicACSet("DDS", SchDDS; index=[:Φ], part_type=BitSetParts)
+  dds_maker = BSDDS
   dds = dds_maker()
   @test keys(tables(dds)) == (:X,)
   @test nparts(dds, :X) == 0
@@ -525,7 +525,9 @@ h2 = map(g, dec = f, label = i -> 3)
 ####################
 @acset_type Grph(SchDecGraph, part_type=BitSetParts, index=[:src,:tgt])
 
-g = @acset Grph{String} begin
+gc!(g) == Dict(:V=>1:4,:E=>1:4)
+
+g2 = @acset Grph{String} begin
   V = 4
   E = 4
   src = [1,2,3,4]
@@ -533,12 +535,12 @@ g = @acset Grph{String} begin
   dec = ["a","b","c","d"]
 end
 
-rem_parts!(g, :E, [1,4])
-rem_part!(g, :V, 1)
-@test g[:src] == [2,3]
-@test g[:tgt] == [3,4]
-gc!(g)
-@test g[:src] == [1,2]
-@test g[:tgt] == [2,3]
+rem_parts!(g2, :E, [1,4])
+rem_part!(g2, :V, 1)
+@test g2[:src] == [2,3]
+@test g2[:tgt] == [3,4]
+gc!(g2)
+@test g2[:src] == [1,2]
+@test g2[:tgt] == [2,3]
 
 end

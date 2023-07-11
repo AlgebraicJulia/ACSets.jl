@@ -43,7 +43,7 @@ parts.
 """
 struct DenseParts <: IdAllocationStrat end 
 
-abstract type ACSet{IdAllocationStrat} end
+abstract type ACSet{I<:IdAllocationStrat}  end
 
 """
 Get the schema of an acset at runtime.

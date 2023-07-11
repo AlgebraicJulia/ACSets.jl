@@ -28,9 +28,16 @@ struct BitSetParts <: AbstractParts
   val::BitSet
   next::Ref{Int}
   BitSetParts(n::Int=0) = new(BitSet(1:n),n)
-end 
+end
+
 Base.:(==)(x::BitSetParts,y::BitSetParts) = x.val == y.val && x.next.x == y.next.x
 Base.hash(x::BitSetParts, h::UInt64) = hash(x.val, hash(x.next.x, h))
+
+allocation_strat(::Type{BitSetParts}) = ACSetInterface.MarkAsDeleted
+allocation_strat(::Type{IntParts}) = ACSetInterface.DenseParts
+part_type(::ACSet{ACSetInterface.MarkAsDeleted}) = BitSetParts
+part_type(::ACSet{ACSetInterface.DenseParts}) = IntParts
+
 function gc!(b::BitSetParts, n::Int) 
   for i in b.val 
     if i > n delete!(b.val, i) end
@@ -147,7 +154,7 @@ function struct_acset(name::Symbol, parent, s::Schema{Symbol};
   Parts = make_parts(s, part_type)
   Subparts = genericize(pi_type(columns), TypeVar[values(Tvars)...])
   quote
-    struct $parameterized_type <: $parent{$schema_type, Tuple{$(attrtypes(s)...)},$part_type}
+    struct $parameterized_type <: $parent{$schema_type, Tuple{$(attrtypes(s)...)},$(allocation_strat(part_type))}
       parts::$Parts
       subparts::$Subparts
       function $parameterized_type() where {$(attrtypes(s)...)}
@@ -203,11 +210,11 @@ end
 """ This is a SimpleACSet which has the schema as a field value rather
 than as a type parameter.
 """
-struct DynamicACSet{PT} <: SimpleACSet{PT}
+struct DynamicACSet{X} <: SimpleACSet{X}
   name::String
   schema::Schema{Symbol}
   type_assignment::Dict{Symbol,Type}
-  parts::Dict{Symbol,PT}
+  parts::Dict{Symbol,<:AbstractParts}
   subparts::Dict{Symbol,Column}
   function DynamicACSet(
     name::String,
@@ -217,7 +224,7 @@ struct DynamicACSet{PT} <: SimpleACSet{PT}
     unique_index::Vector=[],
     part_type::Type{<:AbstractParts}=IntParts
   )
-    new{part_type}(
+    new{allocation_strat(part_type)}(
       name,
       s,
       type_assignment,
@@ -237,7 +244,7 @@ struct DynamicACSet{PT} <: SimpleACSet{PT}
     parts::Dict{Symbol,PT},
     subparts::Dict{Symbol,Column}
   ) where PT <: AbstractParts
-    new{PT}(name,schema,type_assignment,parts,subparts)
+    new{allocation_strat(PT)}(name,schema,type_assignment,parts,subparts)
   end
 end
 attrtype_type(x::DynamicACSet, D::Symbol) = x.type_assignment[D]
@@ -711,64 +718,49 @@ function replace_colons(acs::ACSet, parts::NamedTuple{types}) where {types}
     part == (:) ? (1:nparts(acs, type)) : part
   end)
 end
+
 # Garbage collection 
 ####################
-"""
-Returns the part type of an arbitrary part of an ACSet (we presently assume 
-that all parts are the same type). If there are no objects in the schema, we 
-return nothing
-"""
-function part_type(X::ACSet)
-  S = acset_schema(X)
-  if !isempty(ob(S))
-    p = X.parts[first(ob(S))]
-    if typeof(p) == IntParts
-      return Int 
-    elseif typeof(p) == BitSetParts
-      return BitSet
-    else 
-      error("Unknown part type $(typeof(p))")
-    end
-  end
-end
 
 """
 Reindex the parts of the acset such that there are no gaps between the indices.
 Return a vector for each part mapping the new parts into the old parts. 
 """
-function ACSetInterface.gc!(X::ACSet)
-  if part_type(X) == Int 
-    return Dict(o=>1:nparts(X,o) for o in types(X))
-  elseif part_type(X) == BitSet
-    S = acset_schema(X)
-    μ = Dict(map(types(S)) do o 
-      p    = X.parts[o]
-      m    = collect(p.val)
-      m⁻¹  = [findfirst(==(i), m) for i in 1:p.next.x]
-      return o => (m,m⁻¹)
-    end)
-    # Update homs and attrs
-    for (h, a, b) in homs(S)
-      μᵦ = μ[b][2]
-      X[h] = [μᵦ[X[a,h]] for a in μ[a][1]]
-      for i in (nparts(X,a)+1) : X.parts[a].next.x
-        clear_subpart!(X, i, h)
-      end
+function ACSetInterface.gc!(X::ACSet{ACSetInterface.MarkAsDeleted})
+  S = acset_schema(X)
+  μ = Dict(map(types(S)) do o 
+    p    = X.parts[o]
+    m    = collect(p.val)
+    m⁻¹  = Vector{Union{Int,Nothing}}(fill(nothing, p.next.x))
+    for (i, v) in enumerate(m)  
+      m⁻¹[v] = i 
     end
-    # TODO CLEAR HOM OF JUNK DATA
-    for (h, a, b) in attrs(S)
-      μᵦ = μ[b][2]
-      X[h] = map(μ[a][1]) do a
-        b = X[a,h]
-        b isa AttrVar ? AttrVar(μᵦ(b.val)) : b
-      end
+    return o => (m, m⁻¹)
+  end)
+  # Update homs and attrs
+  for (h, a, b) in homs(S)
+    μᵦ = μ[b][2]
+    X[h] = [μᵦ[X[a,h]] for a in μ[a][1]]
+    for i in (nparts(X,a)+1) : X.parts[a].next.x
+      clear_subpart!(X, i, h)
     end
-    for o in types(S)
-      gc!(X.parts[o], nparts(X,o))
-    end
-    return Dict([o=>μ[o][1] for o in types(S)])
   end
+  # TODO CLEAR HOM OF JUNK DATA
+  for (h, a, b) in attrs(S)
+    μᵦ = μ[b][2]
+    X[h] = map(μ[a][1]) do a
+      b = X[a,h]
+      b isa AttrVar ? AttrVar(μᵦ(b.val)) : b
+    end
+  end
+  for o in types(S)
+    gc!(X.parts[o], nparts(X,o))
+  end
+  return Dict([o=>μ[o][1] for o in types(S)])
 end
+
+ACSetInterface.gc!(X::ACSet{ACSetInterface.DenseParts}) = 
+  Dict(o=>1:nparts(X,o) for o in types(acset_schema(X)))
 
 # Type modification
 ###################
