@@ -3,15 +3,62 @@ These are ACSets where the set associated to each object is of the form `1:n`
 """
 module DenseACSets
 export @acset_type, @abstract_acset_type, StructACSet, StructCSet,
-  DynamicACSet, SimpleACSet, AnonACSet, ACSetTableType, AnonACSetType
+  DynamicACSet, SimpleACSet, AnonACSet, ACSetTableType, AnonACSetType,
+  AbstractParts, IntParts, BitSetParts
 
+using StructEquality
 using MLStyle: @match
 using CompTime
 import Tables
 
-using ..LVectors
 using ..Columns, ..ColumnImplementations
 using ..ACSetInterface, ..Schemas
+
+# Parts 
+#######
+"""
+Int and BitSet parts currently supported
+"""
+abstract type AbstractParts end 
+@struct_hash_equal mutable struct IntParts <: AbstractParts
+  val::Int 
+  IntParts(n::Int=0) = new(n)
+end 
+struct BitSetParts <: AbstractParts
+  val::BitSet
+  next::Ref{Int}
+  BitSetParts(n::Int=0) = new(BitSet(1:n),n)
+end 
+Base.:(==)(x::BitSetParts,y::BitSetParts) = x.val == y.val && x.next.x == y.next.x
+Base.hash(x::BitSetParts, h::UInt64) = hash(x.val, hash(x.next.x, h))
+function gc!(b::BitSetParts, n::Int) 
+  for i in b.val 
+    if i > n delete!(b.val, i) end
+  end
+  push!(b.val, Base.OneTo(n)...) 
+  b.next.x = n
+end
+ACSetInterface.nparts(p::IntParts) = p.val 
+ACSetInterface.nparts(p::BitSetParts) = length(p.val)
+@inline ACSetInterface.parts(p::IntParts) = 1:p.val
+@inline ACSetInterface.parts(p::BitSetParts) = collect(p.val)
+
+@inline function ACSetInterface.add_parts!(m::IntParts, n::Int)
+  nparts = m.val + n
+  newparts = (m.val+1):nparts
+  m.val = nparts
+  newparts
+end
+
+@inline function ACSetInterface.add_parts!(m::BitSetParts, n::Int)
+  nparts = m.next.x + n
+  newparts = (m.next.x+1):nparts
+  m.next.x = nparts
+  for p in newparts 
+    push!(m.val, p) 
+  end
+  newparts
+end
 
 # StructACSet Struct Generation
 ###############################
@@ -23,16 +70,16 @@ which is a mapping from symbols to ints, and a `subparts` field which is a
 mapping from symbols to columns, which are any data structure that
 satisfies the interface given in Columns.jl.
 """
-abstract type SimpleACSet <: ACSet end
+abstract type SimpleACSet{T} <: ACSet{T} end
 
 """ A `StructACSet` is a SimpleACSet where the schema and the types assigned
 to the attrtypes are available in the type.
 """
-abstract type StructACSet{S<:TypeLevelSchema{Symbol},Ts<:Tuple} <: SimpleACSet end
+abstract type StructACSet{S<:TypeLevelSchema{Symbol},Ts<:Tuple, T} <: SimpleACSet{T} end
 
 """ A special case where there are no attributes.
 """
-const StructCSet{S} = StructACSet{S,Tuple{}}
+const StructCSet{S,T} = StructACSet{S,Tuple{},T}
 
 """ Creates a named tuple type
 """
@@ -68,10 +115,9 @@ function genericize(T::Type, tvars::Vector{TypeVar})
   end
 end
 
-function make_parts(s::Schema{Symbol})
-  parts_t = LVector{Tuple(types(s)), Int}
-end
-
+make_parts(s::Schema{Symbol}, part_type=IntParts) =  
+  NamedTuple{Tuple(types(s)), Tuple{fill(part_type,length(types(s)))...}}
+  
 function make_columns(s::Schema{Symbol}, index, unique_index, Tvars)
   vcat(
     Tuple{Symbol,Type}[
@@ -88,7 +134,8 @@ end
 """ Create the struct declaration for a `StructACSet` from a Presentation
 """
 function struct_acset(name::Symbol, parent, s::Schema{Symbol};
-                      index::Vector=[], unique_index::Vector=[])
+                      index::Vector=[], unique_index::Vector=[], 
+                      part_type::Type{<:AbstractParts}=IntParts)
   Tvars = Dict(at => TypeVar(at) for at in attrtypes(s))
   parameterized_type, new_call = if length(attrtypes(s)) > 0
     (:($name{$(attrtypes(s)...)}), :(new{$(attrtypes(s)...)}))
@@ -97,15 +144,15 @@ function struct_acset(name::Symbol, parent, s::Schema{Symbol};
   end
   schema_type = typelevel(s)
   columns = make_columns(s, index, unique_index, Tvars)
-  Parts = make_parts(s)
+  Parts = make_parts(s, part_type)
   Subparts = genericize(pi_type(columns), TypeVar[values(Tvars)...])
   quote
-    struct $parameterized_type <: $parent{$schema_type, Tuple{$(attrtypes(s)...)}}
+    struct $parameterized_type <: $parent{$schema_type, Tuple{$(attrtypes(s)...)},$part_type}
       parts::$Parts
       subparts::$Subparts
       function $parameterized_type() where {$(attrtypes(s)...)}
         $new_call(
-          $Parts(zeros(Int, $(length(types(s))))),
+          $Parts(([$part_type() for _ in 1:$(length(types(s)))])),
           $(pi_type_elt([(f,:($(genericize(T, TypeVar[values(Tvars)...]))())) for (f,T) in columns]))
         )
       end
@@ -149,31 +196,32 @@ macro abstract_acset_type(head)
     _ => (head, GlobalRef(DenseACSets, :StructACSet))
   end
   esc(quote
-    abstract type $type{S,Ts} <: $parent{S,Ts} end
+    abstract type $type{S,Ts,P} <: $parent{S,Ts,P} end
   end)
 end
 
 """ This is a SimpleACSet which has the schema as a field value rather
 than as a type parameter.
 """
-struct DynamicACSet <: SimpleACSet
+struct DynamicACSet{PT} <: SimpleACSet{PT}
   name::String
   schema::Schema{Symbol}
   type_assignment::Dict{Symbol,Type}
-  parts::Dict{Symbol,Int}
+  parts::Dict{Symbol,PT}
   subparts::Dict{Symbol,Column}
   function DynamicACSet(
     name::String,
     s::Schema{Symbol};
     type_assignment=Dict{Symbol,Type}(),
     index::Vector=[],
-    unique_index::Vector=[]
+    unique_index::Vector=[],
+    part_type::Type{<:AbstractParts}=IntParts
   )
-    new(
+    new{part_type}(
       name,
       s,
       type_assignment,
-      Dict(ob => 0 for ob in types(s)),
+      Dict(ob => part_type() for ob in types(s)),
       Dict([
         [f => column_type(HomChoice, indexchoice(f,index,unique_index))()
          for f in homs(s; just_names=true)];
@@ -186,10 +234,10 @@ struct DynamicACSet <: SimpleACSet
     name::String,
     schema::Schema{Symbol},
     type_assignment::Dict{Symbol,Type},
-    parts::Dict{Symbol,Int},
+    parts::Dict{Symbol,PT},
     subparts::Dict{Symbol,Column}
-  )
-    new(name,schema,type_assignment,parts,subparts)
+  ) where PT <: AbstractParts
+    new{PT}(name,schema,type_assignment,parts,subparts)
   end
 end
 attrtype_type(x::DynamicACSet, D::Symbol) = x.type_assignment[D]
@@ -211,19 +259,19 @@ end
 """ This works the same as something made with `@acset_type`, only the types of the
 parts and subparts are stored as type parameters. Thus, this can be used with any schema.
 """
-struct AnonACSet{S,Ts,Parts,Subparts} <: StructACSet{S,Ts}
+struct AnonACSet{S,Ts,Parts,Subparts,PT} <: StructACSet{S,Ts, PT}
   parts::Parts
   subparts::Subparts
-  function AnonACSet{S,Ts,Parts,Subparts}(
+  function AnonACSet{S,Ts,Parts,Subparts,PT}(
     parts::Parts,
     subparts::Subparts
-  ) where {S,Ts,Parts,Subparts}
-    new{S,Ts,Parts,Subparts}(parts,subparts)
+  ) where {S,Ts,Parts,Subparts,PT}
+    new{S,Ts,Parts,Subparts,PT}(parts,subparts)
   end
 
-  function AnonACSet{S,Ts,Parts,Subparts}() where {S,Ts,Parts,Subparts}
-    new{S,Ts,Parts,Subparts}(
-      Parts(zeros(Int, length(S.parameters[2].parameters)+length(Ts.parameters))),
+  function AnonACSet{S,Ts,Parts,Subparts,PT}() where {S,Ts,Parts,Subparts,PT}
+    new{S,Ts,Parts,Subparts,PT}(
+      Parts([PT() for _ in 1:length(types(S))]),
       Subparts(T() for T in Subparts.parameters[2].parameters)
     )
   end
@@ -232,9 +280,11 @@ struct AnonACSet{S,Ts,Parts,Subparts} <: StructACSet{S,Ts}
     s::Schema{Symbol};
     type_assignment=Dict{Symbol,Type}(),
     index::Vector{Symbol}=Symbol[],
-    unique_index::Vector{Symbol}=Symbol[]
+    unique_index::Vector{Symbol}=Symbol[],
+    part_type::Type{<:AbstractParts}=IntParts
   )
-    T = AnonACSetType(s; type_assignment, index=index, unique_index=unique_index)
+    T = AnonACSetType(s; type_assignment, index=index, unique_index=unique_index, 
+                      part_type=part_type)
     T()
   end
 end
@@ -246,7 +296,8 @@ function AnonACSetType(
   type_assignment::Dict{Symbol, Type}=Dict{Symbol,Type}(),
   index::Vector=[],
   unique_index::Vector=[],
-  union_all::Bool=false
+  union_all::Bool=false,
+  part_type::Type{<:AbstractParts}=IntParts
 )
   (!union_all || isempty(type_assignment)) || error("If union_all is true, then attrtypes must be empty")
   S = typelevel(s)
@@ -257,9 +308,9 @@ function AnonACSetType(
   end
   Ts = Tuple{(Tvars[at] for at in attrtypes(s))...}
   columns = make_columns(s, index, unique_index, Tvars)
-  Parts = make_parts(s)
+  Parts = make_parts(s, part_type)
   Subparts = pi_type(columns)
-  T = AnonACSet{S,Ts,Parts,Subparts}
+  T = AnonACSet{S,Ts,Parts,Subparts,part_type}
   if union_all
     foldr(UnionAll, [Tvars[at] for at in attrtypes(s)]; init=T)
   else
@@ -307,7 +358,7 @@ Base.copy(acs::DynamicACSet) =
     acs.name,
     acs.schema,
     acs.type_assignment,
-    copy(acs.parts),
+    deepcopy(acs.parts),
     deepcopy(acs.subparts)
   )
 
@@ -316,7 +367,7 @@ indices(acs::DynamicACSet) =
 unique_indices(acs::DynamicACSet) = 
   [k for (k,v) in collect(acs.subparts) if v.pc isa InjectiveCache]
 
-Base.copy(acs::T) where {T <: StructACSet} = T(copy(acs.parts), map(copy, acs.subparts))
+Base.copy(acs::T) where {T <: StructACSet} = T(deepcopy(acs.parts), map(copy, acs.subparts))
 
 Base.:(==)(acs1::T, acs2::T) where {T <: SimpleACSet} =
   acs1.parts == acs2.parts && acs1.subparts == acs2.subparts
@@ -330,17 +381,13 @@ add_parts_with_indices!(acs::SimpleACSet, ob::Symbol, n::Int, index_sizes::Named
 Base.hash(x::T, h::UInt) where T <: SimpleACSet =
   hash(x.parts, hash(x.subparts, h))
 
-@inline function ACSetInterface.add_parts!(acs::SimpleACSet, ob::Symbol, n::Int)
-  m = acs.parts[ob]
-  nparts = m + n
-  newparts = (m+1):nparts
-  acs.parts[ob] = nparts
-  newparts
-end
+@inline ACSetInterface.add_parts!(acs::SimpleACSet, ob::Symbol, n::Int) = 
+  ACSetInterface.add_parts!(acs.parts[ob], n)
 
-@inline ACSetInterface.nparts(acs::SimpleACSet, type::Symbol) = acs.parts[type]
 
-ACSetInterface.has_part(acs::StructACSet{S}, ob::Symbol) where {S} =
+@inline ACSetInterface.nparts(acs::SimpleACSet, type::Symbol) = nparts(acs.parts[type])
+
+ACSetInterface.has_part(::StructACSet{S}, ob::Symbol) where {S} =
   _has_part(Val{S}, Val{ob})
 
 ACSetInterface.has_part(acs::DynamicACSet, ob::Symbol) =
@@ -455,7 +502,7 @@ ACSetInterface.set_subpart!(acs::DynamicACSet, part::Int, f::Symbol, subpart) =
 @ct_enable function _set_subpart!(acs::SimpleACSet, @ct(S), @ct(Ts), part, @ct(f), subpart)
   @ct s = Schema(S)
   @ct_ctrl if f ∈ homs(s; just_names=true)
-    @assert 0 <= subpart <= acs.parts[@ct codom(s, f)]
+    @assert 0 <= subpart <= ACSetInterface.nparts(acs,@ct codom(s, f))
   end
   acs.subparts[@ct f][part] = subpart
 end
@@ -464,18 +511,18 @@ end
   delete!(acs.subparts[f], part)
 
 @inline ACSetInterface.rem_part!(acs::StructACSet{S}, type::Symbol, part::Int) where {S} =
-  _rem_part!(acs, Val{S}, Val{type}, part)
+  _rem_part!(acs, Val{S}, Val{type}, part, acs.parts[type])
 
 ACSetInterface.rem_part!(acs::DynamicACSet, type::Symbol, part::Int) =
-  runtime(_rem_part!, acs, acs.schema, type, part)
+  runtime(_rem_part!, acs, acs.schema, type, part, acs.parts[type])
 
-@ct_enable function _rem_part!(acs::SimpleACSet, @ct(S), @ct(ob), part)
+@ct_enable function _rem_part!(acs::SimpleACSet, @ct(S), @ct(ob), part, ::IntParts)
   @ct s = Schema(S)
   @ct in_homs = homs(s; to=ob, just_names=true)
   @ct out_homs = homs(s; from=ob, just_names=true)
   @ct out_attrs = attrs(s; from=ob, just_names=true)
 
-  last_part = acs.parts[@ct ob]
+  last_part = acs.parts[@ct ob].val
 
   @ct_ctrl for hom in in_homs
     incoming_to_part = copy(incident(acs, part, @ct hom))
@@ -492,7 +539,19 @@ ACSetInterface.rem_part!(acs::DynamicACSet, type::Symbol, part::Int) =
     clear_subpart!(acs, last_part, @ct f)
   end
 
-  acs.parts[@ct ob] -= 1
+  acs.parts[@ct ob].val -= 1
+end
+
+@ct_enable function _rem_part!(acs::SimpleACSet, @ct(S), @ct(ob), part, ::BitSetParts)
+  @ct s = Schema(S)
+  @ct out_homs = homs(s; from=ob, just_names=true)
+  @ct out_attrs = attrs(s; from=ob, just_names=true)
+
+  @ct_ctrl for f in [out_homs; out_attrs]
+    clear_subpart!(acs, part, @ct f)
+  end
+
+  delete!(acs.parts[ob].val, part)
 end
 
 """
@@ -652,6 +711,64 @@ function replace_colons(acs::ACSet, parts::NamedTuple{types}) where {types}
     part == (:) ? (1:nparts(acs, type)) : part
   end)
 end
+# Garbage collection 
+####################
+"""
+Returns the part type of an arbitrary part of an ACSet (we presently assume 
+that all parts are the same type). If there are no objects in the schema, we 
+return nothing
+"""
+function part_type(X::ACSet)
+  S = acset_schema(X)
+  if !isempty(ob(S))
+    p = X.parts[first(ob(S))]
+    if typeof(p) == IntParts
+      return Int 
+    elseif typeof(p) == BitSetParts
+      return BitSet
+    else 
+      error("Unknown part type $(typeof(p))")
+    end
+  end
+end
+
+"""
+Reindex the parts of the acset such that there are no gaps between the indices.
+Return a vector for each part mapping the new parts into the old parts. 
+"""
+function ACSetInterface.gc!(X::ACSet)
+  if part_type(X) == Int 
+    return Dict(o=>1:nparts(X,o) for o in types(X))
+  elseif part_type(X) == BitSet
+    S = acset_schema(X)
+    μ = Dict(map(types(S)) do o 
+      p    = X.parts[o]
+      m    = collect(p.val)
+      m⁻¹  = [findfirst(==(i), m) for i in 1:p.next.x]
+      return o => (m,m⁻¹)
+    end)
+    # Update homs and attrs
+    for (h, a, b) in homs(S)
+      μᵦ = μ[b][2]
+      X[h] = [μᵦ[X[a,h]] for a in μ[a][1]]
+      for i in (nparts(X,a)+1) : X.parts[a].next.x
+        clear_subpart!(X, i, h)
+      end
+    end
+    # TODO CLEAR HOM OF JUNK DATA
+    for (h, a, b) in attrs(S)
+      μᵦ = μ[b][2]
+      X[h] = map(μ[a][1]) do a
+        b = X[a,h]
+        b isa AttrVar ? AttrVar(μᵦ(b.val)) : b
+      end
+    end
+    for o in types(S)
+      gc!(X.parts[o], nparts(X,o))
+    end
+    return Dict([o=>μ[o][1] for o in types(S)])
+  end
+end
 
 # Type modification
 ###################
@@ -697,7 +814,7 @@ function Base.show(io::IO, acs::SimpleACSet)
     print(io, acset_name(acs))
     println(io, ":")
     join(io, Iterators.flatten((
-      ("  $ob = $(parts(acs,ob))" for ob in types(s)),
+      ("  $ob = $(nparts(acs,ob))" for ob in types(s)),
       ("  $f : $d → $c = $(subpart(acs,f))"
        for (f,d,c) in homs(s)),
       ("  $a : $d → $c = $(subpart(acs,a))"

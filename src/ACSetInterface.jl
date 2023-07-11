@@ -2,9 +2,9 @@ module ACSetInterface
 export ACSet, acset_schema, acset_name, dom_parts, subpart_type,
   nparts, parts, has_part, has_subpart, subpart, incident,
   add_part!, add_parts!, set_subpart!, set_subparts!, clear_subpart!,
-  rem_part!, rem_parts!, cascading_rem_part!, cascading_rem_parts!,
-  copy_parts!, copy_parts_only!, disjoint_union, tables, pretty_tables, 
-  constructor, @acset
+  rem_part!, rem_parts!, cascading_rem_part!, cascading_rem_parts!, gc!,
+  copy_parts!, copy_parts_only!, disjoint_union, tables, pretty_tables,
+  constructor, @acset, @acset_transformation, @acset_transformations
 
 using MLStyle: @match
 using StaticArrays: StaticArray
@@ -16,7 +16,34 @@ using ..Schemas: types
 # Core interface
 ################
 
-abstract type ACSet end
+"""
+ACSets can structure their parts in various ways which have different semantics.
+"""
+abstract type IdAllocationStrat end 
+
+"""
+Garbage collection is an operation that makes sense to perform.
+Parts can be deleted without invalidating external references to particular parts.
+"""
+struct MarkAsDeleted <: IdAllocationStrat end
+"""
+Garbage collection is an operation that makes sense to perform.
+Parts can be identified with each other without invalidating external 
+references to particular parts.
+"""
+struct UnionFind <: IdAllocationStrat end
+
+"""The combination of MarkAsDeleted and UnionFind functionality"""
+struct MarkAsDeletedUnionFind <: IdAllocationStrat end
+
+"""
+Garbage collection does not alter this kind of ACSet.
+Deletion or identification of parts may invalidate any references to particular 
+parts.
+"""
+struct DenseParts <: IdAllocationStrat end 
+
+abstract type ACSet{IdAllocationStrat} end
 
 """
 Get the schema of an acset at runtime.
@@ -34,7 +61,7 @@ function nparts end
 
 """ Parts of given type in an acset.
 """
-@inline parts(acs, type) = 1:nparts(acs, type)
+@inline parts(acs, type) = parts(acs.parts[type])
 
 """ Whether an acset has a part with the given name.
 """
@@ -322,6 +349,11 @@ Get a named tuple of Tables.jl-compatible tables from an acset
 function tables end
 
 """
+Garbage collection.
+"""
+function gc! end 
+
+"""
 Get a nullary callable which constructs an (empty) ACSet of the same type
 """
 function constructor end
@@ -345,8 +377,8 @@ function pretty_tables(io::IO, acs::ACSet; tables=nothing, kw...)
 
     # By necessity, omit tables with no rows. PrettyTables will not print them.
     Tables.rowcount(table) == 0 && continue
-
-    pretty_table(io, table; row_number_column_title=string(name), options...)
+    pretty_table(io, table; row_label_column_title=string(name),
+                 row_labels=collect(parts(acs,name)), options...)
   end
 end
 
@@ -354,13 +386,13 @@ pretty_tables(acs::ACSet; kw...) = pretty_tables(stdout, acs; kw...)
 
 const default_pretty_table_options = (
   show_subheader = false,
-  show_row_number = true,
+  show_row_number = false,
 )
 
 function Base.show(io::IO, ::MIME"text/plain", acs::T) where T <: ACSet
   print(io, acset_name(acs))
   print(io, " with elements ")
-  join(io, ["$ob = $(parts(acs,ob))" for ob in types(acset_schema(acs))], ", ")
+  join(io, ["$ob = $(nparts(acs,ob))" for ob in types(acset_schema(acs))], ", ")
   println(io)
   pretty_tables(io, acs)
 end
@@ -370,7 +402,7 @@ function Base.show(io::IO, ::MIME"text/html", acs::T) where T <: ACSet
   print(io, "<span class=\"c-set-summary\">")
   print(io, acset_name(acs))
   print(io, " with elements ")
-  join(io, ["$ob = $(parts(acs,ob))" for ob in types(acset_schema(acs))], ", ")
+  join(io, ["$ob = $(nparts(acs,ob))" for ob in types(acset_schema(acs))], ", ")
   println(io, "</span>")
   pretty_tables(io, acs, backend=Val(:html), standalone=false)
   println(io, "</div>")
