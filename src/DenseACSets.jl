@@ -35,8 +35,9 @@ Base.hash(x::BitSetParts, h::UInt64) = hash(x.val, hash(x.next.x, h))
 
 allocation_strat(::Type{BitSetParts}) = ACSetInterface.MarkAsDeleted
 allocation_strat(::Type{IntParts}) = ACSetInterface.DenseParts
-part_type(::ACSet{ACSetInterface.MarkAsDeleted}) = BitSetParts
-part_type(::ACSet{ACSetInterface.DenseParts}) = IntParts
+part_type(::ACSet{T}) where T = part_type(T)
+part_type(::Type{ACSetInterface.MarkAsDeleted}) = BitSetParts
+part_type(::Type{ACSetInterface.DenseParts}) = IntParts
 
 function gc!(b::BitSetParts, n::Int) 
   for i in b.val 
@@ -278,7 +279,7 @@ struct AnonACSet{S,Ts,Parts,Subparts,PT} <: StructACSet{S,Ts, PT}
 
   function AnonACSet{S,Ts,Parts,Subparts,PT}() where {S,Ts,Parts,Subparts,PT}
     new{S,Ts,Parts,Subparts,PT}(
-      Parts([PT() for _ in 1:length(types(S))]),
+      Parts([part_type(PT)() for _ in 1:length(types(S))]),
       Subparts(T() for T in Subparts.parameters[2].parameters)
     )
   end
@@ -317,7 +318,7 @@ function AnonACSetType(
   columns = make_columns(s, index, unique_index, Tvars)
   Parts = make_parts(s, part_type)
   Subparts = pi_type(columns)
-  T = AnonACSet{S,Ts,Parts,Subparts,part_type}
+  T = AnonACSet{S,Ts,Parts,Subparts,allocation_strat(part_type)}
   if union_all
     foldr(UnionAll, [Tvars[at] for at in attrtypes(s)]; init=T)
   else
