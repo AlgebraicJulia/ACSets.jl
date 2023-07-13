@@ -450,8 +450,4 @@ end
 
 function make_acset end
 
-# Function call syntax as alternative to indexing
-(c::Column)(v) = c[v]
-(c::Column)(v::AttrVar) = c[v.val]
-
 end
