@@ -4,7 +4,7 @@ These are ACSets where the set associated to each object is of the form `1:n`
 module DenseACSets
 export @acset_type, @abstract_acset_type, StructACSet, StructCSet,
   DynamicACSet, SimpleACSet, AnonACSet, ACSetTableType, AnonACSetType,
-  AbstractParts, IntParts, BitSetParts
+  AbstractParts, IntParts, BitSetParts, sparsify, densify
 
 using StructEquality
 using MLStyle: @match
@@ -35,9 +35,9 @@ Base.hash(x::BitSetParts, h::UInt64) = hash(x.val, hash(x.next.x, h))
 
 allocation_strat(::Type{BitSetParts}) = ACSetInterface.MarkAsDeleted
 allocation_strat(::Type{IntParts}) = ACSetInterface.DenseParts
-part_type(::ACSet{T}) where T = part_type(T)
-part_type(::Type{ACSetInterface.MarkAsDeleted}) = BitSetParts
-part_type(::Type{ACSetInterface.DenseParts}) = IntParts
+get_part_type(::ACSet{T}) where T = get_part_type(T)
+get_part_type(::Type{ACSetInterface.MarkAsDeleted}) = BitSetParts
+get_part_type(::Type{ACSetInterface.DenseParts}) = IntParts
 
 function gc!(b::BitSetParts, n::Int) 
   for i in b.val 
@@ -251,9 +251,15 @@ end
 attrtype_type(x::DynamicACSet, D::Symbol) = x.type_assignment[D]
 attr_type(x::DynamicACSet, f::Symbol) = attrtype_type(x,codom(x.schema, f))
 datatypes(x::DynamicACSet) = x.type_assignment
-ACSetInterface.constructor(X::DynamicACSet) = ()->DynamicACSet(X.name,X.schema,
-  type_assignment=X.type_assignment, 
-  index=indices(X), unique_index=unique_indices(X))
+function ACSetInterface.constructor(X::DynamicACSet{T}; type_assignment=nothing,
+    index=nothing, unique_index=nothing, part_type=nothing) where T  
+  type_assignment = isnothing(type_assignment) ? X.type_assignment : type_assignment
+  index = isnothing(index) ? indices(X) : index 
+  unique_index = isnothing(unique_index) ? unique_indices(X) : unique_index 
+  part_type = isnothing(part_type) ? get_part_type(T) : part_type
+  () -> DynamicACSet(X.name,X.schema,type_assignment=type_assignment, 
+                  index=index, unique_index=unique_index, part_type=part_type)
+end
 
 """Cast StructACSet into a DynamicACSet"""
 function DynamicACSet(X::StructACSet{S}) where S 
@@ -279,7 +285,7 @@ struct AnonACSet{S,Ts,Parts,Subparts,PT} <: StructACSet{S,Ts, PT}
 
   function AnonACSet{S,Ts,Parts,Subparts,PT}() where {S,Ts,Parts,Subparts,PT}
     new{S,Ts,Parts,Subparts,PT}(
-      Parts([part_type(PT)() for _ in 1:length(types(S))]),
+      Parts([get_part_type(PT)() for _ in 1:length(types(S))]),
       Subparts(T() for T in Subparts.parameters[2].parameters)
     )
   end
@@ -328,8 +334,21 @@ end
 
 attrtype_type(::StructACSet{S,Ts}, D::Symbol) where {S,Ts} = attrtype_instantiation(S, Ts, D)
 attr_type(X::StructACSet{S}, f::Symbol) where {S} = attrtype_type(X, codom(S, f))
-datatypes(::StructACSet{S,Ts}) where {S,Ts} = Dict(zip(attrtypes(S),Ts.parameters))
-ACSetInterface.constructor(X::StructACSet) = typeof(X)
+datatypes(::StructACSet{S,Ts}) where {S,Ts} = Dict{Symbol,Type}(zip(attrtypes(S),Ts.parameters))
+function ACSetInterface.constructor(X::StructACSet{S}; 
+    index=nothing, type_assignment=nothing, unique_index=nothing, 
+    part_type=nothing) where {S} 
+  if all(isnothing, [index, type_assignment, unique_index, part_type]) 
+    return typeof(X)
+  else 
+    type_assignment = isnothing(type_assignment) ? datatypes(X) : type_assignment
+    index = isnothing(index) ? indices(X) : index 
+    unique_index = isnothing(unique_index) ? unique_indices(X) : unique_index 
+    part_type = isnothing(part_type) ? allocation_strat(p_t) : part_type  
+    return () -> AnonACSet(Schema(S), type_assignment=type_assignment, index=index, 
+                           unique_index=unique_index, part_type=part_type)
+  end
+end
 
 function ACSetTableSchema(s::Schema{Symbol}, ob::Symbol)
   attrs = filter(Schemas.attrs(s)) do (f,d,c)
@@ -370,10 +389,10 @@ Base.copy(acs::DynamicACSet) =
     deepcopy(acs.subparts)
   )
 
-indices(acs::DynamicACSet) = 
-  [k for (k,v) in collect(acs.subparts) if v.pc isa StoredPreimageCache]
-unique_indices(acs::DynamicACSet) = 
-  [k for (k,v) in collect(acs.subparts) if v.pc isa InjectiveCache]
+indices(acs::ACSet) = 
+  Symbol[k for (k,v) in pairs(acs.subparts) if v.pc isa StoredPreimageCache]
+unique_indices(acs::ACSet) = 
+  Symbol[k for (k,v) in pairs(acs.subparts) if v.pc isa InjectiveCache]
 
 Base.copy(acs::T) where {T <: StructACSet} = T(deepcopy(acs.parts), map(copy, acs.subparts))
 
@@ -749,9 +768,10 @@ function ACSetInterface.gc!(X::ACSet{ACSetInterface.MarkAsDeleted})
   # TODO CLEAR HOM OF JUNK DATA
   for (h, a, b) in attrs(S)
     μᵦ = μ[b][2]
-    X[h] = map(μ[a][1]) do a
-      b = X[a,h]
-      b isa AttrVar ? AttrVar(μᵦ(b.val)) : b
+    X[h] = map(μ[a][1]) do p
+      p′ = X[p, h]
+      println("$h:$a->$b μᵦ $μᵦ p $p p′ $p′")
+      p′ isa AttrVar ? AttrVar(μᵦ[p′.val]) : p′
     end
   end
   for o in types(S)
@@ -762,6 +782,21 @@ end
 
 ACSetInterface.gc!(X::ACSet{ACSetInterface.DenseParts}) = 
   Dict(o=>1:nparts(X,o) for o in types(acset_schema(X)))
+
+sparsify(X::ACSet{ACSetInterface.MarkAsDeleted}) = X
+function sparsify(X::ACSet{ACSetInterface.DenseParts})
+  Y = constructor(X, part_type=BitSetParts)()
+  copy_parts!(Y, X)
+  Y
+end
+densify(X::ACSet{ACSetInterface.DenseParts}) = X
+function densify(X::ACSet{ACSetInterface.MarkAsDeleted})
+  Y = constructor(X; part_type=IntParts)()
+  X = deepcopy(X)
+  m = ACSetInterface.gc!(X)
+  copy_parts!(Y, X)
+  Y, m
+end
 
 # Type modification
 ###################
