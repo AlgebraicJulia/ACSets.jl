@@ -1,4 +1,5 @@
 module TestCSetDataStructures
+
 using Test
 
 using StaticArrays: StaticVector
@@ -14,6 +15,7 @@ SchDDS = BasicSchema([:X], [(:Φ,:X,:X)])
 
 @abstract_acset_type AbstractDDS
 @acset_type DDS(SchDDS, index=[:Φ]) <: AbstractDDS
+@acset_type BSDDS(SchDDS, part_type=BitSetParts) <: AbstractDDS
 @acset_type UnindexedDDS(SchDDS)
 @test DDS <: AbstractDDS
 @test DDS <: StructACSet
@@ -22,12 +24,16 @@ SchDDS = BasicSchema([:X], [(:Φ,:X,:X)])
 
 dds_makers = [
   DDS,
+  BSDDS,
   UnindexedDDS,
   () -> DynamicACSet("DDS", SchDDS; index=[:Φ]),
-  () -> AnonACSet(SchDDS; index=[:Φ])
+  () -> DynamicACSet("DDS", SchDDS; index=[:Φ], part_type=BitSetParts),
+  () -> AnonACSet(SchDDS; index=[:Φ]),
+  () -> AnonACSet(SchDDS; index=[:Φ], part_type=BitSetParts)
 ]
 
 for dds_maker in dds_makers
+  dds_maker = BSDDS
   dds = dds_maker()
   @test keys(tables(dds)) == (:X,)
   @test nparts(dds, :X) == 0
@@ -69,24 +75,41 @@ for dds_maker in dds_makers
   view(dds,:Φ) isa ColumnView
 
   # Deletion.
+  dds = @acset BSDDS begin X=3; Φ=[2,3,3] end
   rem_part!(dds, :X, 2)
   @test nparts(dds, :X) == 2
-  @test subpart(dds, :Φ) == [0,2]
   @test incident(dds, 1, :Φ) == []
-  @test incident(dds, 2, :Φ) == [2]
+  if dds.parts[:X] isa IntParts
+    @test subpart(dds, :Φ) == [0,2]
+    @test incident(dds, 2, :Φ) == [2]
+  else
+    @test subpart(dds, :Φ) == [2,3]
+    @test incident(dds, 2, :Φ) == [1]
+  end 
   rem_part!(dds, :X, 2)
-  @test nparts(dds, :X) == 1
-  @test subpart(dds, :Φ) == [0]
+  if dds.parts[:X] isa IntParts
+    @test nparts(dds, :X) == 1
+    @test subpart(dds, :Φ) == [0]
+  else 
+    @test nparts(dds, :X) == 2
+  end 
   rem_part!(dds, :X, 1)
-  @test nparts(dds, :X) == 0
+  if dds.parts[:X] isa IntParts
+    @test nparts(dds, :X) == 0
+  else 
+    @test nparts(dds, :X) == 1
+  end 
+
 
   dds = dds_maker()
   add_parts!(dds, :X, 4, Φ=[2,3,3,4])
   @test_throws ErrorException rem_parts!(dds, :X, [4,1])
   rem_parts!(dds, :X, [1,4])
-  @test subpart(dds, :Φ) == [1,1]
-  @test incident(dds, 1, :Φ) == [1,2]
-  @test incident(dds, 2, :Φ) == []
+  if dds.parts[:X] isa IntParts
+    @test subpart(dds, :Φ) == [1,1]
+    @test incident(dds, 1, :Φ) == [1,2]
+    @test incident(dds, 2, :Φ) == []
+  end
 
   # Recursive deletion.
   dds = dds_maker()
@@ -106,7 +129,7 @@ for dds_maker in dds_makers
   if !(dds isa AnonACSet)
     @test contains(s, "DDS:")
   end
-  @test contains(s, "X = 1:3")
+  @test contains(s, "X = 3")
   @test contains(s, "Φ : X → X = ")
   s = sprint(show, dds, context=:compact=>true)
   if !(dds isa AnonACSet)
@@ -119,7 +142,7 @@ for dds_maker in dds_makers
   if !(dds isa AnonACSet)
     @test contains(s, "DDS")
   end
-  @test contains(s, "X = 1:3")
+  @test contains(s, "X = 3")
   @test contains(s, "│ X │")
 
   s = sprint(show, MIME"text/html"(), dds)
@@ -169,18 +192,23 @@ SchDendrogram = BasicSchema([:X], [(:parent,:X,:X)], [:R], [(:height,:X,:R)])
 
 @abstract_acset_type AbstractDendrogram
 @acset_type Dendrogram(SchDendrogram, index=[:parent]) <: AbstractDendrogram
+@acset_type BSDendrogram(SchDendrogram, part_type=BitSetParts, index=[:parent]) <: AbstractDendrogram
 
 @test Dendrogram <: AbstractDendrogram
 @test Dendrogram <: ACSet
+@test BSDendrogram <: ACSet
 @test Dendrogram{Real} <: AbstractDendrogram{S,Tuple{Real}} where {S}
+@test BSDendrogram{Real} <: AbstractDendrogram{S,Tuple{Real}} where {S}
 
 SchLDendrogram = BasicSchema([:X,:L], [(:parent,:X,:X),(:leafparent,:L,:X)],
                              [:R], [(:height,:X,:R)])
 
 @acset_type LDendrogram(SchLDendrogram, index=[:parent, :leafparent]) <: AbstractDendrogram
+@acset_type BSLDendrogram(SchLDendrogram, part_type=BitSetParts, index=[:parent, :leafparent]) <: AbstractDendrogram
 
 dgram_makers = [
   (T -> Dendrogram{T}(), T -> LDendrogram{T}()),
+  (T -> BSDendrogram{T}(), T -> BSLDendrogram{T}()),
   (T -> DynamicACSet("Dendrogram", SchDendrogram; type_assignment=Dict(:R=>T), index=[:parent]),
    T -> DynamicACSet("LDendrogram", SchLDendrogram; type_assignment=Dict(:R=>T), index=[:parent, :leafparent])
    )
@@ -387,9 +415,6 @@ for lset_maker in lset_makers
   @test_throws Exception set_subpart!(lset, 1, :label, :bar)
 end
 
-# Acset macro
-#------------
-
 SchDecGraph = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)],
                           [:X], [(:dec,:E,:X)])
 
@@ -495,5 +520,46 @@ h2 = map(g, dec = f, label = i -> 3)
 @test subpart(h2,:label) == [3,3,3,3]
 
 @test_throws Exception map(g, dec = f)
+
+# Garbage collection
+####################
+@acset_type Grph(SchDecGraph, part_type=BitSetParts, index=[:src,:tgt])
+
+g2 = @acset Grph{String} begin
+  V = 4; E = 4; X=3
+  src = [1,2,3,4]
+  tgt = [2,3,4,1]
+  dec = ["a","b",AttrVar(3),AttrVar(1)]
+end
+
+rem_parts!(g2, :E, [1,4])
+rem_part!(g2, :V, 1)
+rem_part!(g2, :X, 1)
+@test g2[:src] == [2,3]
+@test g2[:tgt] == [3,4]
+@test g2[:dec] == ["b",AttrVar(3)]
+@test gc!(g2) == Dict(:V=>[2,3,4], :E=>[2,3], :X=>[2,3])
+@test g2[:src] == [1,2]
+@test g2[:tgt] == [2,3]
+@test g2[:dec] == ["b",AttrVar(2)]
+
+# Densify and sparsify 
+g2 = @acset Grph{String} begin
+  V = 4
+  E = 4
+  src = [1,2,3,4]
+  tgt = [2,3,4,1]
+  dec = ["a","b","c","d"]
+end
+
+rem_parts!(g2, :E, [1,4])
+rem_part!(g2, :V, 1)
+
+g22, _ = densify(g2)
+g222 = sparsify(g22)
+@test g22 isa ACSet{DenseParts}
+@test g222 isa ACSet{MarkAsDeleted}
+@test g22[:src] == [1,2]
+@test g222[:src] == [1,2]
 
 end

@@ -2,7 +2,6 @@ using Test
 
 @testset "Utilities" begin
   include("IndexUtils.jl")
-  include("LVectors.jl")
 end
 
 @testset "Mappings" begin

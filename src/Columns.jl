@@ -43,6 +43,9 @@ Base.hash(c::Column, h::UInt) = hash(c.m, h)
 
 Base.copy(c::T) where {T <: Column} = T(copy(c.m), copy(c.pc))
 
+# Function call syntax as alternative to indexing
+(c::Column)(v) = c[v]
+
 Base.getindex(c::Column, x) = c.m[x]
 
 Base.get(c::Column, x, def) = get(c.m, x, def)
@@ -54,6 +57,8 @@ function Base.setindex!(c::Column, y, x)
   assign!(c.pc, y, x)
   c.m[x] = y
 end
+
+Base.collect(c::Column) = [c[k] for k in keys(c.m)]
 
 preimage(dom, c::Column, y) = preimage(dom, c.m, c.pc, y)
 
