@@ -1,6 +1,6 @@
 module ACSetInterface
 export ACSet, acset_schema, acset_name, dom_parts, subpart_type,
-  nparts, parts, has_part, has_subpart, subpart, incident,
+  nparts, maxpart, parts, has_part, has_subpart, subpart, incident,
   add_part!, add_parts!, set_subpart!, set_subparts!, clear_subpart!,
   rem_part!, rem_parts!, cascading_rem_part!, cascading_rem_parts!, gc!,
   copy_parts!, copy_parts_only!, disjoint_union, tables, pretty_tables,
@@ -59,6 +59,10 @@ function acset_name end
 """ Number of parts of given type in an acset.
 """
 function nparts end
+
+""" Maximum possible part value of given type in an acset.
+"""
+function maxpart end
 
 """ Parts of given type in an acset.
 """

@@ -48,6 +48,9 @@ function gc!(b::BitSetParts, n::Int)
 end
 ACSetInterface.nparts(p::IntParts) = p.val 
 ACSetInterface.nparts(p::BitSetParts) = length(p.val)
+ACSetInterface.maxpart(p::IntParts) = p.val 
+ACSetInterface.maxpart(p::BitSetParts) = p.next[]
+
 @inline ACSetInterface.parts(p::IntParts) = 1:p.val
 @inline ACSetInterface.parts(p::BitSetParts) = collect(p.val)
 
@@ -413,6 +416,7 @@ Base.hash(x::T, h::UInt) where T <: SimpleACSet =
 
 
 @inline ACSetInterface.nparts(acs::SimpleACSet, type::Symbol) = nparts(acs.parts[type])
+@inline ACSetInterface.maxpart(acs::SimpleACSet, type::Symbol) = maxpart(acs.parts[type])
 
 ACSetInterface.has_part(::StructACSet{S}, ob::Symbol) where {S} =
   _has_part(Val{S}, Val{ob})
@@ -770,7 +774,6 @@ function ACSetInterface.gc!(X::ACSet{ACSetInterface.MarkAsDeleted})
     μᵦ = μ[b][2]
     X[h] = map(μ[a][1]) do p
       p′ = X[p, h]
-      println("$h:$a->$b μᵦ $μᵦ p $p p′ $p′")
       p′ isa AttrVar ? AttrVar(μᵦ[p′.val]) : p′
     end
   end
