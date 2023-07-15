@@ -33,7 +33,10 @@ SchLabeledGraph = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)],
           Statement(:E, [Value(2), Value(3)])
       ]
   )
-  @test to_string(gspec) isa String
+  @test sprint(show, gspec) isa String
+  @test sprint(show, gspec) != ""
+  @test !isnothing(sprint(show, gspec))
+  @test sprint(show, gspec) == "LabeledGraph{Symbol} begin \n  V(label=a)\n  V(label=b)\n  V(label=c)\n  E(1,3)\n  E(2,3)\n end"
   @test generate_expr(gspec) isa Expr
 end
 

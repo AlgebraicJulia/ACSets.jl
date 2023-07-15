@@ -1,39 +1,42 @@
 module ADTs
 export Value, Kwarg, Args, Statement, ACSetSpec,
   construct, acsetspec, generate_expr,
-  to_string, to_dict, label2index
+  to_dict, label2index
 
 using MLStyle
 using ..ACSetInterface
+
+import Base: show
 # using Catlab
 # using Catlab.CategoricalAlgebra
 
-@data Args{T} begin
+abstract type AbstractACSetSpec end
+@data Args{T} <: AbstractACSetSpec begin
   Value(T)
   Kwarg(Symbol, Value{T})
 end
 
-@as_record struct Statement
+@as_record struct Statement <: AbstractACSetSpec
   table::Symbol
   element::Vector{Args}
 end
 
-@as_record struct ACSetSpec
+@as_record struct ACSetSpec <: AbstractACSetSpec
   acstype::Union{Symbol,Expr}
   body::Vector{Statement}
 end
 
-"""    to_string(s::ACSetSpec)
+"""    show(io::IO, s::AbstractACSetSpec)
 
 generates a human readable string of the `ACSetSpec` (or any sub-term).
 """
-function to_string(s)
-  let ! = to_string
+function show(io::IO, s::AbstractACSetSpec)
+  let ! = show
     @match s begin
-      Value(v) => string(v)
-      Kwarg(k, v) => "$k=$(!v)"
-      Statement(t, e) => "  $t($(join(to_string.(e), ",")))"
-      ACSetSpec(s, body) => "$s begin \n$(join([!b for b in body], "\n"))\n end"
+      Value(v) => print(io, v)
+      Kwarg(k, v) => begin print(io, "$k="); !(io,v) end
+      Statement(t, e) => print(io, "  $t($(join(sprint.(show, e), ",")))")
+      ACSetSpec(s, body) => print(io, "$s begin \n$(join([sprint(show, b) for b in body], "\n"))\n end")
     end
   end
 end
@@ -142,7 +145,7 @@ end
 
 """    acsetspec(head::Symbol, body::Expr)
 
-processes a Julia Expr specifying the ACSet construction into a the ADT representation. Approximate inverse to `to_string`
+processes a Julia Expr specifying the ACSet construction into a the ADT representation. Approximate inverse to `show`
 """
 function acsetspec(head, body)
   processed_body = @match body begin
