@@ -14,7 +14,7 @@ SchDDS = BasicSchema([:X], [(:Φ,:X,:X)])
 
 @abstract_acset_type AbstractDDS
 @acset_type DDS(SchDDS, index=[:Φ]) <: AbstractDDS
-@acset_type BSDDS(SchDDS, part_type=BitSetParts) <: AbstractDDS
+@acset_type BitSetDDS(SchDDS, part_type=BitSetParts) <: AbstractDDS
 @acset_type UnindexedDDS(SchDDS)
 @test DDS <: AbstractDDS
 @test DDS <: StructACSet
@@ -23,7 +23,7 @@ SchDDS = BasicSchema([:X], [(:Φ,:X,:X)])
 
 dds_makers = [
   DDS,
-  BSDDS,
+  BitSetDDS,
   UnindexedDDS,
   () -> DynamicACSet("DDS", SchDDS; index=[:Φ]),
   () -> DynamicACSet("DDS", SchDDS; index=[:Φ], part_type=BitSetParts),
@@ -73,7 +73,6 @@ for dds_maker in dds_makers
   view(dds,:Φ) isa ColumnView
 
   # Deletion.
-  dds = @acset BSDDS begin X=3; Φ=[2,3,3] end
   rem_part!(dds, :X, 2)
   @test nparts(dds, :X) == 2
   @test incident(dds, 1, :Φ) == []
@@ -96,8 +95,7 @@ for dds_maker in dds_makers
     @test nparts(dds, :X) == 0
   else 
     @test nparts(dds, :X) == 1
-  end 
-
+  end
 
   dds = dds_maker()
   add_parts!(dds, :X, 4, Φ=[2,3,3,4])
@@ -192,11 +190,11 @@ SchDendrogram = BasicSchema([:X], [(:parent,:X,:X)], [:R], [(:height,:X,:R)])
 @acset_type Dendrogram(SchDendrogram, index=[:parent]) <: AbstractDendrogram
 @acset_type BSDendrogram(SchDendrogram, part_type=BitSetParts, index=[:parent]) <: AbstractDendrogram
 
-@test Dendrogram <: AbstractDendrogram
-@test Dendrogram <: ACSet
-@test BSDendrogram <: ACSet
-@test Dendrogram{Real} <: AbstractDendrogram{S,Tuple{Real}} where {S}
-@test BSDendrogram{Real} <: AbstractDendrogram{S,Tuple{Real}} where {S}
+for DendrogramType in (Dendrogram, BSDendrogram)
+  @test DendrogramType <: ACSet
+  @test DendrogramType <: AbstractDendrogram
+  @test DendrogramType{Real} <: AbstractDendrogram{S,Tuple{Real}} where {S}
+end
 
 SchLDendrogram = BasicSchema([:X,:L], [(:parent,:X,:X),(:leafparent,:L,:X)],
                              [:R], [(:height,:X,:R)])
