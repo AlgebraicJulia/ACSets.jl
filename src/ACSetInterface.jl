@@ -4,7 +4,7 @@ export ACSet, acset_schema, acset_name, dom_parts, subpart_type,
   add_part!, add_parts!, set_subpart!, set_subparts!, clear_subpart!,
   rem_part!, rem_parts!, cascading_rem_part!, cascading_rem_parts!, gc!,
   copy_parts!, copy_parts_only!, disjoint_union, tables, pretty_tables,
-  @acset, constructor, IDAllocator, DenseParts, MarkAsDeleted
+  @acset, constructor, PartsType, DenseParts, MarkAsDeleted
 
 using MLStyle: @match
 using StaticArrays: StaticArray
@@ -13,30 +13,33 @@ using PrettyTables: pretty_table
 
 using ..Schemas: types
 
-# Core interface
-################
+# Parts types
+#############
 
-""" Method for allocating part IDs in an acset.
+""" Type of part IDs to use in an acset.
 
-These do not alter the mathematical model of an acset but they do affect the
-performance tradeoffs of the data structure, the assumptions that can be made
-about the part IDs, and whether garbage collection ([`gc!`](@ref)) is needed.
+The choice of parts type does not alter the mathematical model but it does
+affect the performance tradeoffs of the acset data structure, the assumptions
+that can be made about the part IDs, and whether garbage collection
+([`gc!`](@ref)) is relevant.
+
+The default choice is [`DenseParts`](@ref).
 """
-abstract type IDAllocator end
+abstract type PartsType end
 
-""" Maintain part IDs as contiguous integers from 1 to n.
+""" Part IDs are densely packed without gaps.
 
 Mutations are eager and garbage collection is a no-op. Deletion or
 identification of parts may invalidate external references to particular parts.
 """
-struct DenseParts <: IDAllocator end
+abstract type DenseParts <: PartsType end
 
 """ Mark parts as deleted when they are removed.
 
 Deletions are lazy and arrays are not resized until garbage collection. Parts
 can be deleted without invalidating external references to other parts.
 """
-struct MarkAsDeleted <: IDAllocator end
+abstract type MarkAsDeleted <: PartsType end
 
 """ Allow distinct part IDs to refer to the same logical part.
 
@@ -44,16 +47,24 @@ Implemented using union-find. Garbage collection is an operation that makes
 sense to perform. Parts can be identified with each other without invalidating
 external references to particular parts.
 """
-struct UnionFind <: IDAllocator end
+abstract type UnionFind <: PartsType end
 
 """ Combination of [`MarkAsDeleted`](@ref) and [`UnionFind`](@ref).
 """
-struct MarkAsDeletedUnionFind <: IDAllocator end
+abstract type MarkAsDeletedUnionFind <: PartsType end
+
+function default_parts_type(::Type{T}) where T <: PartsType
+  @assert !isabstracttype(T)
+  return T
+end
+
+# Core interface
+################
 
 """
 Abstract base type for acsets, static or dynamic.
 """
-abstract type ACSet{I<:IDAllocator}  end
+abstract type ACSet{PT<:PartsType}  end
 
 """
 Get the schema of an acset at runtime.

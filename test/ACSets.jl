@@ -26,9 +26,9 @@ dds_makers = [
   BitSetDDS,
   UnindexedDDS,
   () -> DynamicACSet("DDS", SchDDS; index=[:Φ]),
-  () -> DynamicACSet("DDS", SchDDS; index=[:Φ], part_type=BitSetParts),
+  () -> DynamicACSet("DDS", SchDDS; index=[:Φ], part_type=MarkAsDeleted),
   () -> AnonACSet(SchDDS; index=[:Φ]),
-  () -> AnonACSet(SchDDS; index=[:Φ], part_type=BitSetParts)
+  () -> AnonACSet(SchDDS; index=[:Φ], part_type=MarkAsDeleted)
 ]
 
 for dds_maker in dds_makers
@@ -520,9 +520,9 @@ h2 = map(g, dec = f, label = i -> 3)
 # Garbage collection
 ####################
 
-@acset_type BSDecGraph(SchDecGraph, part_type=BitSetParts, index=[:src,:tgt])
+@acset_type MadDecGraph(SchDecGraph, part_type=MarkAsDeleted, index=[:src,:tgt])
 
-g = @acset BSDecGraph{String} begin
+g = @acset MadDecGraph{String} begin
   V = 4; E = 4; X=3
   src = [1,2,3,4]
   tgt = [2,3,4,1]
@@ -541,7 +541,7 @@ rem_part!(g, :X, 1)
 @test g[:dec] == ["b",AttrVar(2)]
 
 # Densify and sparsify 
-g = @acset BSDecGraph{String} begin
+g = @acset MadDecGraph{String} begin
   V = 4
   E = 4
   src = [1,2,3,4]
@@ -554,8 +554,8 @@ rem_part!(g, :V, 1)
 
 g′, _ = densify(g)
 g′′ = sparsify(g′)
-@test g′ isa ACSet{DenseParts}
-@test g′′ isa ACSet{MarkAsDeleted}
+@test g′ isa ACSet{<:DenseParts}
+@test g′′ isa ACSet{<:MarkAsDeleted}
 @test g′[:src] == [1,2]
 @test g′′[:src] == [1,2]
 
