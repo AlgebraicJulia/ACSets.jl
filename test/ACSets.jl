@@ -1,5 +1,4 @@
-module TestCSetDataStructures
-
+module TestACSetDataStructures
 using Test
 
 using StaticArrays: StaticVector
@@ -33,7 +32,6 @@ dds_makers = [
 ]
 
 for dds_maker in dds_makers
-  dds_maker = BSDDS
   dds = dds_maker()
   @test keys(tables(dds)) == (:X,)
   @test nparts(dds, :X) == 0
