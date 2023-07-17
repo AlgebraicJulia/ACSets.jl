@@ -363,7 +363,9 @@ Get a named tuple of Tables.jl-compatible tables from an acset
 function tables end
 
 """
-Garbage collection.
+Garbage collect in an acset.
+
+For some choices of [`IDAllocator`](@ref), this function is a no-op.
 """
 function gc! end 
 
