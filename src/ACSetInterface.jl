@@ -4,8 +4,7 @@ export ACSet, acset_schema, acset_name, dom_parts, subpart_type,
   add_part!, add_parts!, set_subpart!, set_subparts!, clear_subpart!,
   rem_part!, rem_parts!, cascading_rem_part!, cascading_rem_parts!, gc!,
   copy_parts!, copy_parts_only!, disjoint_union, tables, pretty_tables,
-  constructor, @acset, @acset_transformation, @acset_transformations,
-  IdAllocationStrat, DenseParts, MarkAsDeleted
+  @acset, constructor, IdAllocationStrat, DenseParts, MarkAsDeleted
 
 using MLStyle: @match
 using StaticArrays: StaticArray
