@@ -519,28 +519,29 @@ h2 = map(g, dec = f, label = i -> 3)
 
 # Garbage collection
 ####################
-@acset_type Grph(SchDecGraph, part_type=BitSetParts, index=[:src,:tgt])
 
-g2 = @acset Grph{String} begin
+@acset_type BSDecGraph(SchDecGraph, part_type=BitSetParts, index=[:src,:tgt])
+
+g = @acset BSDecGraph{String} begin
   V = 4; E = 4; X=3
   src = [1,2,3,4]
   tgt = [2,3,4,1]
   dec = ["a","b",AttrVar(3),AttrVar(1)]
 end
 
-rem_parts!(g2, :E, [1,4])
-rem_part!(g2, :V, 1)
-rem_part!(g2, :X, 1)
-@test g2[:src] == [2,3]
-@test g2[:tgt] == [3,4]
-@test g2[:dec] == ["b",AttrVar(3)]
-@test gc!(g2) == Dict(:V=>[2,3,4], :E=>[2,3], :X=>[2,3])
-@test g2[:src] == [1,2]
-@test g2[:tgt] == [2,3]
-@test g2[:dec] == ["b",AttrVar(2)]
+rem_parts!(g, :E, [1,4])
+rem_part!(g, :V, 1)
+rem_part!(g, :X, 1)
+@test g[:src] == [2,3]
+@test g[:tgt] == [3,4]
+@test g[:dec] == ["b",AttrVar(3)]
+@test gc!(g) == Dict(:V=>[2,3,4], :E=>[2,3], :X=>[2,3])
+@test g[:src] == [1,2]
+@test g[:tgt] == [2,3]
+@test g[:dec] == ["b",AttrVar(2)]
 
 # Densify and sparsify 
-g2 = @acset Grph{String} begin
+g = @acset BSDecGraph{String} begin
   V = 4
   E = 4
   src = [1,2,3,4]
@@ -548,14 +549,14 @@ g2 = @acset Grph{String} begin
   dec = ["a","b","c","d"]
 end
 
-rem_parts!(g2, :E, [1,4])
-rem_part!(g2, :V, 1)
+rem_parts!(g, :E, [1,4])
+rem_part!(g, :V, 1)
 
-g22, _ = densify(g2)
-g222 = sparsify(g22)
-@test g22 isa ACSet{DenseParts}
-@test g222 isa ACSet{MarkAsDeleted}
-@test g22[:src] == [1,2]
-@test g222[:src] == [1,2]
+g′, _ = densify(g)
+g′′ = sparsify(g′)
+@test g′ isa ACSet{DenseParts}
+@test g′′ isa ACSet{MarkAsDeleted}
+@test g′[:src] == [1,2]
+@test g′′[:src] == [1,2]
 
 end
