@@ -4,7 +4,7 @@ export ACSet, acset_schema, acset_name, dom_parts, subpart_type,
   add_part!, add_parts!, set_subpart!, set_subparts!, clear_subpart!,
   rem_part!, rem_parts!, cascading_rem_part!, cascading_rem_parts!, gc!,
   copy_parts!, copy_parts_only!, disjoint_union, tables, pretty_tables,
-  @acset, constructor, IdAllocationStrat, DenseParts, MarkAsDeleted
+  @acset, constructor, IDAllocator, DenseParts, MarkAsDeleted
 
 using MLStyle: @match
 using StaticArrays: StaticArray
@@ -16,34 +16,44 @@ using ..Schemas: types
 # Core interface
 ################
 
+""" Method for allocating part IDs in an acset.
+
+These do not alter the mathematical model of an acset but they do affect the
+performance tradeoffs of the data structure, the assumptions that can be made
+about the part IDs, and whether garbage collection ([`gc!`](@ref)) is needed.
 """
-ACSets can structure their parts in various ways which have different semantics.
+abstract type IDAllocator end
+
+""" Maintain part IDs as contiguous integers from 1 to n.
+
+Mutations are eager and garbage collection is a no-op. Deletion or
+identification of parts may invalidate external references to particular parts.
 """
-abstract type IdAllocationStrat end 
+struct DenseParts <: IDAllocator end
+
+""" Mark parts as deleted when they are removed.
+
+Deletions are lazy and arrays are not resized until garbage collection. Parts
+can be deleted without invalidating external references to other parts.
+"""
+struct MarkAsDeleted <: IDAllocator end
+
+""" Allow distinct part IDs to refer to the same logical part.
+
+Implemented using union-find. Garbage collection is an operation that makes
+sense to perform. Parts can be identified with each other without invalidating
+external references to particular parts.
+"""
+struct UnionFind <: IDAllocator end
+
+""" Combination of [`MarkAsDeleted`](@ref) and [`UnionFind`](@ref).
+"""
+struct MarkAsDeletedUnionFind <: IDAllocator end
 
 """
-Garbage collection is an operation that makes sense to perform.
-Parts can be deleted without invalidating external references to particular parts.
+Abstract base type for acsets, static or dynamic.
 """
-struct MarkAsDeleted <: IdAllocationStrat end
-"""
-Garbage collection is an operation that makes sense to perform.
-Parts can be identified with each other without invalidating external 
-references to particular parts.
-"""
-struct UnionFind <: IdAllocationStrat end
-
-"""The combination of MarkAsDeleted and UnionFind functionality"""
-struct MarkAsDeletedUnionFind <: IdAllocationStrat end
-
-"""
-Garbage collection does not alter this kind of ACSet.
-Deletion or identification of parts may invalidate any references to particular 
-parts.
-"""
-struct DenseParts <: IdAllocationStrat end 
-
-abstract type ACSet{I<:IdAllocationStrat}  end
+abstract type ACSet{I<:IDAllocator}  end
 
 """
 Get the schema of an acset at runtime.
