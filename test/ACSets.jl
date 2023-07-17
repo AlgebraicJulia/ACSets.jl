@@ -129,20 +129,20 @@ for dds_maker in dds_makers
   if !(dds isa AnonACSet)
     @test contains(s, "DDS:")
   end
-  @test contains(s, "X = 3")
+  @test contains(s, "X = ")
   @test contains(s, "Φ : X → X = ")
   s = sprint(show, dds, context=:compact=>true)
   if !(dds isa AnonACSet)
     @test contains(s, "DDS")
   end
   @test !contains(s, "\n")
-  @test contains(s, "X = 3")
+  @test contains(s, "X:3")
 
   s = sprint(show, MIME"text/plain"(), dds)
   if !(dds isa AnonACSet)
     @test contains(s, "DDS")
   end
-  @test contains(s, "X = 3")
+  @test contains(s, "X:3")
   @test contains(s, "│ X │")
 
   s = sprint(show, MIME"text/html"(), dds)

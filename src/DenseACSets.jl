@@ -839,13 +839,13 @@ function Base.show(io::IO, acs::SimpleACSet)
   if get(io, :compact, false)
     print(io, acset_name(acs))
     print(io, " {")
-    join(io, ("$ob = $(nparts(acs,ob))" for ob in types(s)), ", ")
+    join(io, ("$(ob):$(nparts(acs,ob))" for ob in types(s)), ", ")
     print(io, "}")
   else
     print(io, acset_name(acs))
     println(io, ":")
     join(io, Iterators.flatten((
-      ("  $ob = $(nparts(acs,ob))" for ob in types(s)),
+      ("  $ob = $(parts(acs,ob))" for ob in types(s)),
       ("  $f : $d → $c = $(subpart(acs,f))"
        for (f,d,c) in homs(s)),
       ("  $a : $d → $c = $(subpart(acs,a))"
