@@ -58,8 +58,6 @@ function Base.setindex!(c::Column, y, x)
   c.m[x] = y
 end
 
-Base.collect(c::Column) = [c[k] for k in keys(c.m)]
-
 preimage(dom, c::Column, y) = preimage(dom, c.m, c.pc, y)
 
 preimage_multi(dom, c::Column, ys) = preimage_multi(dom, c.m, c.pc, ys)
