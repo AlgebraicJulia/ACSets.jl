@@ -538,7 +538,7 @@ end
 ACSetInterface.rem_part!(acs::DynamicACSet, type::Symbol, part::Int) =
   runtime(_rem_part!, acs, acs.schema, type, part, acs.parts[type])
 
-@ct_enable function _rem_part!(acs::SimpleACSet, @ct(S), @ct(ob), part, ::IntParts)
+@ct_enable function _rem_part!(acs::SimpleACSet, @ct(S), @ct(ob), part, ::DenseParts)
   @ct s = Schema(S)
   @ct in_homs = homs(s; to=ob, just_names=true)
   @ct out_homs = homs(s; from=ob, just_names=true)
@@ -564,7 +564,7 @@ ACSetInterface.rem_part!(acs::DynamicACSet, type::Symbol, part::Int) =
   acs.parts[@ct ob].val -= 1
 end
 
-@ct_enable function _rem_part!(acs::SimpleACSet, @ct(S), @ct(ob), part, ::BitSetParts)
+@ct_enable function _rem_part!(acs::SimpleACSet, @ct(S), @ct(ob), part, ::MarkAsDeleted)
   @ct s = Schema(S)
   @ct out_homs = homs(s; from=ob, just_names=true)
   @ct out_attrs = attrs(s; from=ob, just_names=true)
