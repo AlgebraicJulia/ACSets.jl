@@ -21,7 +21,6 @@ Base.convert(::Type{T}, x::T) where {T>:Union{Nothing,AttrVar}} = x
 Base.convert(::Type{T}, x::T) where {T>:AttrVar} = x
 Base.convert(::Type{T}, x) where {T>:AttrVar} = convert(Base.typesplit(T, AttrVar), x)
 
-(c::Column)(v::AttrVar) = c[v.val]
 
 # Column types for acsets
 #########################

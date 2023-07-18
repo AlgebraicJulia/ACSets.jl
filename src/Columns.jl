@@ -43,9 +43,6 @@ Base.hash(c::Column, h::UInt) = hash(c.m, h)
 
 Base.copy(c::T) where {T <: Column} = T(copy(c.m), copy(c.pc))
 
-# Function call syntax as alternative to indexing
-(c::Column)(v) = c[v]
-
 Base.getindex(c::Column, x) = c.m[x]
 
 Base.get(c::Column, x, def) = get(c.m, x, def)
