@@ -23,23 +23,27 @@ affect the performance tradeoffs of the acset data structure, the assumptions
 that can be made about the part IDs, and whether garbage collection
 ([`gc!`](@ref)) is relevant.
 
-The default choice is [`DenseParts`](@ref).
+Type parameter `S` is the collection type (`Int`, `BitSet`, etc) and type
+parameter `T` is the element type (`Int`, `Symbol`, etc), mirroring the two type
+parameters of `FinSet` in Catlab.
+
+The default choice of parts type is [`DenseParts`](@ref).
 """
-abstract type PartsType end
+abstract type PartsType{S,T} end
 
 """ Part IDs are densely packed without gaps.
 
 Mutations are eager and garbage collection is a no-op. Deletion or
 identification of parts may invalidate external references to particular parts.
 """
-abstract type DenseParts <: PartsType end
+abstract type DenseParts{S,T} <: PartsType{S,T} end
 
 """ Mark parts as deleted when they are removed.
 
 Deletions are lazy and arrays are not resized until garbage collection. Parts
 can be deleted without invalidating external references to other parts.
 """
-abstract type MarkAsDeleted <: PartsType end
+abstract type MarkAsDeleted{S,T} <: PartsType{S,T} end
 
 """ Allow distinct part IDs to refer to the same logical part.
 
@@ -47,15 +51,15 @@ Implemented using union-find. Garbage collection is an operation that makes
 sense to perform. Parts can be identified with each other without invalidating
 external references to particular parts.
 """
-abstract type UnionFind <: PartsType end
+abstract type UnionFind{S,T} <: PartsType{S,T} end
 
 """ Combination of [`MarkAsDeleted`](@ref) and [`UnionFind`](@ref).
 """
-abstract type MarkAsDeletedUnionFind <: PartsType end
+abstract type MarkAsDeletedUnionFind{S,T} <: PartsType{S,T} end
 
-function default_parts_type(::Type{T}) where T <: PartsType
-  @assert !isabstracttype(T)
-  return T
+function default_parts_type(::Type{PT}) where PT <: PartsType
+  @assert !isabstracttype(PT)
+  return PT
 end
 
 # Core interface
