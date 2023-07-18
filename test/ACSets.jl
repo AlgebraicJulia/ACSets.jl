@@ -375,6 +375,12 @@ for lset_maker in lset_makers
   rem_part!(lset, :X, 1)
   @test nparts(lset, :X) == 0
 
+  # Shallow copying is shallow.
+  lset = lset_maker(Vector{Symbol})
+  label = [:foo]
+  add_part!(lset, :X, label=label)
+  @test subpart(copy(lset), 1, :label) === label
+
   # Pretty-printing with unitialized data attribute.
   lset = lset_maker(Symbol)
   add_part!(lset, :X)

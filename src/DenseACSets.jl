@@ -379,7 +379,7 @@ Base.copy(acs::DynamicACSet{PT}) where PT =
     acs.schema,
     acs.type_assignment,
     deepcopy(acs.parts),
-    deepcopy(acs.subparts)
+    typeof(acs.subparts)(k => copy(v) for (k,v) in pairs(acs.subparts))
   )
 
 indices(acs::ACSet) = 
@@ -387,7 +387,8 @@ indices(acs::ACSet) =
 unique_indices(acs::ACSet) = 
   Symbol[k for (k,v) in pairs(acs.subparts) if v.pc isa InjectiveCache]
 
-Base.copy(acs::T) where {T <: StructACSet} = T(deepcopy(acs.parts), map(copy, acs.subparts))
+Base.copy(acs::T) where {T <: StructACSet} =
+  T(deepcopy(acs.parts), map(copy, acs.subparts))
 
 Base.:(==)(acs1::T, acs2::T) where {T <: SimpleACSet} =
   acs1.parts == acs2.parts && acs1.subparts == acs2.subparts
