@@ -3,7 +3,6 @@ module ACSets
 using Reexport 
 
 include("IndexUtils.jl")
-include("LVectors.jl")
 include("Defaults.jl")
 include("Mappings.jl")
 include("PreimageCaches.jl")
