@@ -753,21 +753,21 @@ function ACSetInterface.gc!(X::ACSet{<:MarkAsDeleted})
     return o => (m, m⁻¹)
   end)
   # Update homs and attrs
-  for (h, a, b) in homs(S)
+  for (h, a, b) in arrows(S)
     μᵦ = μ[b][2]
-    X[h] = [μᵦ[X[a,h]] for a in μ[a][1]]
+    if h ∈ homs(S; just_names=true)
+      X[h] = [μᵦ[X[a,h]] for a in μ[a][1]]
+    else 
+      X[h] = map(μ[a][1]) do p
+        p′ = X[p, h]
+        p′ isa AttrVar ? AttrVar(μᵦ[p′.val]) : p′
+      end
+    end
     for i in (nparts(X,a)+1) : X.parts[a].next.x
       clear_subpart!(X, i, h)
     end
   end
-  # TODO CLEAR HOM OF JUNK DATA
-  for (h, a, b) in attrs(S)
-    μᵦ = μ[b][2]
-    X[h] = map(μ[a][1]) do p
-      p′ = X[p, h]
-      p′ isa AttrVar ? AttrVar(μᵦ[p′.val]) : p′
-    end
-  end
+
   for o in types(S)
     gc!(X.parts[o], nparts(X,o))
   end
