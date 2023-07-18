@@ -19,14 +19,14 @@ using ..ACSetInterface, ..Schemas
 
 """ Part IDs are contiguous integers from 1 to n.
 """
-@struct_hash_equal mutable struct IntParts <: DenseParts
+@struct_hash_equal mutable struct IntParts <: DenseParts{Int,Int}
   val::Int 
   IntParts(n::Int=0) = new(n)
 end
 
 """ Parts IDs are a subset of contiguous integers from 1 to n.
 """
-struct BitSetParts <: MarkAsDeleted
+struct BitSetParts <: MarkAsDeleted{BitSet,Int}
   val::BitSet
   next::Ref{Int}
   BitSetParts(n::Int=0) = new(BitSet(1:n),n)
