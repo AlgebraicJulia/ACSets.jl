@@ -19,6 +19,7 @@ include("ADTs.jl")
 @reexport using .ACSetInterface
 @reexport using .DenseACSets
 @reexport using .JSONACSets
-@reexport using .ADTs
+
+using .ADTs
 
 end
