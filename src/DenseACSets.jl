@@ -38,6 +38,16 @@ Base.hash(x::BitSetParts, h::UInt64) = hash(x.val, hash(x.next.x, h))
 ACSetInterface.default_parts_type(::Type{DenseParts}) = IntParts
 ACSetInterface.default_parts_type(::Type{MarkAsDeleted}) = BitSetParts
 
+
+Base.length(s::IntParts) = s.val
+Base.length(s::BitSetParts) = length(s.val)
+Base.iterate(s::IntParts) = iterate(1:s.val)  
+Base.iterate(s::IntParts,i) = iterate(1:s.val,i)  
+Base.iterate(s::BitSetParts,) = iterate(s.val)  
+Base.iterate(s::BitSetParts,i) = iterate(s.val,i)
+Base.eltype(::IntParts) = Int
+Base.eltype(::BitSetParts) = Int
+
 function gc!(b::BitSetParts, n::Int) 
   for i in b.val 
     if i > n delete!(b.val, i) end
@@ -541,6 +551,7 @@ ACSetInterface.rem_part!(acs::DynamicACSet, type::Symbol, part::Int) =
 @ct_enable function _rem_part!(acs::SimpleACSet, @ct(S), @ct(ob), part, ::DenseParts)
   @ct s = Schema(S)
   @ct in_homs = homs(s; to=ob, just_names=true)
+  @ct in_attrs = attrs(s; to=ob, just_names=true)
   @ct out_homs = homs(s; from=ob, just_names=true)
   @ct out_attrs = attrs(s; from=ob, just_names=true)
 
@@ -552,6 +563,14 @@ ACSetInterface.rem_part!(acs::DynamicACSet, type::Symbol, part::Int) =
 
     incoming_to_last_part = copy(incident(acs, last_part, @ct hom))
     set_subpart!(acs, incoming_to_last_part, (@ct hom), part)
+  end
+
+  @ct_ctrl for hom in in_attrs
+    incoming_to_part = copy(incident(acs, AttrVar(part), @ct hom))
+    clear_subpart!(acs, incoming_to_part, @ct hom)
+
+    incoming_to_last_part = copy(incident(acs, AttrVar(last_part), @ct hom))
+    set_subpart!(acs, incoming_to_last_part, (@ct hom), [AttrVar(part)])
   end
 
   @ct_ctrl for f in [out_homs; out_attrs]
@@ -730,7 +749,7 @@ end
 
 function replace_colons(acs::ACSet, parts::NamedTuple{types}) where {types}
   NamedTuple{types}(map(types, parts) do type, part
-    part == (:) ? (1:nparts(acs, type)) : part
+    part == (:) ? collect(acs.parts[type]) : part
   end)
 end
 

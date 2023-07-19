@@ -217,6 +217,10 @@ for (dgram_maker, ldgram_maker) in dgram_makers
   set_subpart!(d, 1:3, :parent, 4)
   set_subpart!(d, [4,5], :parent, 5)
 
+  rem_free_vars!(d) # now the added X is AttrVar(1), if IntParts
+  @test nparts(d, :R) == 1
+  A = AttrVar(only(parts(d, :R)))
+  
   @test nparts(d, :X) == 5
   @test subpart(d, 1:3, :parent) == [4,4,4]
   @test subpart(d, 4, :parent) == 5
@@ -226,7 +230,7 @@ for (dgram_maker, ldgram_maker) in dgram_makers
   @test has_subpart(d, :height)
   @test subpart(d, [1,2,3], :height) == [0,0,0]
   @test subpart(d, 4, :height) == 10
-  @test subpart(d, :, :height) == [0,0,0,10,AttrVar(3)]
+  @test subpart(d, :, :height) == [0,0,0,10,A]
 
   # Chained accessors.
   @test subpart(d, 3, [:parent, :parent]) == 5
@@ -237,7 +241,7 @@ for (dgram_maker, ldgram_maker) in dgram_makers
   # Indexing syntax.
   @test d[3, :parent] == 4
   @test d[3, [:parent, :height]] == 10
-  @test d[3:5, [:parent, :height]] == [10,AttrVar(3),AttrVar(3)]
+  @test d[3:5, [:parent, :height]] == [10,A,A]
   @test d[:, :parent] == [4,4,4,5,5]
   d2 = copy(d)
   d2[1, :parent] = 1
@@ -248,7 +252,7 @@ for (dgram_maker, ldgram_maker) in dgram_makers
 
   # Copying parts.
   d2 = dgram_maker(Int)
-  copy_parts!(d2, d, X=[4,5], R=[3])
+  copy_parts!(d2, d, X=[4,5], R=[A.val])
   @test nparts(d2, :X) == 2
   @test subpart(d2, [1,2], :parent) == [2,2]
   @test subpart(d2, [1,2], :height) == [10, AttrVar(1)]
@@ -256,7 +260,7 @@ for (dgram_maker, ldgram_maker) in dgram_makers
   du = disjoint_union(d, d2)
   @test nparts(du, :X) == 7
   @test subpart(du, :parent) == [4,4,4,5,5,7,7]
-  @test subpart(du, :height) == [0,0,0,10,AttrVar(3),10,AttrVar(4)]
+  @test subpart(du, :height) == [0,0,0,10,A,10,AttrVar(A.val+1)]
 
   # Pretty printing of data attributes.
   s = sprint(show, d)
@@ -296,7 +300,10 @@ for (dgram_maker, ldgram_maker) in dgram_makers
   @test subpart(ld, :leafparent) == [2,3,4]
   d′ = dgram_maker(Int)
   copy_parts!(d′, ld)
-  @test d′ == d
+
+  @test d′[:parent] == d[:parent]
+  @test d[:height] == [0,0,0,10,A]
+  @test d′[:height] == [0,0,0,10,AttrVar(1)]
 end
 
 # Subsets
