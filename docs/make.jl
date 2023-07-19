@@ -43,8 +43,10 @@ makedocs(
     "ACSets.jl"=>"index.md",
     "Examples"=>Any[
       "generated/json_serialization.md",
+      "generated/ADTs.md",
     ],
     "Library Reference"=>"api.md",
+    "Specification Language"=>"ADTs.md",
   ]
 )
 
