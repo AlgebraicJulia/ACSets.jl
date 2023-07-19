@@ -2,7 +2,7 @@ name = "ACSets"
 uuid = "227ef7b5-1206-438b-ac65-934d6da304b8"
 license = "MIT"
 authors = ["Owen Lynch <owen@topos.institute>", "Kris Brown <kris@topos.institute>", "Evan Patterson <evan@epatters.org>", "AlgebraicJulia Team"]
-version = "0.2.3"
+version = "0.2.4"
 
 [deps]
 CompTime = "0fb5dd42-039a-4ca4-a1d7-89a96eae6d39"
