@@ -1,4 +1,4 @@
-# # Algebraic Data Type Representation
+# # Specifying acsets using Algebraic Data Types
 
 # ACSets are an extremely flexible data representation that can store anything you
 # can put in a database. But in order to construct them, you might want
@@ -8,8 +8,7 @@
 # these linguisting interfaces easier, ACSets.jl supports an Algebraic Data Types approach
 # to specification of ACSets.
 
-using ACSets
-using ACSets.ADTs
+using ACSets, ACSets.ADTs
 using MLStyle
 using Test
 import ACSets.ADTs: symb2string

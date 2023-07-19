@@ -1,5 +1,6 @@
-using ACSets
-using ACSets.ADTs
+module TestACSetADTs
+
+using ACSets, ACSets.ADTs
 using MLStyle
 using Test
 
@@ -122,4 +123,6 @@ end
       Statement(:E, [Kwarg(:src, Value(:b)), Kwarg(:tgt, Value(:c))])
     ])
   @test_throws ErrorException label2index(gspec_bad_labels)
+end
+
 end
