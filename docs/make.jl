@@ -46,6 +46,7 @@ makedocs(
       "generated/ADTs.md",
     ],
     "Library Reference"=>"api.md",
+    "Specification Language"=>"ADTs.md",
   ]
 )
 
