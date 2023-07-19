@@ -217,9 +217,10 @@ for (dgram_maker, ldgram_maker) in dgram_makers
   set_subpart!(d, 1:3, :parent, 4)
   set_subpart!(d, [4,5], :parent, 5)
 
-  remove_freevars!(d) # now the added X is AttrVar(1), if IntParts
-  A = AttrVar(d.parts[:X] isa IntParts ? 1 : 3)
-
+  rem_free_vars!(d) # now the added X is AttrVar(1), if IntParts
+  @test nparts(d, :R) == 1
+  A = AttrVar(only(parts(d, :R)))
+  
   @test nparts(d, :X) == 5
   @test subpart(d, 1:3, :parent) == [4,4,4]
   @test subpart(d, 4, :parent) == 5

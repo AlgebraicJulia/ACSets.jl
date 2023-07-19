@@ -4,7 +4,7 @@ export ACSet, acset_schema, acset_name, dom_parts, subpart_type,
   add_part!, add_parts!, set_subpart!, set_subparts!, clear_subpart!,
   rem_part!, rem_parts!, cascading_rem_part!, cascading_rem_parts!, gc!,
   copy_parts!, copy_parts_only!, disjoint_union, tables, pretty_tables,
-  @acset, constructor, PartsType, DenseParts, MarkAsDeleted, remove_freevars!
+  @acset, constructor, PartsType, DenseParts, MarkAsDeleted, rem_free_vars!
 
 using MLStyle: @match
 using StaticArrays: StaticArray
@@ -486,13 +486,13 @@ function make_acset end
 """
 Remove all AttrType parts that are not in the image of any of the attributes.
 """
-function remove_freevars!(acs::ACSet)
+function rem_free_vars!(acs::ACSet)
   for k in attrtypes(acset_schema(acs)) 
-    remove_freevars!(acs, k)
+    rem_free_vars!(acs, k)
   end
 end
 
-remove_freevars!(X::ACSet, a::Symbol) = rem_parts!(X, a, filter(parts(X,a)) do p 
+rem_free_vars!(X::ACSet, a::Symbol) = rem_parts!(X, a, filter(parts(X,a)) do p 
   all(f->isempty(incident(X, AttrVar(p), f)), 
       attrs(acset_schema(X); to=a, just_names=true))
 end)
