@@ -4,12 +4,13 @@ These are ACSets where the set associated to each object is of the form `1:n`
 module DenseACSets
 export @acset_type, @abstract_acset_type, StructACSet, StructCSet,
   DynamicACSet, SimpleACSet, AnonACSet, ACSetTableType, AnonACSetType,
-  IntParts, BitSetParts, sparsify, densify
+  IntParts, BitSetParts, sparsify, densify, idx
 
 using StructEquality
 using MLStyle: @match
 using CompTime
 import Tables
+import Base: parent
 
 using ..Columns, ..ColumnImplementations
 using ..ACSetInterface, ..Schemas
@@ -883,6 +884,11 @@ ACSetInterface.tables(acs::StructACSet{<:TypeLevelBasicSchema{Name, obs}}) where
 ACSetInterface.tables(acs::DynamicACSet) =
   NamedTuple([ob => ACSetTable(acs, ob) for ob in objects(acs.schema)])
 
+""" Get parent acset.
+
+Given a `ACSetTable` or `ACSetRow` object from the Tables.jl interface,
+return the parent acset the object was derived from.
+"""
 parent(sat::ACSetTable) = getfield(sat, :parent)
 
 struct ACSetRow{T<:ACSet, ob} <: Tables.AbstractRow
@@ -891,6 +897,13 @@ struct ACSetRow{T<:ACSet, ob} <: Tables.AbstractRow
 end
 
 parent(row::ACSetRow) = getfield(row, :parent)
+
+""" Get index of row in parent acset.
+
+Given an `ACSetRow` object from the Tables.jl interface,
+return the ID of the correspond part in the parent acset the row was
+derived from.
+"""
 idx(row::ACSetRow) = getfield(row, :idx)
 
 # - Tables.jl interface
