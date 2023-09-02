@@ -289,6 +289,9 @@ for (dgram_maker, ldgram_maker) in dgram_makers
   @test Tables.getcolumn(rows[1], :parent) == 4
   @test Tables.getcolumn(rows[1], :height) == 0
   @test Tables.getcolumn(rows[1], 1) == 4
+  @test parent(td.X) == d
+  @test parent(Tables.rows(td.X)[1]) == d
+  @test idx(rows[1]) == 1
 
   # Copying between C-sets and C′-sets with C != C′.
   ld = ldgram_maker(Int)
