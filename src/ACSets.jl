@@ -20,5 +20,6 @@ include("ADTs.jl")
 @reexport using .DenseACSets
 @reexport using .ACSetSerialization
 using .ADTs
+@reexport using .NautyInterface
 
 end
