@@ -11,16 +11,14 @@ include("ColumnImplementations.jl")
 include("Schemas.jl")
 include("ACSetInterface.jl")
 include("DenseACSets.jl")
+include("serialization/Serialization.jl")
 include("ADTs.jl")
 
 @reexport using .ColumnImplementations: AttrVar
 @reexport using .Schemas
 @reexport using .ACSetInterface
 @reexport using .DenseACSets
+@reexport using .ACSetSerialization
 using .ADTs
-
-include("serialization/JSONACSets.jl")
-
-@reexport using .JSONACSets
 
 end
