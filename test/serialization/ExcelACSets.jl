@@ -17,11 +17,11 @@ SchMutagenesis = BasicSchema(
 
   [:Indicator, :Categorical, :Name, :Numerical],
   [(:molecule_id, :Molecule, :Name),
-   #(:ind1, :Molecule, :Indicator),
-   #(:inda, :Molecule, :Indicator),
+   (:ind1, :Molecule, :Indicator),
+   (:inda, :Molecule, :Indicator),
    (:logp, :Molecule, :Numerical),
    (:lumo, :Molecule, :Numerical),
-   #(:mutagenic, :Molecule, :Indicator),
+   (:mutagenic, :Molecule, :Indicator),
 
    (:atom_id, :Atom, :Name),
    (:atom_type, :Atom, :Categorical),
@@ -37,21 +37,27 @@ SchMutagenesis = BasicSchema(
 # Read XLSX
 ###########
 
-T = MutagenesisData{Bool,Int,String,Float64}
+function yesno_to_bool(s::AbstractString)
+  s == "yes" && return true
+  s == "no" ? false : error("Value must be \"yes\" or \"no\"")
+end
+
 tables = (
-  Molecule = (primary_key = :molecule_id,),
+  Molecule = (primary_key = :molecule_id,
+              convert = (mutagenic = yesno_to_bool,)),
   Atom = (primary_key = :atom_id,
           columns = (atom_type=:type, molecule=:molecule_id)),
   Bond = (columns = (bond_type=:type, atom1=:atom1_id, atom2=:atom2_id),)
 )
+
+T = MutagenesisData{Bool,Int,String,Float64}
 result = read_xlsx_acset(mutagenesis_path, T, tables=tables)
 @test nparts(result, :Molecule) == 188
 @test nparts(result, :Atom) == 4893
 @test nparts(result, :Bond) == 5243
 
+@test result[1:5, :mutagenic] == [true, true, false, true, true]
 @test result[1,:molecule] == 3
 @test (result[1,:atom1], result[1,:atom2]) == (1, 12)
-
-show(IOContext(stdout, :limit => true), "text/plain", result)
 
 end

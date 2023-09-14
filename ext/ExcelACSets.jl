@@ -12,8 +12,9 @@ const AbstractMap = Union{AbstractDict,NamedTuple}
 
 @kwdef struct ExcelTableSpec
   sheet::Union{AbstractString,Integer,Missing} = missing
-  columns::AbstractMap = (;)
   primary_key::Union{Symbol,Missing} = missing
+  columns::AbstractMap = (;)
+  convert::AbstractMap = (;)
 end
 
 @kwdef struct ExcelSpec
@@ -57,7 +58,9 @@ function read_acset!(xf::XLSX.XLSXFile, acs::ACSet; kw...)
     for attr in attrs(schema, from=ob, just_names=true)
       column_name = get(table_spec.columns, attr, attr)
       column = Tables.getcolumn(columns, column_name)
-      set_subpart!(acs, parts[ob], attr, column)
+      converter = get(table_spec.convert, attr, nothing)
+      data = isnothing(converter) ? column : map(converter, column)
+      set_subpart!(acs, parts[ob], attr, data)
     end
   end
 
@@ -81,6 +84,8 @@ function read_acset!(xf::XLSX.XLSXFile, acs::ACSet; kw...)
   acs
 end
 
+""" Read table from Excel file for each object in acset schema.
+"""
 function read_tables(xf::XLSX.XLSXFile, schema::Schema, spec::ExcelSpec)
   Iterators.map(objects(schema)) do ob
     table_spec = spec.tables[ob]
