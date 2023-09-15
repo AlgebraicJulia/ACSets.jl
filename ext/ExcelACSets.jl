@@ -13,7 +13,9 @@ const AbstractMap = Union{AbstractDict,NamedTuple}
 @kwdef struct ExcelTableSpec
   sheet::Union{AbstractString,Integer,Missing} = missing
   primary_key::Union{Symbol,Missing} = missing
-  columns::AbstractMap = (;)
+  row_range::Union{AbstractUnitRange,Integer,Missing} = missing
+  column_range::Union{AbstractString,Missing} = missing
+  column_labels::AbstractMap = (;)
   convert::AbstractMap = (;)
 end
 
@@ -56,7 +58,7 @@ function read_acset!(xf::XLSX.XLSXFile, acs::ACSet; kw...)
     table_spec = spec.tables[ob]
     columns = Tables.columns(tables[ob])
     for attr in attrs(schema, from=ob, just_names=true)
-      column_name = get(table_spec.columns, attr, attr)
+      column_name = get(table_spec.column_labels, attr, attr)
       column = Tables.getcolumn(columns, column_name)
       converter = get(table_spec.convert, attr, nothing)
       data = isnothing(converter) ? column : map(converter, column)
@@ -74,7 +76,7 @@ function read_acset!(xf::XLSX.XLSXFile, acs::ACSet; kw...)
         @warn "Skipping foreign key $hom since primary key not set for $tgt"
         continue
       end
-      column_name = get(table_spec.columns, hom, hom)
+      column_name = get(table_spec.column_labels, hom, hom)
       column = Tables.getcolumn(columns, column_name)
       set_subpart!(acs, parts[ob], hom,
                    map(only, incident(acs, column, pk)))
@@ -91,7 +93,15 @@ function read_tables(xf::XLSX.XLSXFile, schema::Schema, spec::ExcelSpec)
     table_spec = spec.tables[ob]
     sheet_name = coalesce(table_spec.sheet, string(ob))
     sheet = XLSX.getsheet(xf, sheet_name)
-    table = XLSX.gettable(sheet)
+
+    row_range, col_range = table_spec.row_range, table_spec.column_range
+    row_range isa AbstractRange && error("Specifying end row is not supported")
+    first_row = coalesce(row_range, nothing)
+
+    table = XLSX.gettable(
+      (ismissing(col_range) ? (sheet,) : (sheet, col_range))...;
+      first_row=first_row,
+    )
     ob => table
   end |> Dict
 end
