@@ -33,6 +33,12 @@ end
 ################
 
 """ Read acset from an Excel (.xlsx) file.
+
+# Arguments
+- `source`: filename or IO stream from which to read Excel file
+- `cons`: constructor for acset, e.g., the acset type for struct acsets
+- `tables=(;)`: dictionary or named tuple mapping object names in acset schema
+  to Excel table specifications
 """
 function ACSets.read_xlsx_acset(source::Union{AbstractString,IO}, cons; kw...)
   read_acset(XLSX.readxlsx(source), cons; kw...)
