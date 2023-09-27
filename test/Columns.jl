@@ -69,6 +69,5 @@ for coltype in coltypes
   @test collect(preimage(OneTo(3), col, missing)) == [3]
 end
 
-# check the truly deranged case where someone has Missing and Nothing in an AttrType
 
 end # module
