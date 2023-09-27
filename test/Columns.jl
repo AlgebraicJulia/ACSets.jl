@@ -42,4 +42,33 @@ for coltype in coltypes
   @test collect(preimage(OneTo(3), col, :A)) == [1]
 end
 
+# Int → Union type columns
+#---------------------
+
+coltypes = [
+  column_type(AttrChoice(Union{Symbol,Nothing}), NoIndex, sparsity)
+  for sparsity in [Dense, Sparse(Int)]
+]
+
+for coltype in coltypes
+  col = coltype(1=>:A,2=>:B,3=>nothing)
+  @test isempty(preimage(OneTo(3), col, :F))
+  @test collect(preimage(OneTo(3), col, :A)) == [1]
+  @test collect(preimage(OneTo(3), col, nothing)) == [3]
+end
+
+coltypes = [
+  column_type(AttrChoice(Union{Symbol,Missing}), NoIndex, sparsity)
+  for sparsity in [Dense, Sparse(Int)]
+]
+
+for coltype in coltypes
+  col = coltype(1=>:A,2=>:B,3=>missing)
+  @test isempty(preimage(OneTo(3), col, :F))
+  @test collect(preimage(OneTo(3), col, :A)) == [1]
+  @test collect(preimage(OneTo(3), col, missing)) == [3]
+end
+
+# check the truly deranged case where someone has Missing and Nothing in an AttrType
+
 end # module
