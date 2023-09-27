@@ -112,7 +112,7 @@ function preimage(dom, m::Mapping{S,T}, ::TrivialCache{S,T}, y::Missing) where {
 end
 
 function preimage(dom, m::Mapping{S,T}, ::TrivialCache{S,T}, y) where {S,T>:Union{Missing}}
-  [x for x in dom if ismissing(get(m, x, nothing)) ? false : get(m, x, nothing) == y]
+  [x for x in dom if coalesce(get(m, x, nothing) == y, false)]
 end
 
 function preimage_multi(dom, m::Mapping{S,T}, pc::TrivialCache{S,T}, ys) where {S,T}
