@@ -12,6 +12,7 @@ using Tables
 using PrettyTables: pretty_table
 
 using ..ColumnImplementations: AttrVar
+using ..PreimageCaches: is_injective
 
 using ..Schemas: types, attrs, attrtypes
 
@@ -250,6 +251,9 @@ function set_subpart! end
 # Inlined for the same reason as `subpart`.
 
 @inline function set_subpart!(acs::ACSet , parts::Union{AbstractVector{Int}, AbstractSet{Int}}, name, vals)
+  if is_injective(acs.subparts[name])
+    clear_subpart!(acs, parts, name)
+  end
   broadcast(parts, vals) do part, val
     set_subpart!(acs, part, name, val)
   end

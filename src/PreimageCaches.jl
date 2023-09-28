@@ -35,6 +35,7 @@ performance implications.
 - [`preimage`](@ref)
 - [`assign!`](@ref)
 - [`unassign!`](@ref)
+- [`is_injective`](@ref) (defaults to false if not implemented)
 """
 abstract type PreimageCache{S,T} end
 
@@ -93,6 +94,14 @@ Arguments:
 Remove `x` from the preimage of `y`.
 """
 function unassign! end
+
+"""
+Whether or not the cache imposes an injectivity constraint. (default: false)
+"""
+is_injective(::PreimageCache)::Bool = false
+
+# Caches
+########
 
 """
 The trivial preimage mapping. It just computes preimages on the fly, and the
@@ -202,5 +211,7 @@ end
 function unassign!(pc::InjectiveCache{S,T}, y::T, x::S) where {S,T}
   delete!(pc.inverse, y)
 end
+
+is_injective(::InjectiveCache)::Bool = true
 
 end
