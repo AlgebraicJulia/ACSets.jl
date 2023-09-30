@@ -6,6 +6,7 @@ version = "0.2.5"
 
 [deps]
 CompTime = "0fb5dd42-039a-4ca4-a1d7-89a96eae6d39"
+Debugger = "31a5f54b-26ea-5ae9-a837-f05ce5417438"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 MLStyle = "d8e11817-5142-5d16-987a-aa16d5891078"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"

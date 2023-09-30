@@ -527,6 +527,15 @@ end
 @inline ACSetInterface.set_subpart!(acs::StructACSet{S,Ts}, part::Int, f::Symbol, subpart) where {S,Ts} =
   _set_subpart!(acs, Val{S}, Val{Ts}, part, Val{f}, subpart)
 
+# using ..PreimageCaches: is_injective
+
+# @inline function ACSetInterface.set_subpart!(acs::StructACSet{S,Ts}, part::Int, f::Symbol, subpart) where {S,Ts}
+#   if is_injective(acs.subparts[f])
+#     clear_subpart!(acs, part, f)
+#   end
+#   _set_subpart!(acs, Val{S}, Val{Ts}, part, Val{f}, subpart)
+# end
+
 ACSetInterface.set_subpart!(acs::DynamicACSet, part::Int, f::Symbol, subpart) =
   runtime(_set_subpart!, acs, acs.schema, 
     Tuple{[acs.type_assignment[t] for t in acs.schema.attrtypes]...}, 
@@ -549,6 +558,8 @@ end
 ACSetInterface.rem_part!(acs::DynamicACSet, type::Symbol, part::Int) =
   runtime(_rem_part!, acs, acs.schema, type, part, acs.parts[type])
 
+using Debugger
+
 @ct_enable function _rem_part!(acs::SimpleACSet, @ct(S), @ct(ob), part, ::DenseParts)
   @ct s = Schema(S)
   @ct in_homs = homs(s; to=ob, just_names=true)
@@ -559,6 +570,7 @@ ACSetInterface.rem_part!(acs::DynamicACSet, type::Symbol, part::Int) =
   last_part = acs.parts[@ct ob].val
 
   @ct_ctrl for hom in in_homs
+    println("currently working on in hom $(@ct hom) for ob $(@ct ob)")
     incoming_to_part = copy(incident(acs, part, @ct hom))
     clear_subpart!(acs, incoming_to_part, @ct hom)
 
@@ -575,13 +587,38 @@ ACSetInterface.rem_part!(acs::DynamicACSet, type::Symbol, part::Int) =
   end
 
   @ct_ctrl for f in [out_homs; out_attrs]
+    # original
+    # if haskey(acs.subparts[@ct f], last_part)
+    #   set_subpart!(acs, part, (@ct f), subpart(acs, last_part, @ct f))
+    # end    
+    # clear_subpart!(acs, last_part, @ct f)
+    # remixed
+    Debugger.@bp
     if haskey(acs.subparts[@ct f], last_part)
-      set_subpart!(acs, part, (@ct f), subpart(acs, last_part, @ct f))
-    end
-    clear_subpart!(acs, last_part, @ct f)
+
+      println("currently working on out hom $(@ct f) for ob $(@ct ob)")
+      last_part_f = subpart(acs, last_part, @ct f)      
+      println("last_part_f is: $(last_part_f)")
+
+      clear_subpart!(acs, last_part, @ct f)
+      println("after clear_subpart! the subpart looks like:")
+      println("$(pretty_tables(acs))")
+
+      set_subpart!(acs, part, (@ct f), last_part_f)
+      println("after set_subpart! the subpart looks like:")
+      println("$(pretty_tables(acs))")
+
+    else
+      clear_subpart!(acs, last_part, @ct f)
+    end    
   end
 
   acs.parts[@ct ob].val -= 1
+  println("acs now looks like:") 
+  println("$(pretty_tables(acs))")
+  println("we have this many parts left:")
+  println("$(acs.parts)")
+  println("~~~~~~~~~~ OKAY BYEE THATS THE END OF THIS ITERATION!!!!!!! ~~~~~~~~~~ \n\n")
 end
 
 @ct_enable function _rem_part!(acs::SimpleACSet, @ct(S), @ct(ob), part, ::MarkAsDeleted)
