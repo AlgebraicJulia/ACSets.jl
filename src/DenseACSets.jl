@@ -575,6 +575,7 @@ ACSetInterface.rem_part!(acs::DynamicACSet, type::Symbol, part::Int) =
   end
 
   @ct_ctrl for f in [out_homs; out_attrs]
+    # clean up with rather messy logic somehow, too many branches
     if haskey(acs.subparts[@ct f], last_part)
       last_part_f = subpart(acs, last_part, @ct f)      
       clear_subpart!(acs, last_part, @ct f)
