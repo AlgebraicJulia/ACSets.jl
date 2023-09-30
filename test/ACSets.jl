@@ -575,4 +575,85 @@ g′′ = sparsify(g′)
 @test g′[:src] == [1,2]
 @test g′′[:src] == [1,2]
 
+# Recursive deletion with indexing
+#---------------------------------
+
+RecSch = BasicSchema(
+  [:Thing,:Node,:Edge], [(:src,:Edge,:Node),(:tgt,:Edge,:Node),(:thing,:Thing,:Node)],
+  [],[]
+)
+
+@acset_type RecDataInj(RecSch, index=[:src,:tgt], unique_index=[:thing])
+@acset_type RecDataIdx(RecSch, index=[:src,:tgt,:thing])
+@acset_type RecDataNoIdx(RecSch)
+
+datainj = @acset RecDataInj begin
+    Thing=3
+    Node=3
+    Edge=3
+    thing=[1,2,3]
+    src=[1,1,2]
+    tgt=[1,2,3]
+end
+
+dataidx = @acset RecDataIdx begin
+  Thing=3
+  Node=3
+  Edge=3
+  thing=[1,2,3]
+  src=[1,1,2]
+  tgt=[1,2,3]
+end
+
+datanoidx = @acset RecDataNoIdx begin
+  Thing=3
+  Node=3
+  Edge=3
+  thing=[1,2,3]
+  src=[1,1,2]
+  tgt=[1,2,3]
+end
+
+map_inj = cascading_rem_parts!(datainj, :Node, 1)
+map_idx = cascading_rem_parts!(dataidx, :Node, 1)
+map_noidx = cascading_rem_parts!(datanoidx, :Node, 1)
+
+@test map_inj == map_idx
+@test map_idx == map_noidx
+
+@test nparts(datainj,:Thing) == 2
+@test nparts(datainj,:Node) == 2
+@test nparts(datainj,:Edge) == 1
+@test incident(datainj, 3, :thing) == []
+@test incident(datainj, 3, :src) == []
+@test incident(datainj, 3, :tgt) == []
+
+# attributes and an injective index
+RecAttrSch = BasicSchema(
+  [:Thing,:Node,:Edge], [(:src,:Edge,:Node),(:tgt,:Edge,:Node),(:thing,:Thing,:Node)],
+  [:Attr1,:Attr2,:Attr3],[(:attr1,:Node,:Attr1),(:attr2,:Edge,:Attr2),(:attr3,:Thing,:Attr3)]
+)
+
+@acset_type RecAttrData(RecAttrSch, index=[:src,:tgt], unique_index=[:thing])
+
+dataattr = @acset RecAttrData{String,Symbol,Float64} begin
+  Thing=3
+  Node=3
+  Edge=3
+  thing=[1,2,3]
+  src=[1,1,2]
+  tgt=[1,2,3]
+  attr1=["1","2","3"]
+  attr2=[:a,:b,:c]
+  attr3=[10.0,11.0,12.0]
+end
+
+map_attr = cascading_rem_parts!(dataattr, :Node, 1)
+
+@test map_inj == map_attr
+
+@test all(map(x -> x ∈ subpart(dataattr,:attr1), ["2","3"]))
+@test only(subpart(dataattr,:attr2)) == :c
+@test all(map(x -> x ∈ subpart(dataattr,:attr3), [12.0,11.0]))
+
 end

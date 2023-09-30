@@ -575,12 +575,14 @@ ACSetInterface.rem_part!(acs::DynamicACSet, type::Symbol, part::Int) =
   end
 
   @ct_ctrl for f in [out_homs; out_attrs]
-    if haskey(acs.subparts[@ct f], last_part)
-      set_subpart!(acs, part, (@ct f), subpart(acs, last_part, @ct f))
-    end
-    clear_subpart!(acs, last_part, @ct f)
+    if haskey(acs.subparts[@ct f], last_part) && part != last_part
+      last_part_f = subpart(acs, last_part, @ct f)      
+      clear_subpart!(acs, last_part, @ct f)
+      set_subpart!(acs, part, (@ct f), last_part_f)
+    else
+      clear_subpart!(acs, last_part, @ct f)
+    end    
   end
-
   acs.parts[@ct ob].val -= 1
 end
 
