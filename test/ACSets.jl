@@ -577,8 +577,8 @@ g′′ = sparsify(g′)
 @test g′[:src] == [1,2]
 @test g′′[:src] == [1,2]
 
-# Recursive deletion
-#-------------------
+# Recursive deletion with indexing
+#---------------------------------
 
 RecSch = BasicSchema(
   [:Thing,:Node,:Edge], [(:src,:Edge,:Node),(:tgt,:Edge,:Node),(:thing,:Thing,:Node)],
