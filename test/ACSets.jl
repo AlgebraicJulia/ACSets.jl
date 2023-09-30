@@ -628,4 +628,32 @@ map_noidx = cascading_rem_parts!(datanoidx, :Node, 1)
 @test incident(datainj, 3, :src) == []
 @test incident(datainj, 3, :tgt) == []
 
+# attributes and an injective index
+RecAttrSch = BasicSchema(
+  [:Thing,:Node,:Edge], [(:src,:Edge,:Node),(:tgt,:Edge,:Node),(:thing,:Thing,:Node)],
+  [:Attr1,:Attr2,:Attr3],[(:attr1,:Node,:Attr1),(:attr2,:Edge,:Attr2),(:attr3,:Thing,:Attr3)]
+)
+
+@acset_type RecAttrData(RecAttrSch, index=[:src,:tgt], unique_index=[:thing])
+
+dataattr = @acset RecAttrData{String,Symbol,Float64} begin
+  Thing=3
+  Node=3
+  Edge=3
+  thing=[1,2,3]
+  src=[1,1,2]
+  tgt=[1,2,3]
+  attr1=["1","2","3"]
+  attr2=[:a,:b,:c]
+  attr3=[10.0,11.0,12.0]
+end
+
+map_attr = cascading_rem_parts!(dataattr, :Node, 1)
+
+@test map_inj == map_attr
+
+@test all(map(x -> x ∈ subpart(dataattr,:attr1), ["2","3"]))
+@test only(subpart(dataattr,:attr2)) == :c
+@test all(map(x -> x ∈ subpart(dataattr,:attr3), [12.0,11.0]))
+
 end
