@@ -1,6 +1,8 @@
 using Revise, ACSets
 MySch = BasicSchema([:Thing,:Node,:Edge], [(:src,:Edge,:Node),(:tgt,:Edge,:Node),(:thing,:Thing,:Node)],[],[])
 
+# INJECTIVE HOM --------------------------------------------------
+
 @acset_type MyData(MySch, index=[:src,:tgt], unique_index=[:thing])
 
 mydata = @acset MyData begin
@@ -11,6 +13,9 @@ mydata = @acset MyData begin
     src=[1,1,2]
     tgt=[1,2,3]
 end
+
+# errors
+cascading_rem_parts!(mydata, :Node, 1)
 
 # by hand --------------------------------------------------
 delparts = Dict(:Node=>1)
@@ -55,10 +60,7 @@ if haskey(X.subparts[f], last_part)
 end
 clear_subpart!(X, last_part, f)
 
-
-
-# errors
-cascading_rem_parts!(mydata, :Node, 1)
+# REGULAR HOM --------------------------------------------------
 
 @acset_type MyDataNoInjective(MySch, index=[:src,:tgt,:thing])
 
@@ -73,3 +75,21 @@ end
 
 # no error
 cascading_rem_parts!(mydatanoinj, :Node, 1)
+
+
+# FAILING TESTS --------------------------------------------------
+using Test
+SchDDS = BasicSchema([:X], [(:Φ,:X,:X)])
+
+@abstract_acset_type AbstractDDS
+@acset_type DDS(SchDDS, index=[:Φ]) <: AbstractDDS
+
+dds = DDS()
+add_parts!(dds, :X, 3, Φ=[1,1,1])
+@test !isempty(dds)
+@test_throws AssertionError add_part!(dds, :X, Φ=5)
+@test nparts(dds, :X) == 3
+@test subpart(dds, :Φ) == [1,1,1]
+@test_throws AssertionError add_parts!(dds, :X, 2, Φ=[3,6])
+@test nparts(dds, :X) == 3
+@test incident(dds, 3, :Φ) == []
