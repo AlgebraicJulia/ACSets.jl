@@ -577,4 +577,57 @@ g′′ = sparsify(g′)
 @test g′[:src] == [1,2]
 @test g′′[:src] == [1,2]
 
+# Recursive deletion
+#-------------------
+
+RecSch = BasicSchema(
+  [:Thing,:Node,:Edge], [(:src,:Edge,:Node),(:tgt,:Edge,:Node),(:thing,:Thing,:Node)],
+  [],[]
+)
+
+@acset_type RecDataInj(RecSch, index=[:src,:tgt], unique_index=[:thing])
+@acset_type RecDataIdx(RecSch, index=[:src,:tgt,:thing])
+@acset_type RecDataNoIdx(RecSch)
+
+datainj = @acset RecDataInj begin
+    Thing=3
+    Node=3
+    Edge=3
+    thing=[1,2,3]
+    src=[1,1,2]
+    tgt=[1,2,3]
+end
+
+dataidx = @acset RecDataIdx begin
+  Thing=3
+  Node=3
+  Edge=3
+  thing=[1,2,3]
+  src=[1,1,2]
+  tgt=[1,2,3]
+end
+
+datanoidx = @acset RecDataNoIdx begin
+  Thing=3
+  Node=3
+  Edge=3
+  thing=[1,2,3]
+  src=[1,1,2]
+  tgt=[1,2,3]
+end
+
+map_inj = cascading_rem_parts!(datainj, :Node, 1)
+map_idx = cascading_rem_parts!(dataidx, :Node, 1)
+map_noidx = cascading_rem_parts!(datanoidx, :Node, 1)
+
+@test map_inj == map_idx
+@test map_idx == map_noidx
+
+@test nparts(datainj,:Thing) == 2
+@test nparts(datainj,:Node) == 2
+@test nparts(datainj,:Edge) == 1
+@test incident(datainj, 3, :thing) == []
+@test incident(datainj, 3, :src) == []
+@test incident(datainj, 3, :tgt) == []
+
 end

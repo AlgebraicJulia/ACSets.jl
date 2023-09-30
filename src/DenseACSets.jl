@@ -527,15 +527,6 @@ end
 @inline ACSetInterface.set_subpart!(acs::StructACSet{S,Ts}, part::Int, f::Symbol, subpart) where {S,Ts} =
   _set_subpart!(acs, Val{S}, Val{Ts}, part, Val{f}, subpart)
 
-# using ..PreimageCaches: is_injective
-
-# @inline function ACSetInterface.set_subpart!(acs::StructACSet{S,Ts}, part::Int, f::Symbol, subpart) where {S,Ts}
-#   if is_injective(acs.subparts[f])
-#     clear_subpart!(acs, part, f)
-#   end
-#   _set_subpart!(acs, Val{S}, Val{Ts}, part, Val{f}, subpart)
-# end
-
 ACSetInterface.set_subpart!(acs::DynamicACSet, part::Int, f::Symbol, subpart) =
   runtime(_set_subpart!, acs, acs.schema, 
     Tuple{[acs.type_assignment[t] for t in acs.schema.attrtypes]...}, 
@@ -558,10 +549,8 @@ end
 ACSetInterface.rem_part!(acs::DynamicACSet, type::Symbol, part::Int) =
   runtime(_rem_part!, acs, acs.schema, type, part, acs.parts[type])
 
-using Debugger
-
 @ct_enable function _rem_part!(acs::SimpleACSet, @ct(S), @ct(ob), part, ::DenseParts)
-  println("********** OKAY HI THATS THE START OF THIS ITERATION!!!!!!! **********")
+  # println("********** OKAY HI THATS THE START OF THIS ITERATION!!!!!!! **********")
   @ct s = Schema(S)
   @ct in_homs = homs(s; to=ob, just_names=true)
   @ct in_attrs = attrs(s; to=ob, just_names=true)
@@ -571,16 +560,16 @@ using Debugger
   last_part = acs.parts[@ct ob].val
 
   @ct_ctrl for hom in in_homs
-    println("currently working on in hom $(@ct hom) for ob $(@ct ob)")
+    # println("currently working on in hom $(@ct hom) for ob $(@ct ob)")
     incoming_to_part = copy(incident(acs, part, @ct hom))
     clear_subpart!(acs, incoming_to_part, @ct hom)
-    println("going to clear these parts: $(incoming_to_part) of the hom")
+    # println("going to clear these parts: $(incoming_to_part) of the hom")
 
     incoming_to_last_part = copy(incident(acs, last_part, @ct hom))
     set_subpart!(acs, incoming_to_last_part, (@ct hom), part)
-    println("going to set these parts: $(incoming_to_last_part) of the hom to $(part)")
+    # println("going to set these parts: $(incoming_to_last_part) of the hom to $(part)")
   end
-  println("$(pretty_tables(acs))")
+  # println("$(pretty_tables(acs))")
 
   @ct_ctrl for hom in in_attrs
     incoming_to_part = copy(incident(acs, AttrVar(part), @ct hom))
@@ -597,35 +586,34 @@ using Debugger
     # end    
     # clear_subpart!(acs, last_part, @ct f)
     # remixed
-    Debugger.@bp
     if haskey(acs.subparts[@ct f], last_part)
 
-      println("currently working on out hom $(@ct f) for ob $(@ct ob)")
+      # println("currently working on out hom $(@ct f) for ob $(@ct ob)")
       last_part_f = subpart(acs, last_part, @ct f)      
-      println("last_part_f is: $(last_part_f)")
+      # println("last_part_f is: $(last_part_f)")
 
       clear_subpart!(acs, last_part, @ct f)
-      println("after clear_subpart! the subpart looks like:")
-      println("$(pretty_tables(acs))")
+      # println("after clear_subpart! the subpart looks like:")
+      # println("$(pretty_tables(acs))")
 
       if part != last_part
         set_subpart!(acs, part, (@ct f), last_part_f)
-        println("after set_subpart! the subpart looks like:")
-        println("$(pretty_tables(acs))")
+        # println("after set_subpart! the subpart looks like:")
+        # println("$(pretty_tables(acs))")
       end      
 
     else
-      println("currently working on out hom $(@ct f) for ob $(@ct ob), just clearing subpart: $(last_part)")
+      # println("currently working on out hom $(@ct f) for ob $(@ct ob), just clearing subpart: $(last_part)")
       clear_subpart!(acs, last_part, @ct f)
     end    
   end
 
   acs.parts[@ct ob].val -= 1
-  println("acs now looks like:") 
-  println("$(pretty_tables(acs))")
-  println("we have this many parts left:")
-  println("$(acs.parts)")
-  println("~~~~~~~~~~ OKAY BYEE THATS THE END OF THIS ITERATION!!!!!!! ~~~~~~~~~~ \n\n")
+  # println("acs now looks like:") 
+  # println("$(pretty_tables(acs))")
+  # println("we have this many parts left:")
+  # println("$(acs.parts)")
+  # println("~~~~~~~~~~ OKAY BYEE THATS THE END OF THIS ITERATION!!!!!!! ~~~~~~~~~~ \n\n")
 end
 
 @ct_enable function _rem_part!(acs::SimpleACSet, @ct(S), @ct(ob), part, ::MarkAsDeleted)
