@@ -10,7 +10,7 @@ using Reexport
 @reexport using ..PreimageCaches
 
 import ..Mappings: view_with_default
-import ..PreimageCaches: preimage, preimage_multi, is_injective
+import ..PreimageCaches: preimage, preimage_multi
 
 # Columns
 #########
@@ -93,7 +93,5 @@ Base.view(c::Column, xs) = ColumnView(c, xs, nothing)
 view_with_default(c::Column, xs, def) = ColumnView(c, xs, def)
 
 Base.size(c::ColumnView) = size(c.indices)
-
-is_injective(c::Column) = is_injective(c.pc)
 
 end

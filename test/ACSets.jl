@@ -425,8 +425,6 @@ for lset_maker in lset_makers
   @test isempty(incident(lset, :foo, :label))
 
   @test_throws Exception set_subpart!(lset, 1, :label, :bar)
-  set_subpart!(lset, :, :label, [:bar, :foo])
-  @test subpart(lset, :, :label) == [:bar, :foo]
 end
 
 SchDecGraph = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)],
