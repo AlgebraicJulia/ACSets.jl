@@ -644,6 +644,21 @@ end
 ACSetInterface.cascading_rem_parts!(acs::ACSet, type, parts) =
   delete_subobj!(acs, Dict(type=>parts))
 
+function ACSetInterface.undefined_subparts(acs::StructACSet{S,Ts}, f::Symbol) where {S,Ts}
+  _undefined_subparts(acs, S, f)
+end
+
+function ACSetInterface.undefined_subparts(acs::DynamicACSet, f::Symbol)
+  _undefined_subparts(acs, acs.schema, f)
+end
+
+function _undefined_subparts(acs::SimpleACSet, S, f)
+  if f ∉ homs(Schema(S); just_names=true)
+    error("$(f) is not a hom")
+  end
+  findall([!haskey(acs.subparts[f],i) for i in dom_parts(acs,f)])
+end
+
 # Copy Parts
 ############
 

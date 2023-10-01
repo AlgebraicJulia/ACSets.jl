@@ -32,6 +32,7 @@ dds_makers = [
 ]
 
 for dds_maker in dds_makers
+  println("dds maker: $(dds_maker)")
   dds = dds_maker()
   @test keys(tables(dds)) == (:X,)
   @test nparts(dds, :X) == 0
@@ -73,7 +74,10 @@ for dds_maker in dds_makers
   view(dds,:Φ) isa ColumnView
 
   # Deletion.
+  @test_throws ErrorException undefined_subparts(dds, :X)
+  @test undefined_subparts(dds, :Φ) == []
   rem_part!(dds, :X, 2)
+  @test undefined_subparts(dds, :Φ) == [1] skip=dds_maker ∈ dds_makers[[2,5,7]]
   @test nparts(dds, :X) == 2
   @test incident(dds, 1, :Φ) == []
   if dds.parts[:X] isa IntParts

@@ -4,7 +4,8 @@ export ACSet, acset_schema, acset_name, dom_parts, subpart_type,
   add_part!, add_parts!, set_subpart!, set_subparts!, clear_subpart!,
   rem_part!, rem_parts!, cascading_rem_part!, cascading_rem_parts!, gc!,
   copy_parts!, copy_parts_only!, disjoint_union, tables, pretty_tables,
-  @acset, constructor, PartsType, DenseParts, MarkAsDeleted, rem_free_vars!
+  @acset, constructor, undefined_subparts, PartsType, DenseParts, MarkAsDeleted, 
+  rem_free_vars!
 
 using MLStyle: @match
 using StaticArrays: StaticArray
@@ -390,6 +391,11 @@ function gc! end
 Get a nullary callable which constructs an (empty) ACSet of the same type
 """
 function constructor end
+
+"""
+Given a hom, find which parts in its domain are undefined.
+"""
+function undefined_subparts end
 
 # Pretty printing
 #################
