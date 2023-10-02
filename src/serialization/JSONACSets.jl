@@ -10,9 +10,9 @@ using OrderedCollections: OrderedDict
 import Pkg
 import Tables
 
-using ..ACSetInterface, ..Schemas, ..DenseACSets
-using ..DenseACSets: attr_type
-using ..ColumnImplementations: AttrVar # TODO: Move this.
+using ...ACSetInterface, ...Schemas, ...DenseACSets
+using ...DenseACSets: attr_type
+using ...ColumnImplementations: AttrVar # TODO: Move this.
 
 # ACSet serialization
 #####################

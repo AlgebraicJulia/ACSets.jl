@@ -20,8 +20,8 @@ end
   include("ACSets.jl")
 end
 
-@testset "JSON" begin
-  include("JSONACSets.jl")
+@testset "Serialization" begin
+  include("serialization/Serialization.jl")
 end
 
 @testset "ADTs" begin
