@@ -498,6 +498,14 @@ end
   parts(acs, @ct dom(s, f))
 end
 
+@inline ACSetInterface.codom_parts(acs::StructACSet{S}, f::Symbol) where {S} = _codom_parts(acs, Val{S}, Val{f})
+@inline ACSetInterface.codom_parts(acs::DynamicACSet, f::Symbol) = runtime(_codom_parts, acs, acs.schema, f)
+
+@ct_enable function _codom_parts(acs, @ct(S), @ct(f))
+  @ct s = Schema(S)
+  parts(acs, @ct codom(s, f))
+end
+
 @inline function ACSetInterface.incident(acs::SimpleACSet, part, f::Symbol)
   preimage(dom_parts(acs, f), acs.subparts[f], part)
 end 
@@ -644,14 +652,8 @@ end
 ACSetInterface.cascading_rem_parts!(acs::ACSet, type, parts) =
   delete_subobj!(acs, Dict(type=>parts))
 
-function ACSetInterface.undefined_subparts(acs::StructACSet{S,Ts}, f::Symbol) where {S,Ts}
-  s = Schema(S)
-  f ∈ homs(s; just_names=true) || error("$f is not a hom")
-  _undefined_subparts(acs, f, acs.parts[dom(s,f)])
-end
-
-function ACSetInterface.undefined_subparts(acs::DynamicACSet, f::Symbol)
-  s = Schema(acs.schema)
+function ACSetInterface.undefined_subparts(acs::SimpleACSet, f::Symbol)
+  s = acset_schema(acs)
   f ∈ homs(s; just_names=true) || error("$f is not a hom")
   _undefined_subparts(acs, f, acs.parts[dom(s,f)])
 end
@@ -661,7 +663,8 @@ function _undefined_subparts(acs::SimpleACSet, f::Symbol, ::DenseParts)
 end
 
 function _undefined_subparts(acs::SimpleACSet, f::Symbol, ::MarkAsDeleted)
-  error("undefined_subparts only defined for homs with DenseParts domains")
+  codom_ids = codom_parts(acs,f)
+  findall([acs.subparts[f][i] ∉ codom_ids for i in dom_parts(acs,f)])
 end
 
 # Copy Parts

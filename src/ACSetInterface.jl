@@ -1,11 +1,11 @@
 module ACSetInterface
-export ACSet, acset_schema, acset_name, dom_parts, subpart_type,
+export ACSet, acset_schema, acset_name, dom_parts, codom_parts, subpart_type,
   nparts, maxpart, parts, has_part, has_subpart, subpart, incident,
   add_part!, add_parts!, set_subpart!, set_subparts!, clear_subpart!,
   rem_part!, rem_parts!, cascading_rem_part!, cascading_rem_parts!, gc!,
   copy_parts!, copy_parts_only!, disjoint_union, tables, pretty_tables,
   @acset, constructor, undefined_subparts, PartsType, DenseParts, MarkAsDeleted, 
-  rem_free_vars!
+  rem_free_vars!, parts_type
 
 using MLStyle: @match
 using StaticArrays: StaticArray
@@ -113,6 +113,15 @@ dom_parts(acs, f) == parts(acs, X)
 where X is the dom of the f in the schema
 """
 function dom_parts end
+
+"""
+Get the parts of the codomain of a morphism in an acset
+
+dom_parts(acs, f) == parts(acs, Y)
+
+where Y is the codom of the f in the schema
+"""
+function codom_parts end
 
 """
 Get the type assigned to a subpart in an acset, i.e.
@@ -396,6 +405,11 @@ function constructor end
 Given a hom, find which parts in its domain are undefined.
 """
 function undefined_subparts end
+
+"""
+Get the type used to store parts IDs.
+"""
+parts_type(::ACSet{PT}) where {PT} = PT
 
 # Pretty printing
 #################

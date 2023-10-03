@@ -74,17 +74,9 @@ for dds_maker in dds_makers
 
   # Deletion.
   @test_throws ErrorException undefined_subparts(dds, :X)
-  if dds.parts[dom(acset_schema(dds),:Φ)] isa DenseParts
-    @test undefined_subparts(dds, :Φ) == []
-  else
-    @test_throws ErrorException undefined_subparts(dds, :Φ)
-  end
+  @test undefined_subparts(dds, :Φ) == []
   rem_part!(dds, :X, 2)
-  if dds.parts[dom(acset_schema(dds),:Φ)] isa DenseParts
-    @test undefined_subparts(dds, :Φ) == [1]
-  else
-    @test_throws ErrorException undefined_subparts(dds, :Φ)
-  end
+  @test undefined_subparts(dds, :Φ) == [1]
   @test nparts(dds, :X) == 2
   @test incident(dds, 1, :Φ) == []
   if dds.parts[:X] isa IntParts
