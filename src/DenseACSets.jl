@@ -655,14 +655,14 @@ ACSetInterface.cascading_rem_parts!(acs::ACSet, type, parts) =
 function ACSetInterface.undefined_subparts(acs::SimpleACSet, f::Symbol)
   s = acset_schema(acs)
   f ∈ homs(s; just_names=true) || error("$f is not a hom")
-  _undefined_subparts(acs, f, acs.parts[dom(s,f)])
+  _undefined_subparts(acs, f, parts_type(acs))
 end
 
-function _undefined_subparts(acs::SimpleACSet, f::Symbol, ::DenseParts)
+function _undefined_subparts(acs::SimpleACSet, f::Symbol, ::Type{<:DenseParts})
   findall([!haskey(acs.subparts[f],i) for i in dom_parts(acs,f)])
 end
 
-function _undefined_subparts(acs::SimpleACSet, f::Symbol, ::MarkAsDeleted)
+function _undefined_subparts(acs::SimpleACSet, f::Symbol, ::Type{<:MarkAsDeleted})
   codom_ids = codom_parts(acs,f)
   findall([acs.subparts[f][i] ∉ codom_ids for i in dom_parts(acs,f)])
 end
