@@ -73,7 +73,7 @@ for dds_maker in dds_makers
   view(dds,:Φ) isa ColumnView
 
   # Deletion.
-  @test_throws ErrorException undefined_subparts(dds, :X)
+  @test_throws ArgumentError undefined_subparts(dds, :X)
   @test undefined_subparts(dds, :Φ) == []
   rem_part!(dds, :X, 2)
   @test undefined_subparts(dds, :Φ) == [1]
