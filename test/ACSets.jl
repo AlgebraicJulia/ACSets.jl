@@ -586,50 +586,74 @@ RecSch = BasicSchema(
   [],[]
 )
 
+# DenseParts
 @acset_type RecDataInj(RecSch, index=[:src,:tgt], unique_index=[:thing])
 @acset_type RecDataIdx(RecSch, index=[:src,:tgt,:thing])
 @acset_type RecDataNoIdx(RecSch)
 
-datainj = @acset RecDataInj begin
-    Thing=3
-    Node=3
-    Edge=3
-    thing=[1,2,3]
-    src=[1,1,2]
-    tgt=[1,2,3]
+recdata_makers = [
+  RecDataInj,
+  RecDataIdx,
+  RecDataNoIdx,
+  () -> DynamicACSet("RecData", RecSch; index=[:src,:tgt]),
+  () -> AnonACSet(RecSch; index=[:src,:tgt])
+]
+
+for recdata in recdata_makers
+  mydata = recdata()
+  add_parts!(mydata, :Node, 3)
+  add_parts!(mydata, :Thing, 3, thing=[1,2,3])
+  add_parts!(mydata, :Edge, 3, src=[1,1,2], tgt=[1,2,3])
+
+  @test parts_type(mydata) <: DenseParts
+
+  new2old = cascading_rem_parts!(mydata, :Node, 1)
+
+  @test length(new2old[:Thing]) == nparts(mydata,:Thing)
+  @test nparts(mydata,:Thing) == 2
+  @test length(new2old[:Node]) == nparts(mydata,:Node)
+  @test nparts(mydata,:Node) == 2
+  @test length(new2old[:Edge]) == nparts(mydata,:Edge)
+  @test nparts(mydata,:Edge) == 1
+  @test incident(mydata, 3, :thing) == []
+  @test incident(mydata, 3, :src) == []
+  @test incident(mydata, 3, :tgt) == []
 end
 
-dataidx = @acset RecDataIdx begin
-  Thing=3
-  Node=3
-  Edge=3
-  thing=[1,2,3]
-  src=[1,1,2]
-  tgt=[1,2,3]
+# MarkAsDeleted parts
+@acset_type RecDataInjMarkDel(RecSch, index=[:src,:tgt], unique_index=[:thing], part_type=BitSetParts)
+@acset_type RecDataIdxMarkDel(RecSch, index=[:src,:tgt,:thing], part_type=BitSetParts)
+@acset_type RecDataNoIdxMarkDel(RecSch, part_type=BitSetParts)
+
+recdata_makers = [
+  RecDataInjMarkDel,
+  RecDataIdxMarkDel,
+  RecDataNoIdxMarkDel,
+  () -> DynamicACSet("RecData", RecSch; index=[:src,:tgt], part_type=MarkAsDeleted),
+  () -> AnonACSet(RecSch; index=[:src,:tgt], part_type=MarkAsDeleted)
+]
+
+for recdata in recdata_makers
+  mydata = recdata()
+  add_parts!(mydata, :Node, 3)
+  add_parts!(mydata, :Thing, 3, thing=[1,2,3])
+  add_parts!(mydata, :Edge, 3, src=[1,1,2], tgt=[1,2,3])
+
+  @test parts_type(mydata) <: MarkAsDeleted
+
+  new2old = cascading_rem_parts!(mydata, :Node, 1)
+
+  @test length(new2old[:Thing]) == nparts(mydata,:Thing)
+  @test nparts(mydata,:Thing) == 2
+  @test length(new2old[:Node]) == nparts(mydata,:Node)
+  @test nparts(mydata,:Node) == 2
+  @test length(new2old[:Edge]) == nparts(mydata,:Edge)
+  @test nparts(mydata,:Edge) == 1
+  # IDs are not updated in MarkAsDeleted, so "1" is the deleted element
+  @test incident(mydata, 1, :thing) == []
+  @test incident(mydata, 1, :src) == []
+  @test incident(mydata, 1, :tgt) == []
 end
-
-datanoidx = @acset RecDataNoIdx begin
-  Thing=3
-  Node=3
-  Edge=3
-  thing=[1,2,3]
-  src=[1,1,2]
-  tgt=[1,2,3]
-end
-
-map_inj = cascading_rem_parts!(datainj, :Node, 1)
-map_idx = cascading_rem_parts!(dataidx, :Node, 1)
-map_noidx = cascading_rem_parts!(datanoidx, :Node, 1)
-
-@test map_inj == map_idx
-@test map_idx == map_noidx
-
-@test nparts(datainj,:Thing) == 2
-@test nparts(datainj,:Node) == 2
-@test nparts(datainj,:Edge) == 1
-@test incident(datainj, 3, :thing) == []
-@test incident(datainj, 3, :src) == []
-@test incident(datainj, 3, :tgt) == []
 
 # attributes and an injective index
 RecAttrSch = BasicSchema(
@@ -651,9 +675,7 @@ dataattr = @acset RecAttrData{String,Symbol,Float64} begin
   attr3=[10.0,11.0,12.0]
 end
 
-map_attr = cascading_rem_parts!(dataattr, :Node, 1)
-
-@test map_inj == map_attr
+cascading_rem_parts!(dataattr, :Node, 1)
 
 @test all(map(x -> x ∈ subpart(dataattr,:attr1), ["2","3"]))
 @test only(subpart(dataattr,:attr2)) == :c
