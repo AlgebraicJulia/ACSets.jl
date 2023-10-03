@@ -498,6 +498,14 @@ end
   parts(acs, @ct dom(s, f))
 end
 
+@inline ACSetInterface.codom_parts(acs::StructACSet{S}, f::Symbol) where {S} = _codom_parts(acs, Val{S}, Val{f})
+@inline ACSetInterface.codom_parts(acs::DynamicACSet, f::Symbol) = runtime(_codom_parts, acs, acs.schema, f)
+
+@ct_enable function _codom_parts(acs, @ct(S), @ct(f))
+  @ct s = Schema(S)
+  parts(acs, @ct codom(s, f))
+end
+
 @inline function ACSetInterface.incident(acs::SimpleACSet, part, f::Symbol)
   preimage(dom_parts(acs, f), acs.subparts[f], part)
 end 
@@ -643,6 +651,15 @@ end
 
 ACSetInterface.cascading_rem_parts!(acs::ACSet, type, parts) =
   delete_subobj!(acs, Dict(type=>parts))
+
+function ACSetInterface.undefined_subparts(acs::SimpleACSet{<:DenseParts}, f::Symbol)
+  findall([!haskey(acs.subparts[f],i) for i in dom_parts(acs,f)])
+end
+
+function ACSetInterface.undefined_subparts(acs::SimpleACSet{<:MarkAsDeleted}, f::Symbol)
+  codom_ids = codom_parts(acs,f)
+  findall([acs.subparts[f][i] ∉ codom_ids for i in dom_parts(acs,f)])
+end
 
 # Copy Parts
 ############
