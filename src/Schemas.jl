@@ -5,6 +5,7 @@ export Schema, TypeLevelSchema, BasicSchema, TypeLevelBasicSchema, typelevel,
   ob, hom, attrtype, attr, dom_nums, codom_nums, adom_nums, acodom_nums, types
 
 using StructEquality
+import AlgebraicInterfaces: dom, codom, ob, hom, attr, attrtype
 
 # Schemas
 #########

@@ -5,6 +5,7 @@ authors = ["Owen Lynch <owen@topos.institute>", "Kris Brown <kris@topos.institut
 version = "0.2.6"
 
 [deps]
+AlgebraicInterfaces = "23cfdc9f-0504-424a-be1f-4892b28e2f0c"
 CompTime = "0fb5dd42-039a-4ca4-a1d7-89a96eae6d39"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 MLStyle = "d8e11817-5142-5d16-987a-aa16d5891078"
