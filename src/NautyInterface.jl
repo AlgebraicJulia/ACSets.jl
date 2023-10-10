@@ -185,9 +185,6 @@ function add_edges!(u::UnDiGraph, sts::Vector{Tuple{Int,Int}})::Vector{Int}
   end 
 end
 
-add_edges!(u::UnDiGraph, ss::Vector{Int}, ts::Vector{Int})::Vector{Int} =
-  add_edges!(u, collect(zip(ss, ts)))
-
 function to_mat(u::UnDiGraph)::Matrix{Bool}
   mat = zeros(Bool, (u.V, u.V))
   for (s, t) in zip(u.src, u.tgt)
