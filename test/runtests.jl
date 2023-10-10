@@ -27,3 +27,9 @@ end
 @testset "ADTs" begin
   include("ADTs.jl")
 end
+
+if !Sys.iswindows()
+  @testset "Nauty" begin
+    include("NautyInterface.jl")
+  end
+end
