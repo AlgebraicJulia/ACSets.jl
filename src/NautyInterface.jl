@@ -1,6 +1,6 @@
 """Compute automorphism group via nauty.c"""
 module NautyInterface
-export NautyRes, CanonicalCSet, call_nauty, all_autos, canon, orbits, canonmap, 
+export NautyRes, CSetNautyRes, call_nauty, all_autos, canon, orbits, canonmap, 
        strhsh, generators, ngroup
 
 using ..Schemas
@@ -11,9 +11,9 @@ using StructEquality
 
 # Permutations
 ###############
-const Perm = Dict{Symbol, Permutation}
+const PermDict = Dict{Symbol, Permutation}
 # Pointwise multiplication of permutations
-Base.:(*)(x::Perm, y::Perm) = Dict([k => x[k]*y[k] for k in keys(x)])
+Base.:(*)(x::PermDict, y::PermDict) = Dict([k => x[k]*y[k] for k in keys(x)])
 
 idperm(n::Int) = Permutation(1:n)
 
@@ -21,40 +21,18 @@ idperm(n::Int) = Permutation(1:n)
 Convert an all-parts permutation into a symbol-indexed set of 
 permutations, given a partition of 1:n_total into ranges for each symbol.
 """
-function to_perm(p::Permutation, oinds::Dict{Symbol, UnitRange})::Perm
+function to_perm(p::Permutation, oinds::Dict{Symbol,<:UnitRange})::PermDict
   canon = collect(p)
-  canon2 = Dict([k=>canon[v].-(v.start-1) 
-                 for (k,v) in oinds if v.stop <= length(canon)])
-  Dict([k=>Permutation(v) for (k,v) in collect(canon2)])
+  # ignore extraneous parts, e.g. _src
+  ks = filter(k->oinds[k].stop <= length(canon), keys(oinds)) |> collect
+  Dict(map(ks) do k
+    range = oinds[k]
+    k => Permutation(canon[range].-(range.start-1))
+  end)  
 end
 
 compose(f::Vector{Int}, g::Vector{Int}) = g[f]
 compose(xs::Vector{Int}...) = foldl(compose, xs)
-
-"""
-Because the hom/attr perms really are just given by the perms on their
-domain/codomain, we don't actually need to track anything other than 'obs'. TODO
-"""
-struct CPerm
-  obs::Perm
-  homs::Dict{Symbol, Pair{Vector{Int}, Vector{Int}}}
-  attrs::Perm
-end
-
-"""
-Construct a CPerm given some parsed nauty output
-E.g. oinds  - (:E => 1:7, :V => 8:12,...) 
-     canon  - [6, 0, 5, 4, 1, 2, 3, 11, 10, 7, 8, 9, ...]
-     canon2 - (:E => [7, 1, 6, 5, 2, 3, 4], :V => [5, 4, 1, 2, 3])
-     omap   - (:E => (1,7,4,5,2)(3,6), :V => (1,5,3)(2,4))
-"""
-function CPerm(oinds::Dict{Symbol, UnitRange}, canon::Vector{Int}, S)
-  canon2 = Dict([k=>canon[v].-(v.start-2) for (k,v) in oinds if k ∈ ob(S)])
-  omap = Dict([k=>Permutation(v) for (k,v) in collect(canon2)])
-  hmap = Dict(h => (canon2[s] => canon2[t]) for (h,s,t) in homs(S))
-  amap = Dict(h => Permutation(canon2[s]) for (h,s,_) in attrs(S))
-  CPerm(omap, hmap, amap)
-end
 
 # Nauty
 #######
@@ -70,36 +48,36 @@ NautyResults must satisfy the following interface
 - canonmap: isomorphism from the input into the canonoical isomorph
 - canon: canonical isomorph (codom of `canonmap`)
 """
-@struct_hash_equal struct CanonicalCSet <: NautyRes 
+@struct_hash_equal struct CSetNautyRes <: NautyRes 
   strhsh::String
   orbits::Dict{Symbol, Vector{Int}}
-  generators
+  generators::Vector{Pair{Int, Vector{Permutation}}}
   ngroup::Int
   canonmap::Dict{Symbol,Vector{Int}}
   canon::ACSet
 end
 
-strhsh(n::CanonicalCSet) = n.strhsh
-orbits(n::CanonicalCSet) = n.orbits
-generators(n::CanonicalCSet) = n.generators
-ngroup(n::CanonicalCSet) = n.ngroup
-canonmap(n::CanonicalCSet) = n.canonmap
-canon(n::CanonicalCSet) = n.canon
+strhsh(n::CSetNautyRes) = n.strhsh
+orbits(n::CSetNautyRes) = n.orbits
+generators(n::CSetNautyRes) = n.generators
+ngroup(n::CSetNautyRes) = n.ngroup
+canonmap(n::CSetNautyRes) = n.canonmap
+canon(n::CSetNautyRes) = n.canon
 
 
-"""CanonicalCSet for an empty ACSet"""
-function CanonicalCSet(g::T) where T<:ACSet
-  isempty(g) || error("Cannot make CanonicalCSet for nonempty ACSet")
+"""CSetNautyRes for an empty ACSet"""
+function CSetNautyRes(g::T) where T<:ACSet
+  isempty(g) || error("Cannot make CSetNautyRes for nonempty ACSet")
   emp= Dict([o=>Int[] for o in ob(acset_schema(g))])
-  CanonicalCSet("", emp, CPerm[], 1, emp, g)
+  CSetNautyRes("", emp, Pair{Int, Vector{Permutation}}[], 1, emp, g)
 end
 
 
-"""Compute CanonicalCSet from an ACSet."""
+"""Compute CSetNautyRes from an ACSet."""
 function call_nauty end 
 
 """Parse nauty stdout text"""
-function parse_res(res::String, g::ACSet)::CanonicalCSet
+function parse_res(res::String, g::ACSet)::CSetNautyRes
   m, oinds = to_mat(to_udg(g)), get_oinds(g) # convert g to matrix
   S = acset_schema(g)
 
@@ -126,7 +104,12 @@ function parse_res(res::String, g::ACSet)::CanonicalCSet
   end
   # parse permutation for the canonical graph
   rng = match(reg_perm, res[sec : end])
-  cp = CPerm(oinds, [parse(Int, x) for x in split(strip(rng.match), r"\s+")], S)
+  # cp = CPerm(oinds, [parse(Int, x) for x in split(strip(rng.match), r"\s+")], S)
+  # canonoffset = Dict([k=>canon[v].-(v.start-2) for (k,v) in oinds if k ∈ ob(S)])
+  cp = Dict(map(ob(S)) do o 
+    canon = [parse(Int, x) for x in split(strip(rng.match), r"\s+")]
+    o=>Permutation(canon[oinds[o]].-(oinds[o].start-2))
+  end)
 
   # parse canonical graph
   canonm = zeros(Bool, size(m))
@@ -148,7 +131,7 @@ function parse_res(res::String, g::ACSet)::CanonicalCSet
   codh, h = apply(g, cp)
   string(codh) == string(canong) || error("$(codh)\n\n$(string(canong))")
 
-  CanonicalCSet(hshstr, orb, gens, grpsize, h, canong)
+  CSetNautyRes(hshstr, orb, gens, grpsize, h, canong)
 end
 
 """Parse / postprocess orbits from the end of dreadnaut input"""
@@ -182,18 +165,18 @@ end
 
 """Data structure for undirected graph."""
 struct UnDiGraph
-  n::Int
+  V::Int
   src::Vector{Int}
   tgt::Vector{Int}
-  inv::Dict{Tuple{Int,Int},Int}
+  edge::Dict{Tuple{Int,Int},Int}
   UnDiGraph(n) = new(n,Int[],Int[],Dict{Tuple{Int,Int},Int}())
 end
 
 function add_edge!(u::UnDiGraph, s::Int, t::Int)::Int
-  !(haskey(u.inv, (s,t)) || haskey(u.inv, (t,s))) || error("Duplicate ($s,$t)")
+  !(haskey(u.edge, (s,t)) || haskey(u.edge, (t,s))) || error("Duplicate ($s,$t)")
   push!(u.src, s)
   push!(u.tgt, t)
-  u.inv[(s, t)] = u.inv[(t, s)] = length(u.src)
+  u.edge[(s, t)] = u.edge[(t, s)] = length(u.src)
 end
 
 function add_edges!(u::UnDiGraph, sts::Vector{Tuple{Int,Int}})::Vector{Int}
@@ -206,7 +189,7 @@ add_edges!(u::UnDiGraph, ss::Vector{Int}, ts::Vector{Int})::Vector{Int} =
   add_edges!(u, collect(zip(ss, ts)))
 
 function to_mat(u::UnDiGraph)::Matrix{Bool}
-  mat = zeros(Bool, (u.n,u.n))
+  mat = zeros(Bool, (u.V, u.V))
   for (s, t) in zip(u.src, u.tgt)
     mat[s, t] = mat[t, s] = true
   end
@@ -225,10 +208,10 @@ Convert C-Set to an adjacency matrix of an *undirected* simple graph.
 
 the matrix has rows for all parts (e.g. |E| and |V|), all homs (e.g. |E|
 quantity of src & tgt nodes), and another copy of all homs (called, e.g., _src
-and _tgt). For a given edge in the category of elements eₙ -- src --> vₘ,
+and _tgt). For a given edge in the category of elements eₙ -- srcₙ --> vₘ,
 we set edges in the simple diagraph:
 
-        ↗ _src
+        ↗ _srcₙ
       ↙    ↕
     eₙ <-> srcₙ <-> vₘ
 
@@ -315,7 +298,7 @@ colornames(S) = [
 ]
 
 """
-Symmetric adjacency matrix to ACSet.
+Convert symmetric adjacency matrix to an ACSet which is isomorphic to `X`.
 """
 function from_adj(X::ACSet, oinds::Dict{Symbol, UnitRange},
                   m::AbstractMatrix{Bool})
@@ -360,32 +343,26 @@ function dreadnaut(g::ACSet)
           join(string.((x->x-1).(findall(==(1),m[r,:]))) ," ")
         end, ";"),
         ". f = [$(join([join(c.-1, ",") for c in colorsarray],"|"))]",
-        "c d x b z o"], " ")
+        "c x b z o"], " ")
 end
 
 """
 Action of a permutation on a ACSet, X. Results in a new ACSet, Y, and a map X->Y
 """
-function apply(X::ACSet, p::CPerm)
+function apply(X::ACSet, p::PermDict)
   S = acset_schema(X)
   cd = deepcopy(X)
   for h in homs(S; just_names=true)
-    σs, σt = [collect(x) for x in p.homs[h]]
-    σti = invperm(collect(σt))
-    f = collect(X[h])
-    m =  compose(σs, f, σti)
-    set_subpart!(cd, h, m)
+    σs, σti = Vector{Int}.(collect.([p[dom(S, h)], inv(p[codom(S, h)])]))
+    set_subpart!(cd, h, compose(σs, X[h], σti))
   end
 
   for h in attrs(S; just_names=true)
-    σs = Vector{Int}(collect(p.attrs[h]))
-    f = collect(X[h])
-    m =  f[σs]
-    set_subpart!(cd, h, m)
+    σs = Vector{Int}(collect(p[dom(S,h)]))
+    set_subpart!(cd, h, X[h][σs])
   end
 
-  iso = Dict([k=>invperm(Vector{Int}(collect(v))) for (k,v) in p.obs])
-  (cd, iso)
+  (cd, Dict([k=>invperm(Vector{Int}(collect(v))) for (k,v) in p]))
 end
 
 
@@ -395,21 +372,16 @@ by nauty to efficiently enumerate the automorphism group.
 We iteratively expand our automorphism group with each generator. A `while` loop 
 explores the possible words that we can built (starting with gₙ₊₁)
 """
-function all_autos(X::CanonicalCSet)
-  res = all_autos(canon(X), generators(X))
+function all_autos(X::CSetNautyRes)
+  res = _all_autos(canon(X), generators(X))
   length(res) == X.ngroup || error("# of autos doesn't match nauty's calculation")
   res
 end
 
-# TODO: nauty provides an "index" along with each level of generators saying by 
-# what factor it increases the group. So if after gₙ we
-# have an automorphism group of size N, then if gₙ₊₁ has an index of 3,
-# then we will have fully incorporated the new generator when our group is of size
-# 3*N. Moreover, there are just three new elements which start with gₙ₊₁ that we
-# need to find, which we compose with our earlier group to get the new group.
-# Incorportating this will give speedups + more confirmation we are correctly 
-# generating the right automorphisms.
-function all_autos(X::ACSet, gens)
+# TODO: nauty outputs "index" and "level" information along the generators 
+# of the automorphism group. Somehow taking advantage of these could allow us 
+# to avoid a relatively brute force enumeration of the whole group.
+function _all_autos(X::ACSet, gens)
   oinds = get_oinds(X)
   gens = vcat(last.(gens)...) # discard level info, don't yet know how to use it
   if isempty(gens)
@@ -420,11 +392,10 @@ function all_autos(X::ACSet, gens)
     old_gens, queue = deepcopy(all_gens), [[g]]
     while !isempty(queue)
       q = pop!(queue)
-      qgen, qlast = prod(q), q[end]
+      qgen = prod(q)
       if first(old_gens)*qgen ∉ all_gens
         for og in old_gens push!(all_gens, og * qgen) end
-        append!(queue, [[q...,prev_g] for prev_g in
-                       filter(!=(qlast), gens[1:i])])
+        append!(queue, [[q...,prev_g] for prev_g in gens[1:i]])
       end
     end
   end

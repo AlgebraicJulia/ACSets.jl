@@ -4,6 +4,7 @@ using Test
 using ACSets
 using Permutations
 using nauty_jll
+using ACSets.NautyInterface: _all_autos
 
 # Helper functions
 ##################
@@ -14,7 +15,7 @@ function iso(X::T, Y::T, comps::Dict{Symbol, Vector{Int}}) where {T <: ACSet}
   all(isperm, values(comps)) || return false
   all(((h, c, cd),) -> comps[cd][X[h]] == Y[h][comps[c]], homs(acset_schema(X)))
 end
-iso(X,R::CanonicalCSet) = iso(X, canon(R), canonmap(R))
+iso(X,R::CSetNautyRes) = iso(X, canon(R), canonmap(R))
 
 # Graphs
 ########
@@ -22,6 +23,8 @@ iso(X,R::CanonicalCSet) = iso(X, canon(R), canonmap(R))
 SchGraph = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)])
 
 @acset_type Graph(SchGraph, index=[:src,:tgt])
+
+@test CSetNautyRes(Graph()).canon == Graph()
 
 """
 Add a graph with 5 vertices and 7 edges to an existing graph. This is one 
@@ -42,7 +45,7 @@ cG, cH = call_nauty.([G,H])
 @test canon(cG) == canon(cH)
 @test iso(G,cG) && iso(H,cH)
 # calling `all_autos` confirms the # of automorphisms = # that nauty computes
-@test all(h->iso(G, G, h), all_autos(G, generators(cG)))
+@test all(h->iso(G, G, h), _all_autos(G, generators(cG)))
 
 # Try 4x-sized graphs
 GHGH = addV5E7!(addV5E7!(addV5E7!(addV5E7!(),false)),false)
@@ -77,8 +80,8 @@ cG, cH = call_nauty.([G,H])
 @test strhsh(cG) == strhsh(cH)
 @test canon(cG) == canon(cH)
 @test iso(G,cG) && iso(H,cH)
-@test all(h->iso(G, G, h), all_autos(G, generators(cG)))
-@test length(all_autos(G, generators(cG))) == 1
+@test all(h->iso(G, G, h), _all_autos(G, generators(cG)))
+@test length(_all_autos(G, generators(cG))) == 1
 
 G1 = @acset Labeled{String} begin
   V = 1; E = 1; src = [1]; tgt = [1]; dec = ["a"]

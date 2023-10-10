@@ -5,8 +5,8 @@ using nauty_jll
 
 bashit(str) = run(`bash -c "$str"`)
 
-"""Compute CanonicalCSet from an ACSet."""
-ACSets.call_nauty(g::ACSet)::CanonicalCSet = 
+"""Compute CSetNautyRes from an ACSet."""
+ACSets.call_nauty(g::ACSet)::CSetNautyRes = 
   ACSets.NautyInterface.parse_res(nauty_res(g), g)
 
 """Make shell command to dreadnaut (nauty) and collect stdout text."""

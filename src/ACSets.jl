@@ -13,6 +13,7 @@ include("ACSetInterface.jl")
 include("DenseACSets.jl")
 include("serialization/Serialization.jl")
 include("ADTs.jl")
+include("NautyInterface.jl")
 
 @reexport using .ColumnImplementations: AttrVar
 @reexport using .Schemas
