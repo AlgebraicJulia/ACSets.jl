@@ -196,9 +196,9 @@ function to_mat(u::UnDiGraph)::Matrix{Bool}
   mat
 end
 
-prime(hom_name::Symbol) = Symbol("_$hom_name")
+prime(hom_name::Symbol) = Symbol("$(hom_name)_$(hash(hom_name))")
 
-function to_unitrange(v::Vector{Int}) 
+function to_unitrange(v::Vector{Int})
   ur = minimum(v) : maximum(v)
   collect(ur) == v ? ur : error("Vector is not a UnitRange $v")
 end
@@ -262,7 +262,10 @@ end
 
 """
 Create partition of flattened indices (all parts altogether) to dict with 
-indices for each distinct object, e.g. {V => 1:8, E => 9:13, ...}
+indices for each distinct object, e.g.:
+
+  {V => 1:8, E => 9:13, src => 14:18, tgt => 19:23, 
+    src_... => 24:28, tgt_... => 29:33, weight => 34:38}
 """
 function get_oinds(X)::Dict{Symbol,UnitRange}
     S        = acset_schema(X)
