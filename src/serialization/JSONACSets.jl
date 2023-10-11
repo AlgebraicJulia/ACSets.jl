@@ -18,7 +18,7 @@ import ..ACSetSerialization: read_acset
 # ACSet serialization
 #####################
 
-read_acset(source::AbstractDict, cons) = _parse_json_acset(cons, source)
+read_acset(cons, source::AbstractDict) = _parse_json_acset(cons, source)
 
 """ Generate JSON-able object representing an ACSet.
 

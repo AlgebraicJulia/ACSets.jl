@@ -39,13 +39,13 @@ This is a convenience function that loads the Excel file and then calls
 installed and imported.
 
 # Arguments
-- `source`: filename or IO stream from which to read Excel file
 - `cons`: constructor for acset, e.g., the acset type for struct acsets
+- `source`: filename or IO stream from which to read Excel file
 - `tables=(;)`: dictionary or named tuple mapping object names in acset schema
   to Excel table specifications
 """
-function read_xlsx_acset(source::Union{AbstractString,IO}, cons; kw...)
-  read_acset(read_xlsx(source), cons; kw...)
+function read_xlsx_acset(cons, source::Union{AbstractString,IO}; kw...)
+  read_acset(cons, read_xlsx(source); kw...)
 end
 
 function read_xlsx end

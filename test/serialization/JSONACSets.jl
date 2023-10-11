@@ -25,7 +25,7 @@ add_parts!(g, :E, 5, src=[1,2,3,4,5], tgt=[2,3,4,5,1])
 @test roundtrip_json_acset(g) == g
 json = generate_json_acset(g)
 @test all(row -> haskey(row, :_id), json[:V])
-@test read_acset(json, Graph) == g
+@test read_acset(Graph, json) == g
 
 SchWeightedGraph = BasicSchema([:V,:E], [(:src,:E,:V),(:tgt,:E,:V)],
                                [:Weight], [(:weight,:E,:Weight)])

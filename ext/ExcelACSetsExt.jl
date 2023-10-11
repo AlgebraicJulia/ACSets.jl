@@ -10,7 +10,7 @@ function ExcelACSets.read_xlsx(source::Union{AbstractString,IO})
   XLSX.readxlsx(source)
 end
 
-function ACSets.read_acset!(xf::XLSX.XLSXFile, acs::ACSet; kw...)
+function ACSets.read_acset!(acs::ACSet, xf::XLSX.XLSXFile; kw...)
   # Read table for each object.
   schema = acset_schema(acs)
   spec = ExcelSpec(schema; kw...)

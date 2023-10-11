@@ -71,7 +71,7 @@ tables = (
 )
 
 T = MutagenesisData{Bool,Int,String,Float64}
-result = read_xlsx_acset(mutagenesis_path, T, tables=tables)
+result = read_xlsx_acset(T, mutagenesis_path, tables=tables)
 @test nparts(result, :Molecule) == 188
 @test nparts(result, :Atom) == 4893
 @test nparts(result, :Bond) == 5243
@@ -91,7 +91,7 @@ g = @acset LabeledGraph{String} begin
   tgt = [2,3,4]
 end
 
-result = read_xlsx_acset(labeled_graph_path, LabeledGraph{String}, tables=(
+result = read_xlsx_acset(LabeledGraph{String}, labeled_graph_path, tables=(
   V = (primary_key = :label,
        sheet = 1,
        row_range = 4,
