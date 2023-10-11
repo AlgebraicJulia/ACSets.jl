@@ -13,9 +13,12 @@ import Tables
 using ...ACSetInterface, ...Schemas, ...DenseACSets
 using ...DenseACSets: attr_type
 using ...ColumnImplementations: AttrVar # TODO: Move this.
+import ..ACSetSerialization: read_acset
 
 # ACSet serialization
 #####################
+
+read_acset(source::AbstractDict, cons) = _parse_json_acset(cons, source)
 
 """ Generate JSON-able object representing an ACSet.
 
@@ -52,7 +55,7 @@ function _parse_json_acset(cons, input::AbstractDict)
   end
   for rows ∈ values(input)
     for (rownum, row) ∈ enumerate(rows)
-      for (k, v) ∈ row
+      for (k, v) ∈ pairs(row)
         k = Symbol(k)
         if k == :_id
           # For now, IDs are assumed to coincide with row number.
