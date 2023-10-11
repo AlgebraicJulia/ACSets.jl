@@ -2,14 +2,9 @@ module ACSetSerialization
 using Reexport
 
 include("JSONACSets.jl")
+include("ExcelACSets.jl")
 
 @reexport using .JSONACSets
-
-# Extensions
-############
-
-function read_xlsx_acset end
-
-export read_xlsx_acset
+@reexport using .ExcelACSets
 
 end
