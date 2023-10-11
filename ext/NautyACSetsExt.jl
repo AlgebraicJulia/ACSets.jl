@@ -1,4 +1,4 @@
-module ACSetsnauty_jllExt
+module NautyACSetsExt
 
 using ACSets
 using nauty_jll
