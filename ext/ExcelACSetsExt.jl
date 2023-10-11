@@ -6,11 +6,11 @@ using ACSets
 using ACSets.ACSetSerialization.ExcelACSets: ExcelSpec, ExcelTableSpec
 
 
-ExcelACSets.read_xlsx(source::Union{AbstractString,IO}) = XLSX.readxlsx(source)
-ExcelACSets.read_acset(xf::XLSX.XLSXFile, cons; kw...) =
-  read_acset!(xf, cons(); kw...)
+function ExcelACSets.read_xlsx(source::Union{AbstractString,IO})
+  XLSX.readxlsx(source)
+end
 
-function read_acset!(xf::XLSX.XLSXFile, acs::ACSet; kw...)
+function ACSets.read_acset!(xf::XLSX.XLSXFile, acs::ACSet; kw...)
   # Read table for each object.
   schema = acset_schema(acs)
   spec = ExcelSpec(schema; kw...)

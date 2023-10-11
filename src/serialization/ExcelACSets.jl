@@ -3,7 +3,7 @@
 module ExcelACSets
 export read_xlsx_acset
 
-using ...ACSetInterface, ...Schemas
+using ...ACSetInterface, ...Schemas, ..ACSetSerialization
 
 # Data types
 ############
@@ -34,6 +34,10 @@ end
 
 """ Read acset from an Excel (.xlsx) file.
 
+This is a convenience function that loads the Excel file and then calls
+[`read_acset`](@ref). To use this function, the package XLSX.jl must be
+installed and imported.
+
 # Arguments
 - `source`: filename or IO stream from which to read Excel file
 - `cons`: constructor for acset, e.g., the acset type for struct acsets
@@ -43,9 +47,6 @@ end
 function read_xlsx_acset(source::Union{AbstractString,IO}, cons; kw...)
   read_acset(read_xlsx(source), cons; kw...)
 end
-
-# TODO: Define and export generic functions `read_acset` and `read_acset!`.
-function read_acset end
 
 function read_xlsx end
 
