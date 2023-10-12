@@ -1,55 +1,16 @@
-""" Read acsets from Microsoft Excel files.
-"""
-module ExcelACSets
+module XLSXACSetsExt
 
 import Tables, XLSX
+
 using ACSets
+using ACSets.ACSetSerialization.ExcelACSets: ExcelSpec, ExcelTableSpec
 
-# Excel spec
-############
 
-const AbstractMap = Union{AbstractDict,NamedTuple}
-
-@kwdef struct ExcelTableSpec
-  sheet::Union{AbstractString,Integer,Missing} = missing
-  primary_key::Union{Symbol,Missing} = missing
-  row_range::Union{AbstractUnitRange,Integer,Missing} = missing
-  column_range::Union{AbstractString,Missing} = missing
-  column_labels::AbstractMap = (;)
-  convert::AbstractMap = (;)
+function ExcelACSets.read_xlsx(source::Union{AbstractString,IO})
+  XLSX.readxlsx(source)
 end
 
-@kwdef struct ExcelSpec
-  tables::AbstractDict{Symbol,ExcelTableSpec} = Dict{Symbol,ExcelTableSpec}()
-end
-
-function ExcelSpec(schema::Schema; tables::AbstractMap=(;), kw...)
-  table_specs = Dict(ob => ExcelTableSpec(; get(tables, ob, (;))...)
-                     for ob in objects(schema))
-  ExcelSpec(; tables=table_specs, kw...)
-end
-
-# Read from spec
-################
-
-""" Read acset from an Excel (.xlsx) file.
-
-# Arguments
-- `source`: filename or IO stream from which to read Excel file
-- `cons`: constructor for acset, e.g., the acset type for struct acsets
-- `tables=(;)`: dictionary or named tuple mapping object names in acset schema
-  to Excel table specifications
-"""
-function ACSets.read_xlsx_acset(source::Union{AbstractString,IO}, cons; kw...)
-  read_acset(XLSX.readxlsx(source), cons; kw...)
-end
-
-# TODO: Define and export generic functions `read_acset` and `read_acset!`.
-function read_acset(xf::XLSX.XLSXFile, cons; kw...)
-  read_acset!(xf, cons(); kw...)
-end
-
-function read_acset!(xf::XLSX.XLSXFile, acs::ACSet; kw...)
+function ACSets.read_acset!(acs::ACSet, xf::XLSX.XLSXFile; kw...)
   # Read table for each object.
   schema = acset_schema(acs)
   spec = ExcelSpec(schema; kw...)
