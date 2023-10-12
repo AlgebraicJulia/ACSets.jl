@@ -24,6 +24,7 @@ XLSX = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
 ExcelACSets = "XLSX"
 
 [compat]
+AlgebraicInterfaces = "0.1"
 CompTime = "0.1"
 JSON = "0.21"
 MLStyle = "0.4"
