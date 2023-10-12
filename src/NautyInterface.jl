@@ -5,6 +5,7 @@ export NautyRes, CSetNautyRes, call_nauty, all_autos, canon, orbits, canonmap,
 
 using ..Schemas
 using ..DenseACSets, ..ACSetInterface
+import AlgebraicInterfaces: generators
 using DataStructures: OrderedSet, DefaultDict
 using Permutations 
 using StructEquality
