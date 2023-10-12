@@ -13,12 +13,12 @@ import Tables
 using ...ACSetInterface, ...Schemas, ...DenseACSets
 using ...DenseACSets: attr_type
 using ...ColumnImplementations: AttrVar # TODO: Move this.
-import ..ACSetSerialization: read_acset
+import ..ACSetSerialization: read_acset!
 
 # ACSet serialization
 #####################
 
-read_acset(cons, source::AbstractDict) = _parse_json_acset(cons, source)
+read_acset!(cons, source::AbstractDict) = parse_json_acset!(cons, source)
 
 """ Generate JSON-able object representing an ACSet.
 
@@ -43,16 +43,18 @@ attr_to_json(val) = val
 
 Inverse to [`generate_json_acset`](@ref).
 """
-parse_json_acset(::Type{T}, input::AbstractDict) where {T<:StructACSet} =
-  _parse_json_acset(T, input)
-parse_json_acset(d::DynamicACSet, input::AbstractDict) =
-  _parse_json_acset(constructor(d), input)
+parse_json_acset(cons, input::AbstractDict) =
+  parse_json_acset!(cons(), input)
+parse_json_acset(cons, input::AbstractString) =
+  parse_json_acset(cons, JSON.parse(input))
+parse_json_acset(acs::ACSet, input::AbstractDict) =
+  parse_json_acset(constructor(acs), input)
 
-function _parse_json_acset(cons, input::AbstractDict)
-  out = cons()
-  for (type, rows) ∈ input
-    add_parts!(out, Symbol(type), length(rows))
-  end
+function parse_json_acset!(out::ACSet, input::AbstractDict)
+  schema = acset_schema(out)
+  parts = Iterators.map(input) do (type, rows)
+    Symbol(type) => add_parts!(out, Symbol(type), length(rows))
+  end |> Dict
   for rows ∈ values(input)
     for (rownum, row) ∈ enumerate(rows)
       for (k, v) ∈ pairs(row)
@@ -62,19 +64,16 @@ function _parse_json_acset(cons, input::AbstractDict)
           @assert rownum == v
           continue
         end
-        is_attr = k ∈ attrs(acset_schema(out); just_names=true)
-        vtype = is_attr ? attr_type(out, k) : Int
-        v = v isa AbstractDict && haskey(v, "_var") ?
-          AttrVar(v["_var"]) : vtype(v)
-        set_subpart!(out, rownum, k, v)
+        if k ∈ attrs(schema; just_names=true)
+          vtype = attr_type(out, k)
+          v = v isa AbstractDict && haskey(v, "_var") ?
+            AttrVar(v["_var"]) : vtype(v)
+        end
+        set_subpart!(out, parts[dom(schema, k)][rownum], k, v)
       end
     end
   end
   out
-end
-
-function parse_json_acset(target, input::AbstractString)
-  parse_json_acset(target, JSON.parse(input))
 end
 
 """ Deserialize an ACSet object from a JSON file.
