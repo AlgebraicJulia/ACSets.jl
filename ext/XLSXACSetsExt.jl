@@ -1,4 +1,4 @@
-module ExcelACSetsExt
+module XLSXACSetsExt
 
 import Tables, XLSX
 
