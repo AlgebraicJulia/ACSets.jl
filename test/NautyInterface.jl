@@ -4,7 +4,7 @@ using Test
 using ACSets
 using Permutations
 using nauty_jll
-using ACSets.NautyInterface: _all_autos
+using ACSets.NautyInterface: _all_autos, generators
 
 # Helper functions
 ##################
