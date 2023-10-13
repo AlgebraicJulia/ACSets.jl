@@ -1,7 +1,7 @@
 """Compute automorphism group via nauty.c"""
 module NautyInterface
 export NautyRes, CSetNautyRes, call_nauty, all_autos, canon, orbits, canonmap, 
-       strhsh, generators, ngroup
+       strhsh, ngroup
 
 using ..Schemas
 using ..DenseACSets, ..ACSetInterface
