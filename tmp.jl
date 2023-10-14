@@ -253,3 +253,13 @@ end
 # 2a. part is in the apex, subparts will update after deletion...probably need to recache the values (indices)
 #     but at least the keys are the same
 # 2b. part is in legs, uh oh, the keys changed. Everything has to be redone.
+
+
+# test non surjectivity
+testdat = @acset MyDataType{Symbol,Float64} begin
+    X = 4
+    Rel = 3
+    proj_x = [1,2,3]
+end
+
+incident(testdat, 4, :proj_x)
