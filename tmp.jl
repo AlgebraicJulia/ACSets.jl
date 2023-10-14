@@ -200,12 +200,13 @@ end
 function make_cache_rel(acs::StructACSet{S}, span::Tuple{Vararg{Symbol}}) where {S}
     s = Schema(S)
     length(unique([dom(s, f) for f in span])) == 1 || error("not all morphisms in span have the same domain")
+
     cache_keys = reduce(vcat, Iterators.product([codom_parts(acs, f) for f in span]...))
     span_legs = collect(zip([subpart(acs, f) for f in span]...))
 
-    cache_index = Dict{eltype(cache_keys),Vector{Int}}()
+    cache_index = Dict{eltype(cache_keys),Set{Int}}()
     for key in cache_keys
-        cache_index[key] = findall(isequal(key), span_legs)
+        cache_index[key] = Set(findall(isequal(key), span_legs))
     end
     return cache_index
 end
@@ -219,7 +220,17 @@ for acs in [rel_redundant,rel_product,rel_sparse]
     end
 end
 
+acs = deepcopy(rel_redundant)
+span_homs = (:proj_x,:proj_y)
+cache = make_cache_rel(acs, span_homs)
 
+# how to make clear_subpart! work
+part = 6
+f = :proj_x
+f_pos = findfirst(isequal(f), span_homs)
+legs_parts = [acs[part,g] for g in span_homs]
+clear_subpart!(acs, part, f)
+delete!(cache[tuple(legs_parts...)], part)
 
 # --------------------------------------------------------------------------------
 # now for when the apex is a product
