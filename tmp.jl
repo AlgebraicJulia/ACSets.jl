@@ -254,12 +254,10 @@ end
 #     but at least the keys are the same
 # 2b. part is in legs, uh oh, the keys changed. Everything has to be redone.
 
-
-# test non surjectivity
-testdat = @acset MyDataType{Symbol,Float64} begin
-    X = 4
-    Rel = 3
-    proj_x = [1,2,3]
-end
-
-incident(testdat, 4, :proj_x)
+# Things to do:
+# 1. figure out how to get our wrapped StructACSet to know when set_subpart! or clear_subpart! is called;
+#    those are the points when it will be necessary to recompute some of the cache
+# 1a. NOTE: it seems it really would be enough to just write a method for the wrapper for these 2 functions,
+#     check at compile time if the passed symbol f is a hom that is part of a cached span, if not, we just do as
+#     usual, if it is, then we need to recompute things
+# 2. figure out how the existing setup recomputes the dict backed preimages
