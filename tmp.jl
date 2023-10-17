@@ -220,34 +220,113 @@ for acs in [rel_redundant,rel_product,rel_sparse]
     end
 end
 
+
+
+# --------------------------------------------------------------------------------
+# note that set_subpart! and clear_subpart! do not change keys, because obs were not 
+# changed. Only values associated to the preimages are added/subtracted.
+
 acs = deepcopy(rel_redundant)
 span_homs = (:proj_x,:proj_y)
 cache = make_cache_rel(acs, span_homs)
 
+# how to make set_subpart! work
+new_part = add_part!(acs, :Rel)
+
+# in the final version, acs would have a field that stores
+# all the indexed spans, and we should check if f was a part
+# of any indexed spans. For now we input manually.
+function test_set_subpart!(acs, part, f, val, span_homs, cache)
+    set_subpart!(acs, part, f, val)
+    # is using 0 for uninitialized homs an implementation detail i shouldn't rely on?
+    span_homs_vals = [acs[part, span_f] for span_f in span_homs]
+    if all(span_homs_vals .!= 0)
+        # not sure what SortedDict uses, check if push! is inappropriate
+        push!(cache[Tuple(span_homs_vals)], part) 
+    end
+end
+
+test_set_subpart!(acs, new_part, span_homs[1], 4, span_homs, cache)
+test_set_subpart!(acs, new_part, span_homs[2], 1, span_homs, cache)
+cache[(4,1)]
+
+
 # how to make clear_subpart! work
-part = 6
-f = :proj_x
-f_pos = findfirst(isequal(f), span_homs)
-legs_parts = [acs[part,g] for g in span_homs]
-clear_subpart!(acs, part, f)
-delete!(cache[tuple(legs_parts...)], part)
+old_part = 9
+
+
+# the clear_subpart! method is pretty simple.
+function test_clear_subpart!(acs, part, f, span_homs, cache)    
+    clear_subpart!(acs, part, f)
+    legs_parts = [acs[part,f′] for f′ in span_homs]
+    delete!(cache[tuple(legs_parts...)], part)
+end
+
+test_clear_subpart!(acs, old_part, span_homs[1], span_homs, cache)
+
+
 
 # --------------------------------------------------------------------------------
-# now for when the apex is a product
-cache_dims = [nparts(mydata, codom(s, f)) for f in span]
-product_cache = Array{Int}(undef, cache_dims...)
-for (i, ind) in enumerate(relation_cache)
-    product_cache[ind...] = i
+# add_part!
+# 1. if the part is added to the apex, do not need to do anything
+# 2. if the part is added to the legs, we need to add keys _before_ calling existing methods
+
+function test_add_part!(acs, type, cache, span_homs)
+    s = acset_schema(acs)
+    # if the part is being added to the legs of the homs, update the keys
+    span_legs = [codom(s, f) for f in span_homs]
+    if type ∈ span_legs
+        # find which position in the legs `type` is
+        y_pos = findfirst(isequal(type), span_legs)
+        not_y = setdiff(eachindex(span_homs), y_pos)
+        # NOTE: not generalizable yet, but now we assume the newly added part
+        # will have an ID that is just one more than the maximum already present
+        new_part = nparts(acs, type) + 1
+        not_y_idx = Iterators.product([parts(acs, span_legs[f′]) for f′ in not_y]...)
+        for ix in not_y_idx
+            new_key = zeros(Int, length(span_homs))
+            new_key[y_pos] = new_part
+            new_key[not_y] .= ix
+            cache[new_key...] = Set{Int}()
+        end
+        
+    end
+    add_part!(acs, type)
 end
 
-# find it
-product_cache[parts...]
+acs = deepcopy(rel_sparse)
+span_homs = (:proj_x,:proj_y)
+cache = make_cache_rel(acs, span_homs)
 
-"""
-    Make a cache for a relation (span) that is a product
-"""
-function make_cache_prod()
-end
+test_add_part!(acs, :X, cache, span_homs)
+
+
+# --------------------------------------------------------------------------------
+# rem_part!
+# 1. if the part is removed from the apex, do not need to do anything (set/clear_subpart! will handle it)
+# 2. if the part is removed from the legs, we need to delete keys _after_ calling existing methods
+#    because we get the id associated to the deleted object and then delete all keys including that id
+
+
+
+# --------------------------------------------------------------------------------
+# what i planned to do here was to make another version of cache that is
+# matrix backed rather than dict backed. it may or may not be very useful.
+
+# cache_dims = [nparts(mydata, codom(s, f)) for f in span]
+# product_cache = Array{Int}(undef, cache_dims...)
+# for (i, ind) in enumerate(relation_cache)
+#     product_cache[ind...] = i
+# end
+
+# # find it
+# product_cache[parts...]
+
+# """
+#     Make a cache for a relation (span) that is a product
+# """
+# function make_cache_prod()
+# end
 
 
 # --------------------------------------------------------------------------------
@@ -272,3 +351,5 @@ end
 #     check at compile time if the passed symbol f is a hom that is part of a cached span, if not, we just do as
 #     usual, if it is, then we need to recompute things
 # 2. figure out how the existing setup recomputes the dict backed preimages
+
+# interesting q, when one adds a part to the legs, should the keys be updated? YES
