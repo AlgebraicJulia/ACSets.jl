@@ -13,85 +13,6 @@ MySch = BasicSchema(
 
 @acset_type MyDataType(MySch, index=[:proj_x,:proj_y], unique_index=[:xname,:yname])
 
-# mydata = @acset MyDataType{Symbol,Float64} begin
-#     X = 4
-#     Y = 3
-#     xname = [:widget1,:widget2,:widget3,:widget4]
-#     yname = [:place1,:place2,:place3]
-# end
-
-# costs = rand(4,3)
-
-# add_parts!(
-#     mydata, :Rel, prod(size(costs)),
-#     proj_x = repeat(1:4,3),
-#     proj_y = vcat(map(i->fill(i,4),1:3)...),
-#     cost = vcat(costs...)
-# )
-
-# # a pattern that comes up very, very often
-# mydata[
-#     intersect(
-#         incident(mydata, :widget3, [:proj_x,:xname]),
-#         incident(mydata, :place2, [:proj_y,:yname])
-#     ),
-#     :cost
-# ]
-
-# # Kris' example
-# SchTest = BasicSchema(
-#     [:A,:B,:C,:R],
-#     [(:f,:R,:A),(:g,:R,:B),(:h,:R,:C)],
-#     [],
-#     []
-# )
-
-# # @acset_type Test(SchTest, index=[:h, (:f,:g)])
-# @acset_type DataTest(SchTest)
-
-# X = @acset DataTest begin
-#     A=1
-#     B=1
-#     C=1
-#     R=1
-#     f=[1]
-#     g=[1]
-#     h=[1]
-# end
-
-# # incident(X, (1,1), (:f,:g)) # == [1]
-# incident(X, 1, :f)
-# incident(X, 1, :g)
-
-# # acs = X
-# # parts = (1,1)
-# # f = (:f,:g)
-
-# function ACSetInterface.incident(
-#         acs::SimpleACSet, parts::T1, f::T2) where {T1<:Tuple{Vararg{<:Integer}},T2<:Tuple{Vararg{Symbol}}}
-#     s = acset_schema(acs)
-#     length(unique([dom(s,f[i]) for i in eachindex(f)])) == 1 || error("some homs in $(f) do not have the same domain")
-#     length(parts) == length(f) || error("parts should be the same length as f")
-#     return intersect([incident(acs, parts[i], f[i]) for i in eachindex(f)]...)
-# end
-
-
-# incident(X, (1,1), (:f,:g))
-
-# function ACSetInterface.incident(
-#         acs::SimpleACSet, parts::T1, f::T2) where {T1<:Tuple,T2<:Tuple{Vararg{AbstractVector{Symbol}}}}
-#     s = acset_schema(acs)
-#     length(unique([dom(s,f[i][1]) for i in eachindex(f)])) == 1 || error("some homs in $(f) do not have the same domain")
-#     length(parts) == length(f) || error("parts should be the same length as f")
-#     return intersect(map(i->incident(acs, parts[i], f[i]), eachindex(f))...)
-# end
-
-# incident(mydata, (:widget3,:place2), ([:proj_x,:xname],[:proj_y,:yname]))
-
-# does the new incident with composed arrows work with the composed arrows are of diff lengths?
-# e.g. z -> x -> y
-#      z -> a -> b -> c
-
 # --------------------------------------------------------------------------------
 # need to make a couple of types of relations (now binary, but should test for n-ary)
 # these are used to test the software
@@ -190,7 +111,6 @@ end
 #     cache_index[key] = findall(isequal(key), span_parts)
 # end
 
-
 """
     Make a cache for a general relation (span) that may not be a product, the cache is
         a Dict mapping n-tuples (pairs for binary relations) which index the objects
@@ -211,15 +131,14 @@ function make_cache_rel(acs::StructACSet{S}, span::Tuple{Vararg{Symbol}}) where 
     return cache_index
 end
 
-for acs in [rel_redundant,rel_product,rel_sparse]
-    cache = make_cache_rel(acs, (:proj_x,:proj_y))
-    for (i,j) in Iterators.product(parts(rel_redundant,:X), parts(rel_redundant,:Y))
-        rel_parts_cache = cache[(i,j)]
-        rel_parts_inc = intersect(incident(acs, i, :proj_x), incident(acs, j, :proj_y))
-        @test rel_parts_cache == rel_parts_inc
-    end
-end
-
+# for acs in [rel_redundant,rel_product,rel_sparse]
+#     cache = make_cache_rel(acs, (:proj_x,:proj_y))
+#     for (i,j) in Iterators.product(parts(rel_redundant,:X), parts(rel_redundant,:Y))
+#         rel_parts_cache = cache[(i,j)]
+#         rel_parts_inc = intersect(incident(acs, i, :proj_x), incident(acs, j, :proj_y))
+#         @test rel_parts_cache == rel_parts_inc
+#     end
+# end
 
 
 # --------------------------------------------------------------------------------
@@ -246,30 +165,33 @@ function test_set_subpart!(acs, part, f, val, span_homs, cache)
     end
 end
 
+old_idx = length(cache[(4,1)])
 test_set_subpart!(acs, new_part, span_homs[1], 4, span_homs, cache)
 test_set_subpart!(acs, new_part, span_homs[2], 1, span_homs, cache)
-cache[(4,1)]
-
+@test length(cache[(4,1)]) == old_idx + 1
+@test new_part ∈ cache[(4,1)]
 
 # how to make clear_subpart! work
-old_part = 9
-
+subpart_ix = 9
 
 # the clear_subpart! method is pretty simple.
 function test_clear_subpart!(acs, part, f, span_homs, cache)    
-    clear_subpart!(acs, part, f)
     legs_parts = [acs[part,f′] for f′ in span_homs]
+    clear_subpart!(acs, part, f)    
     delete!(cache[tuple(legs_parts...)], part)
 end
 
+key = tuple([acs[subpart_ix,f] for f in span_homs]...)
+@test subpart_ix ∈ cache[key]
 test_clear_subpart!(acs, old_part, span_homs[1], span_homs, cache)
-
+@test subpart_ix ∉ cache[key]
 
 
 # --------------------------------------------------------------------------------
 # add_part!
 # 1. if the part is added to the apex, do not need to do anything
 # 2. if the part is added to the legs, we need to add keys _before_ calling existing methods
+# NOTE: this only works right now if the leg is involved in only one cached span
 
 function test_add_part!(acs, type, cache, span_homs)
     s = acset_schema(acs)
@@ -298,16 +220,71 @@ acs = deepcopy(rel_sparse)
 span_homs = (:proj_x,:proj_y)
 cache = make_cache_rel(acs, span_homs)
 
+@test sum(length.(values(cache))) == nparts(acs,:Rel)
+old_cache_length = nparts(acs,:X) * nparts(acs,:Y)
+@test length(keys(cache)) == old_cache_length
 test_add_part!(acs, :X, cache, span_homs)
-
+@test length(keys(cache)) == old_cache_length + nparts(acs,:Y)
 
 # --------------------------------------------------------------------------------
 # rem_part!
 # 1. if the part is removed from the apex, do not need to do anything (set/clear_subpart! will handle it)
 # 2. if the part is removed from the legs, we need to delete keys _after_ calling existing methods
 #    because we get the id associated to the deleted object and then delete all keys including that id
+# NOTE: this only works right now if the leg is involved in only one cached span
+
+# function test_rem_part!(acs, type, part, cache, span_homs)    
+#     rem_part!(acs, type, part)
+
+#     s = acset_schema(acs)
+#     homs_to_type = homs(s, to=type_to_del)
+#     hom_to_type_in_span = 0
+#     for i in eachindex(homs_to_type)
+#         if homs_to_type[i][3] == type
+#             hom_to_type_in_span = i
+#         end
+#     end
+
+#     check_pos = findfirst(span_homs .== hom_to_type_in_span) # this will break on lacsets
+#     for key in keys(cache)
+#         if key[check_pos] == part
+#             delete!(cache, key)
+#         end
+#     end
+# end
+
+acs = deepcopy(rel_sparse)
+span_homs = (:proj_x,:proj_y)
+cache = make_cache_rel(acs, span_homs)
+
+type_to_del = :X
+part_to_del = 4
+
+num_keys_with_part = sum(first.(keys(cache)) .== part_to_del)
+@test num_keys_with_part > 0
 
 
+# test_rem_part!(acs, type_to_del, part_to_del, cache, span_homs)
+
+rem_part!(acs, type_to_del, part_to_del)
+
+# we need to find out which arrow in span_homs was going into the ob `type`, because
+# that one will be the index of keys that need to be erased
+s = acset_schema(acs)
+homs_in = homs(s, to=type_to_del, just_names=true)
+
+span_leg = [f ∈ span_homs ? f : nothing for f in homs_in]
+filter!(x->!isnothing(x), span_leg)
+
+span_leg_ix = findfirst(span_homs .== span_leg)
+
+for key in keys(cache)
+    if key[span_leg_ix] == part_to_del
+        delete!(cache, key)
+    end
+end
+
+# we will need to repeat the above for _each_ indexed span
 
 # --------------------------------------------------------------------------------
 # what i planned to do here was to make another version of cache that is
