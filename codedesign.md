@@ -4,7 +4,6 @@
 
 There are a lot of parameterized types in ACSets.jl that make everything work. It's confusing to figure out what they all do. Let's map them out. We use a directed arrow to denote that the type at the source of the arrow is a subtype of the type at the target of the arrow.
 
-
 ```mermaid
 classDiagram
 
@@ -39,6 +38,14 @@ StructACSet <|-- StructCSet : StructACSet{S,Tuple{},PT}
 namespace Columns {
     class Column ["abstract Column{S,T}"]
 }
+
+namespace ColumnImplementations {
+    class DenseFinColumn ["DenseFinColumn{V}"] {
+        m <: VecMap&lcub;Int,V&rcub;
+        pc <: TrivialCache&lcub;Int,Int&rcub;
+    }
+}
+Column <|-- DenseFinColumn : Column{Int,Int}
 
 namespace PreimageCaches {
     class PreimageCache ["abstract PreimageCache{S,T}"] {
@@ -76,4 +83,12 @@ namespace Mappings {
 AbstractDict <|-- Mapping
 Mapping <|-- VecMap : Mapping{Int,T}
 Mapping <|-- DictMap : Mapping{K,V}
+```
+
+## implementation
+
+We need to wrap the ACSet in a struct that may look like:
+
+```
+struct SpanIndexedACSet{S<:}
 ```
