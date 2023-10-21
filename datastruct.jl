@@ -31,9 +31,22 @@ function IndexedSpanACSet(acs::StructACSet{S}, to_index::I) where {S,I<:Vector{<
     IndexedSpanACSet{typelevel_indexedspans(IndexedSpans(to_index)), typeof(idxs)}(
         acs,
         idxs
-    ) 
+    )
 end
 
+get_indexed_spans(::IndexedSpanACSet{S}) where {S} = S
+
+function get_spans(::Type{TypeLevelIndexedSpans{Spans}}) where {Spans}
+    get_spans(
+        IndexedSpans(
+            [Spans.parameters...]
+        )
+    )
+end
+get_spans(s::IndexedSpans) = s.spans
+
+# to get the IndexedSpans from the type level indexed spans
+# get_spans(get_indexed_spans(mydataidx))
 
 # --------------------------------------------------------------------------------
 # build the index for an indexed span
@@ -57,7 +70,22 @@ end
 # --------------------------------------------------------------------------------
 # incident when querying multiple columns
 # note: if the cols are part of an indexed span, use the dict lookup
-#       if not, default to the normal one using intersectn
+#       if not, default to the normal one using intersection
+
+
+
+# incident when `f` is not indexed
+function _incident_noidx(acs, parts, f::I) where {I<:Tuple{Vararg{Symbol}}}
+    return intersect([incident(acs, parts[i], f[i]) for i in eachindex(f)]...)
+end
+
+# incident when `f` is an indexed span
+# we want to use CompTime.jl on this eventually to do the searching
+function _incident_idx(acs, parts, f::I) where {I<:Tuple{Vararg{Symbol}}}
+    # do stuff
+    error("implement me!")
+end
+
 
 # --------------------------------------------------------------------------------
 # code for testing
