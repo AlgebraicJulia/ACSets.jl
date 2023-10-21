@@ -21,13 +21,43 @@ typelevel_indexedspans(my_indexed_spans)
 # to store the cached indices, we'll just use a vector of dicts
 
 # we need a type to store the wrapped ACSet
-struct IndexedSpanACSet{S<:TypeLevelIndexedSpans, K, I<:AbstractVector{<:AbstractDict{<:Tuple{Vararg{K}},K}}}
+struct IndexedSpanACSet{S<:TypeLevelIndexedSpans, I}
     acs::StructACSet
     idx::I
 end
 
+function IndexedSpanACSet(acs::StructACSet{S}, to_index::I) where {S,I<:Vector{<:Tuple{Vararg{Symbol}}}}
+    idxs = [make_spanidx(acs, span) for span in to_index]
+    IndexedSpanACSet{typelevel_indexedspans(IndexedSpans(to_index)), typeof(idxs)}(
+        acs,
+        idxs
+    ) 
+end
 
 
+# --------------------------------------------------------------------------------
+# build the index for an indexed span
+
+function make_spanidx(acs::StructACSet{S}, span::Tuple{Vararg{Symbol}}) where {S}
+    s = Schema(S)
+    length(span) > 1 || error("the span $(span) only has one hom")
+    allequal([dom(s, f) for f in span]) || error("some homs in $(span) have inconsistent domain")
+
+    cache_keys = reduce(vcat, Iterators.product([codom_parts(acs, f) for f in span]...))
+    span_legs = collect(zip([subpart(acs, f) for f in span]...))
+
+    index = Dict{eltype(cache_keys),Set{Int}}()
+    for key in cache_keys
+        index[key] = Set(findall(isequal(key), span_legs))
+    end
+    return index
+end
+
+
+# --------------------------------------------------------------------------------
+# incident when querying multiple columns
+# note: if the cols are part of an indexed span, use the dict lookup
+#       if not, default to the normal one using intersectn
 
 # --------------------------------------------------------------------------------
 # code for testing
@@ -38,7 +68,7 @@ MySch = BasicSchema(
     [:X,:Y,:Rel1,:W,:Z,:Rel2],
     [
         (:proj_x1,:Rel1,:X),(:proj_y,:Rel1,:Y), # relation 1
-        (:proj_x2,:Rel2,:X),(:proj_w,:Rel2,:W),(:proj_Z,:Rel,:Z)
+        (:proj_x2,:Rel2,:X),(:proj_w,:Rel2,:W),(:proj_z,:Rel2,:Z)
     ],
     [],
     []
@@ -76,3 +106,6 @@ mydata = @acset MyDataType begin
     proj_w = getindex.(rel2_proj, 2)
     proj_z = last.(rel2_proj)
 end
+
+# generate an ACSet with indexed spans
+mydataidx = IndexedSpanACSet(mydata, [(:proj_x1,:proj_y),(:proj_x2,:proj_w,:proj_z)])
