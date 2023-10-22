@@ -6,7 +6,7 @@ export generate_json_acset, parse_json_acset, read_json_acset, write_json_acset,
   read_json_acset_schema, write_json_acset_schema, acset_schema_json_schema
 
 import JSON
-using OrderedCollections: OrderedDict
+using DataStructures: OrderedDict
 import Pkg
 import Tables
 
