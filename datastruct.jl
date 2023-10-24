@@ -1,4 +1,5 @@
 using Revise, ACSets
+using CompTime
 
 # need a thing that stores indexed spans
 
@@ -8,15 +9,14 @@ struct IndexedSpans
     spans::Vector{Tuple{Vararg{Symbol}}}
 end
 
-my_indexed_spans = IndexedSpans([(:f1,:f2),(:g1,:g2,:g3)])
-
 function typelevel_indexedspans(s::IndexedSpans)
     TypeLevelIndexedSpans{
         Tuple{s.spans...}
     }
 end
 
-typelevel_indexedspans(my_indexed_spans)
+# my_indexed_spans = IndexedSpans([(:f1,:f2),(:g1,:g2,:g3)])
+# typelevel_indexedspans(my_indexed_spans)
 
 # to store the cached indices, we'll just use a vector of dicts
 
@@ -83,8 +83,13 @@ end
 # we want to use CompTime.jl on this eventually to do the searching
 function _incident_idx(acs, parts, f::I) where {I<:Tuple{Vararg{Symbol}}}
     # do stuff
-    error("implement me!")
+    
+
+    # get_spans()
 end
+
+
+
 
 
 # --------------------------------------------------------------------------------
@@ -137,3 +142,24 @@ end
 
 # generate an ACSet with indexed spans
 mydataidx = IndexedSpanACSet(mydata, [(:proj_x1,:proj_y),(:proj_x2,:proj_w,:proj_z)])
+
+
+
+# test fn that will check if the span the user inputs is indexed
+function testfn(::IndexedSpanACSet{S,I}, f::F) where {S,I,F<:Tuple{Vararg{Symbol}}}
+    spans = get_spans(S)
+    # return f ∈ spans
+    findfirst(isequal(f), spans)
+end
+
+testfn(mydataidx, (:proj_x1,:proj_y))
+testfn(mydataidx, (:proj_x2,:proj_w,:proj_z,:blah))
+
+
+findcolons(parts::T) where {T <: Tuple} = begin
+    findall(isequal(Colon), T.parameters)
+end
+findcolons((:,5))
+findcolons((5,:))
+findcolons((:,:))
+findcolons((5,5))
