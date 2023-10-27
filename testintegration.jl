@@ -21,18 +21,20 @@ end
 # to store the cached indices, we'll just use a vector of dicts
 
 # we need a type to store the wrapped ACSet
-struct IndexedSpanACSet{S<:TypeLevelIndexedSpans, I}
+struct IndexedSpanACSet{S<:TypeLevelIndexedSpans, I, PT} <: ACSet{PT}
     acs::StructACSet
     idx::I
 end
 
-function IndexedSpanACSet(acs::StructACSet{S}, to_index::I) where {S,I<:Vector{<:Tuple{Vararg{Symbol}}}}
+function IndexedSpanACSet(acs::StructACSet{S,TS,PT}, to_index::I) where {S,TS,PT,I<:Vector{<:Tuple{Vararg{Symbol}}}}
     idxs = [make_spanidx(acs, span) for span in to_index]
-    IndexedSpanACSet{typelevel_indexedspans(IndexedSpans(to_index)), typeof(idxs)}(
+    IndexedSpanACSet{typelevel_indexedspans(IndexedSpans(to_index)), typeof(idxs), PT}(
         acs,
         idxs
     )
 end
+
+ACSetInterface.acset_name(acs::IndexedSpanACSet) = acset_name(acs.acs)
 
 get_typelevel_indexed_spans(::IndexedSpanACSet{S}) where {S} = S
 
@@ -108,7 +110,6 @@ function ACSetInterface.add_part!(acs::IndexedSpanACSet{S,I}, type) where {S,I}
     spans_legs = [[codom(sch, f) for f in s] for s in spans]
 
     # if `type` in legs of an indexed span, update keys of index
-    # (note the same object might be involved in >1 indexed span)
     for s in eachindex(spans_legs)
         if type ∉ spans_legs[s]
             continue
