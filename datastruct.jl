@@ -1,5 +1,6 @@
 using Revise, ACSets
 using CompTime
+using Test
 
 # need a thing that stores indexed spans
 
@@ -34,19 +35,19 @@ function IndexedSpanACSet(acs::StructACSet{S}, to_index::I) where {S,I<:Vector{<
     )
 end
 
-get_indexed_spans(::IndexedSpanACSet{S}) where {S} = S
+get_typelevel_indexed_spans(::IndexedSpanACSet{S}) where {S} = S
 
-function get_spans(::Type{TypeLevelIndexedSpans{Spans}}) where {Spans}
-    get_spans(
+function get_indexed_spans(::Type{TypeLevelIndexedSpans{Spans}}) where {Spans}
+    get_indexed_spans(
         IndexedSpans(
             [Spans.parameters...]
         )
     )
 end
-get_spans(s::IndexedSpans) = s.spans
+get_indexed_spans(s::IndexedSpans) = s.spans
 
 # to get the IndexedSpans from the type level indexed spans
-# get_spans(get_indexed_spans(mydataidx))
+# get_indexed_spans(get_typelevel_indexed_spans(mydataidx))
 
 # --------------------------------------------------------------------------------
 # build the index for an indexed span
@@ -72,24 +73,150 @@ end
 # note: if the cols are part of an indexed span, use the dict lookup
 #       if not, default to the normal one using intersection
 
-
-
 # incident when `f` is not indexed
-function _incident_noidx(acs, parts, f::I) where {I<:Tuple{Vararg{Symbol}}}
-    return intersect([incident(acs, parts[i], f[i]) for i in eachindex(f)]...)
+function _incident_noidx(acs::IndexedSpanACSet, parts, f::I) where {I<:Tuple{Vararg{Symbol}}}
+    return intersect([incident(acs.acs, parts[i], f[i]) for i in eachindex(f)]...)
 end
 
 # incident when `f` is an indexed span
-# we want to use CompTime.jl on this eventually to do the searching
-function _incident_idx(acs, parts, f::I) where {I<:Tuple{Vararg{Symbol}}}
-    # do stuff
-    
+# ix: the numeric index of the span (acs.idx[ix])
+function _incident_idx(acs::IndexedSpanACSet, parts, ix)
+    return collect(acs.idx[ix][parts])
+end
 
-    # get_spans()
+function ACSetInterface.incident(acs::IndexedSpanACSet{S,I}, parts::T, f::F) where {S,I,T<:Tuple,F<:Tuple{Vararg{Symbol}}}
+    indexed_spans = get_indexed_spans(S)
+    f_pos = findfirst(isequal(f), indexed_spans)
+    isnothing(f_pos) ? _incident_noidx(acs, parts, f) : _incident_idx(acs, parts, f_pos)
 end
 
 
+# --------------------------------------------------------------------------------
+# add/rem part
+# these methods add and remove keys from indexed spans, if elements are added/removed to ob
+# sets of the legs of any indexed spans
 
+# acs = deepcopy(mydataidx)
+# sch = acset_schema(acs.acs)
+# spans = get_indexed_spans(get_typelevel_indexed_spans(acs))
+
+# add part
+function ACSetInterface.add_part!(acs::IndexedSpanACSet{S,I}, type) where {S,I}
+    sch = acset_schema(acs.acs)
+    spans = get_indexed_spans(S)
+
+    # get objects in legs of each indexed span
+    spans_legs = [[codom(sch, f) for f in s] for s in spans]
+
+    # if `type` in legs of an indexed span, update keys of index
+    for s in eachindex(spans_legs)
+        if type ∉ spans_legs[s]
+            continue
+        end
+        # get index of `type` and not `type` in legs of indexed span `s`
+        type_ix = findfirst(isequal(type), spans_legs[s])
+        nottype_ix = setdiff(eachindex(spans_legs[s]), type_ix)
+        # NOTE: not maybe generalizable? we assume the newly added part
+        # will have an ID that is just one more than the current maximum part
+        # ACSetInterface.add_parts!(m::IntParts/BitSetParts, n::Int) could be seperated
+        # into a fn that returns in the new part ID and one that actually updates m
+
+        # add keys for new part of ob `type` with product of other obs in the legs
+        new_part = nparts(acs.acs, type) + 1
+        nottype_keys = Iterators.product([parts(acs.acs, spans_legs[s][f′]) for f′ in nottype_ix]...)
+        for i in nottype_keys
+            new_key = zeros(Int, length(spans_legs[s]))
+            new_key[type_ix] = new_part
+            new_key[nottype_ix] .= i
+            acs.idx[s][new_key...] = Set{Int}()
+        end
+    end
+
+    # call existing add_part!
+    add_part!(acs.acs, type)
+end
+
+# rem part
+function ACSetInterface.rem_part!(acs::IndexedSpanACSet{S,I}, type, part) where {S,I}
+    # call existing rem_part!
+    rem_part!(acs.acs, type, part)
+
+    sch = acset_schema(acs.acs)
+    spans = get_indexed_spans(S)
+
+    # get objects in legs of each indexed span
+    spans_legs = [[codom(sch, f) for f in s] for s in spans]
+
+    # if `type` in legs of an indexed span, update keys of index
+    for s in eachindex(spans_legs)
+        if type ∉ spans_legs[s]
+            continue
+        end
+        # position of `type` in legs of indxd span `s`
+        type_ix = findfirst(isequal(type), spans_legs[s])
+        # delete all keys with the deleted element of `type`
+        for key in keys(acs.idx[s])
+            if key[type_ix] == part
+                delete!(acs.idx[s], key)
+            end
+        end
+    end
+end
+
+
+# --------------------------------------------------------------------------------
+# set/clear subpart
+# these methods add or remove values associated to keys, if subparts (homs) from
+# the apex of an indexed span are set or removed
+
+# acs = deepcopy(mydataidx)
+# sch = acset_schema(acs.acs)
+# spans = get_indexed_spans(get_typelevel_indexed_spans(acs))
+
+# set_subpart!
+function ACSetInterface.set_subpart!(acs::IndexedSpanACSet{S,I}, part, f, subpart) where {S,I}
+    # basic set subpart
+    set_subpart!(acs.acs, part, f, subpart)
+
+    sch = acset_schema(acs.acs)
+    spans = get_indexed_spans(S)
+
+    # needed in case `f` is involved in multiple spans
+    for s in eachindex(spans)
+        # only need to update idx if `f` was in idxd span `s`
+        if f ∉ spans[s]
+            continue
+        end
+
+        # is using 0 for uninitialized homs an implementation detail i shouldn't rely on?
+        span_subparts = [acs.acs[part, f′] for f′ in spans[s]]
+        if all(span_subparts .!= 0)
+            push!(acs.idx[s][Tuple(span_subparts)], part) 
+        end
+    end
+end
+
+
+# clear subpart!
+function ACSetInterface.clear_subpart!(acs::IndexedSpanACSet{S,I}, part, f) where {S,I}
+
+    sch = acset_schema(acs.acs)
+    spans = get_indexed_spans(S)
+
+    # 
+    for s in eachindex(spans)
+        if f ∉ spans[s]
+            continue
+        end
+        span_subparts = [acs.acs[part,f′] for f′ in spans[s]]
+        if all(span_subparts .!= 0)
+            delete!(acs.idx[s][Tuple(span_subparts)], part)
+        end        
+    end
+
+    # basic clear subpart
+    clear_subpart!(acs.acs, part, f)
+end
 
 
 # --------------------------------------------------------------------------------
@@ -143,23 +270,103 @@ end
 # generate an ACSet with indexed spans
 mydataidx = IndexedSpanACSet(mydata, [(:proj_x1,:proj_y),(:proj_x2,:proj_w,:proj_z)])
 
+# tests
+for i in parts(mydataidx.acs, :Rel1)
+    @test i ∈ incident(mydataidx, (mydataidx.acs[i,:proj_x1], mydataidx.acs[i,:proj_y]), (:proj_x1,:proj_y))
+end
+@test_throws KeyError incident(mydataidx, (100,0), (:proj_x1,:proj_y))
 
 
-# test fn that will check if the span the user inputs is indexed
-function testfn(::IndexedSpanACSet{S,I}, f::F) where {S,I,F<:Tuple{Vararg{Symbol}}}
-    spans = get_spans(S)
-    # return f ∈ spans
-    findfirst(isequal(f), spans)
+for i in parts(mydataidx.acs, :Rel2)
+    @test i ∈ incident(
+        mydataidx, 
+        (mydataidx.acs[i,:proj_x2], mydataidx.acs[i,:proj_w], mydataidx.acs[i,:proj_z]), 
+        (:proj_x2,:proj_w,:proj_z)
+    )
 end
 
-testfn(mydataidx, (:proj_x1,:proj_y))
-testfn(mydataidx, (:proj_x2,:proj_w,:proj_z,:blah))
+@test [11] == incident(mydataidx, (1,3), (:proj_x2,:proj_w))
+
+@test Int[] == incident(
+    mydataidx, 
+    (1,1,1), 
+    (:proj_x2,:proj_w,:proj_z)
+)
+
+idx_spans = get_indexed_spans(get_typelevel_indexed_spans(mydataidx))
+@test length(idx_spans) == 2
+
+# adding a part (will add keys to the span(s) which include that part in their legs)
+keys1 = deepcopy(keys(mydataidx.idx[1]))
+keys2 = deepcopy(keys(mydataidx.idx[2]))
+
+@test nparts(mydataidx.acs, :X) == maximum(first.(keys1))
+@test nparts(mydataidx.acs, :X) == maximum(first.(keys2))
+
+add_part!(mydataidx, :X)
+
+@test nparts(mydataidx.acs, :X) == maximum(first.(keys(mydataidx.idx[1])))
+@test nparts(mydataidx.acs, :X) == maximum(first.(keys(mydataidx.idx[2])))
+@test length(keys(mydataidx.idx[1])) > length(keys1)
+@test length(keys(mydataidx.idx[2])) > length(keys2)
+
+newkeys1 = setdiff(keys(mydataidx.idx[1]), keys1)
+newkeys2 = setdiff(keys(mydataidx.idx[2]), keys2)
+
+@test all(first.(newkeys1) .== nparts(mydataidx.acs, :X))
+@test all(first.(newkeys2) .== nparts(mydataidx.acs, :X))
+
+@test all([length(mydataidx.idx[1][k]) for k in newkeys1] .== 0)
+@test all([length(mydataidx.idx[2][k]) for k in newkeys2] .== 0)
+
+# remove that newly added part
+rem_part!(mydataidx, :X, nparts(mydataidx.acs, :X))
+
+@test keys(mydataidx.idx[1]) == keys1
+@test keys(mydataidx.idx[2]) == keys2
+@test nparts(mydataidx.acs, :X) == 3
+
+# test setting subparts
+new_part = add_part!(mydataidx, :Rel1) # check that indexing was unaffected
+
+preimage_11 = incident(mydataidx, (1,1), (:proj_x1, :proj_y))
+
+set_subpart!(mydataidx, new_part, :proj_x1, 1)
+
+@test preimage_11 == incident(mydataidx, (1,1), (:proj_x1, :proj_y))
+
+set_subpart!(mydataidx, new_part, :proj_y, 1)
+
+@test sort(incident(mydataidx, (1,1), (:proj_x1, :proj_y))) == [1,new_part]
+
+# test removal of subparts
+clear_subpart!(mydataidx, new_part, :proj_x1)
+
+@test incident(mydataidx, (1,1), (:proj_x1, :proj_y)) == [1]
+
+# --------------------------------------------------------------------------------
+# things to look into later
+
+# need to make sure we test:
+# 1. a hom which is part of multiple indexed spans
+# 2. an ob which is in the leg of multiple indexed spans
+
+# find colons in a tuple for sliced indexing
+# findcolons(parts::T) where {T <: Tuple} = begin
+#     findall(isequal(Colon), T.parameters)
+# end
+# findcolons((:,5))
+# findcolons((5,:))
+# findcolons((:,:))
+# findcolons((5,5))
 
 
-findcolons(parts::T) where {T <: Tuple} = begin
-    findall(isequal(Colon), T.parameters)
-end
-findcolons((:,5))
-findcolons((5,:))
-findcolons((:,:))
-findcolons((5,5))
+# # test fn that will check if the span the user inputs is indexed
+# function testfn(::IndexedSpanACSet{S,I}, f::F) where {S,I,F<:Tuple{Vararg{Symbol}}}
+#     spans = get_indexed_spans(S)
+#     # return f ∈ spans
+#     findfirst(isequal(f), spans)
+# end
+
+# testfn(mydataidx, (:proj_x1,:proj_y))
+# testfn(mydataidx, (:proj_x2,:proj_w,:proj_z,:blah))
