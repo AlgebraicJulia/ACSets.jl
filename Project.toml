@@ -6,10 +6,13 @@ version = "0.2.9"
 
 [deps]
 AlgebraicInterfaces = "23cfdc9f-0504-424a-be1f-4892b28e2f0c"
+Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 CompTime = "0fb5dd42-039a-4ca4-a1d7-89a96eae6d39"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 MLStyle = "d8e11817-5142-5d16-987a-aa16d5891078"
+OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 Permutations = "2ae35dd2-176d-5d53-8349-f30d82d94d4f"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"

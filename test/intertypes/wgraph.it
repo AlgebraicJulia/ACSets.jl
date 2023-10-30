@@ -1,0 +1,14 @@
+struct Weight
+  name::Symbol
+  length::Float64
+end
+
+@schema SchWeightedGraph begin
+  V::Ob
+  E::Ob
+  src::Hom(E, V)
+  tgt::Hom(E, V)
+  weight::Attr(E, Weight)
+  label::Attr(V, String)
+end
+
