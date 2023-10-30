@@ -212,7 +212,7 @@ function as_intertypes(context::OrderedDict{Symbol, InterType})
       _ => println(decl)
     end
     push!(out.args, reader(decl))
-    push!(out.args, writer(decl))
+    push!(out.args, :(eval($(Expr(:quote, writer(decl))))))
     out
   end
 end
@@ -268,20 +268,26 @@ function reader(decl::InterTypeDecl)
   end
 end
 
-function objectwriter(fields)
-  fieldwriters = map(enumerate(fields)) do (i, field)
-    (name, expr) = field
-    quote
-      print(io, "\"")
-      print(io, $(string(name)))
-      print(io, "\":")
-      $(write)(io, format, $expr)
-      $(i != length(fields) ? :(print(io, ",")) : nothing)
-    end
+function writejsonfield(io, name, value, comma=true)
+  print(io, "\"", string(name), "\":")
+  write(io, JSONFormat(), value)
+  if comma
+    print(io, ",")
   end
+end
+
+function fieldwriters(fields)
+  map(enumerate(fields)) do (i, field)
+    (name, expr) = field
+    comma = i != length(fields)
+    :($(writejsonfield)(io, $(string(name)), $expr, $comma))
+  end
+end
+
+function objectwriter(fields)
   quote
     print(io, "{")
-    $(fieldwriters...)
+    $(fieldwriters(fields)...)
     print(io, "}")
   end
 end
@@ -296,14 +302,23 @@ function writer(decl::InterTypeDecl)
       variantlines = map(variants) do variant
         fieldnames = nameof.(variant.fields)
         fieldvars = gensym.(fieldnames)
-        Expr(:call, :(=>),
+        Expr(
+          :call, :(=>),
           :($(variant.tag)($(fieldvars...))),
-          objectwriter([(:tag, string(variant.tag)), zip(fieldnames, fieldvars)...])
+          Expr(
+            :block,
+            fieldwriters([(:_type, string(variant.tag)), zip(fieldnames, fieldvars)...])...
+          )
         )
       end
-      Expr(:macrocall, GlobalRef(MLStyle, :(var"@match")), nothing, :d,
-        Expr(:block, variantlines...)
-      )
+      quote
+        print(io, "{")
+        $(Expr(
+          :macrocall, GlobalRef(MLStyle, :(var"@match")), nothing, :d,
+          Expr(:block, variantlines...)
+        ))
+        print(io, "}")
+      end
     end
     _ => nothing
   end

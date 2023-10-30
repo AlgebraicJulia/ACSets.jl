@@ -34,11 +34,11 @@ end
 
 intertype(::Type{Int32}) = I32
 read(::JSONFormat, ::Type{Int32}, s::Real) = Int32(s)
-write(io::IO, ::JSONFormat, d::Int32) = JSON3.write(io, d)
+write(io::IO, ::JSONFormat, d::Int32) = print(io, d)
 
 intertype(::Type{UInt32}) = U32
 read(::JSONFormat, ::Type{UInt32}, s::Real) = UInt32(s)
-write(io::IO, ::JSONFormat, d::UInt32) = JSON3.write(io, d)
+write(io::IO, ::JSONFormat, d::UInt32) = print(io, d)
 
 intertype(::Type{Int64}) = I64
 read(::JSONFormat, ::Type{Int64}, s::String) = parse(Int64, s)
@@ -50,11 +50,11 @@ write(io::IO, ::JSONFormat, d::UInt64) = print(io, "\"", d, "\"")
 
 intertype(::Type{Float64}) = F64
 read(::JSONFormat, ::Type{Float64}, s::Real) = Float64(s)
-write(io::IO, ::JSONFormat, d::Float64) = JSON3.write(io, d)
+write(io::IO, ::JSONFormat, d::Float64) = print(io, d)
 
 intertype(::Type{Bool}) = Boolean
 read(::JSONFormat, ::Type{Bool}, s::Bool) = s
-write(io::IO, ::JSONFormat, d::Bool) = JSON3.write(io, d)
+write(io::IO, ::JSONFormat, d::Bool) = print(io, d)
 
 intertype(::Type{String}) = Str
 read(::JSONFormat, ::Type{String}, s::String) = s
@@ -62,7 +62,7 @@ write(io::IO, ::JSONFormat, d::String) = JSON3.write(io, d)
 
 intertype(::Type{Symbol}) = Sym
 read(::JSONFormat, ::Type{Symbol}, s::String) = Symbol(s)
-write(io::IO, ::JSONFormat, d::Symbol) = JSON3.write(io, d)
+write(io::IO, ::JSONFormat, d::Symbol) = JSON3.write(io, string(d))
 
 intertype(::Type{Vector{UInt8}}) = Binary
 read(::JSONFormat, ::Type{Vector{UInt8}}, s::String) = base64decode(s)

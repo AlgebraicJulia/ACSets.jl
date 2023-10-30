@@ -1,5 +1,5 @@
 module InterTypes
-export InterType, InterTypeDecl, Binary, intertype
+export InterType, InterTypeDecl, Binary, intertype, as_intertypes
 
 using ..InterSchemas
 import ..InterSchemas: Ob as IOb, Hom as IHom, Attr as IAttr
