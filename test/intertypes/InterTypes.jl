@@ -60,6 +60,6 @@ s′ = string(py_t.model_dump_json())
 
 @test jsonread(s′, Term) == t
 
-rm(dir * "ast_generated.py")
+rm(dir * "/ast_generated.py")
 
 end
