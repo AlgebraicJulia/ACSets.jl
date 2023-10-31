@@ -1,10 +1,8 @@
 module InterTypes
 export InterType, InterTypeDecl, Binary, intertype, as_intertypes
 
-using ..InterSchemas
-import ..InterSchemas: Ob as IOb, Hom as IHom, Attr as IAttr
-
 using MLStyle
+using ..Schemas
 
 struct Field{T}
   name::Symbol
@@ -34,7 +32,7 @@ Base.nameof(variant::Variant) = variant.tag
   Map(keytype::InterType, valuetype::InterType)
   Record(fields::Vector{Field{InterType}})
   Sum(variants::Vector{Variant{InterType}})
-  # ACSetInterType(schema::InterSchema{InterType})
+  ACSetInterType(schema::TypedSchema{InterType})
   Annot(desc::String, type::InterType)
   TypeRef(to::Symbol)
 end
@@ -43,8 +41,8 @@ end
   Alias(name::Symbol, type::InterType)
   SumType(name::Symbol, variants::Vector{Variant{InterType}})
   Struct(name::Symbol, fields::Vector{Field{InterType}})
-  SchemaDecl(name::Symbol, schema::InterSchema{InterType})
-  # NamedACSetType(name::Symbol, schemaname:::Symbol)
+  SchemaDecl(name::Symbol, schema::TypedSchema{Symbol, InterType})
+  NamedACSetType(name::Symbol, schemaname::Symbol)
 end
 
 Base.nameof(decl::InterTypeDecl) = @match decl begin

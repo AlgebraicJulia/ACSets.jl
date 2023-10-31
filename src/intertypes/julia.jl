@@ -43,20 +43,6 @@ function parse_intertype(e; defined_types::AbstractSet{Symbol}=Set{Symbol}())
   end
 end
 
-function parse_interschema(block::Expr; defined_types::AbstractSet{Symbol}=Set{Symbol}())
-  objects = OrderedDict{Symbol, IOb}()
-  homs = OrderedDict{Symbol, IHom}()
-  attrs = OrderedDict{Symbol, IAttr{InterType}}()
-  for line in block.args
-    @match line begin
-      :($ob::Ob) => (objects[ob] = IOb())
-      :($f::Hom($x, $y)) => (homs[f] = IHom(x, y))
-      :($a::Attr($x, $y)) => (attrs[a] = IAttr{InterType}(x, parse_intertype(y; defined_types)))
-    end
-  end
-  InterSchema(objects, homs, attrs)
-end
-
 function parse_intertype_decl(e; defined_types::AbstractSet{Symbol}=Set{Symbol}())
   @match e begin
     Expr(:const, Expr(:(=), name::Symbol, type)) => InterTypes.Alias(name, parse_intertype(type; defined_types))
@@ -153,32 +139,9 @@ function toexpr(intertype::InterTypeDecl; show=false)
         nothing, name,
         Expr(:block, toexpr.(variants)...)
       )
-    SchemaDecl(name, schema) =>
-      if show
-        Expr(:macrocall,
-          GlobalRef(InterSchemas, :(var"@interschema")),
-          nothing, name,
-          toexpr(schema)
-        )
-      else
-        :(const $name = $schema)
-      end
   end
 end
 
-function toexpr(schema::InterSchema{InterType})
-  lines = Expr[]
-  for (X, _) in schema.objects
-    push!(lines, :($X::Ob))
-  end
-  for (f, hom) in schema.homs
-    push!(lines, :($f::Hom($(hom.dom), $(hom.codom))))
-  end
-  for (a, attr) in schema.attrs
-    push!(lines, :($a::Attr($(attr.dom), $(toexpr(attr.codom)))))
-  end
-  Expr(:block, lines...)
-end
 
 function Base.show(io::IO, decl::InterTypeDecl)
   print(io, toexpr(decl; show=true))

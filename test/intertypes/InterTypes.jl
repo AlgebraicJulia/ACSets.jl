@@ -4,6 +4,7 @@ using ACSets.InterTypes
 using Test
 using CondaPkg
 using PythonCall
+using OrderedCollections
 import JSON3
 
 CondaPkg.add("pydantic")
@@ -30,7 +31,7 @@ vals = Any[
   UInt8[5, 3, 8],
   true,
   ["python"],
-  Dict(:jl => :py),
+  OrderedDict(:jl => :py),
   (name=:jake,),
   (:finn,)
 ]
