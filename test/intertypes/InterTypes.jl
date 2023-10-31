@@ -5,6 +5,8 @@ using Test
 using CondaPkg
 using PythonCall
 
+CondaPkg.resolve()
+
 include(as_intertypes(), "ast.it")
 
 @test intertype(Term) isa InterType
