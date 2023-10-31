@@ -1,10 +1,10 @@
-@sum_type Const begin
+@sum Const begin
   ConstStr(val::String)
   ConstInt(val::Int32)
   ConstBool(val::Bool)
 end
 
-@sum_type Term begin
+@sum Term begin
   Constant(val::Const)
   Plus(terms::Vector{Term})
   IfThenElse(ifcase::Term, thencase::Term, elsecase::Term)

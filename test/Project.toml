@@ -1,9 +1,11 @@
 [deps]
 ACSets = "227ef7b5-1206-438b-ac65-934d6da304b8"
+CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 JSONSchema = "7d188eb4-7ad8-530c-ae41-71a32a6d4692"
 MLStyle = "d8e11817-5142-5d16-987a-aa16d5891078"
 Permutations = "2ae35dd2-176d-5d53-8349-f30d82d94d4f"
+PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

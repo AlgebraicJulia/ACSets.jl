@@ -211,9 +211,29 @@ function as_intertypes(context::OrderedDict{Symbol, InterType})
       end
       _ => println(decl)
     end
+    push!(out.args, eqmethods(decl))
     push!(out.args, reader(decl))
     push!(out.args, :(eval($(Expr(:quote, writer(decl))))))
     out
+  end
+end
+
+function eqmethod(name::Symbol, fields::Vector{Field{InterType}})
+  quote
+    function Base.:(==)(a::$name, b::$name)
+      Base.all([$([:(a.$x == b.$x) for x in nameof.(fields)]...)])
+    end
+  end
+end
+
+function eqmethods(decl::InterTypeDecl)
+  @match decl begin
+    Alias(_, _) => nothing
+    Struct(name, fields) => eqmethod(name, fields)
+    SumType(name, variants) =>
+      Expr(:block, map(variants) do variant
+        eqmethod(variant.tag, variant.fields)
+    end...)
   end
 end
 
@@ -253,7 +273,7 @@ function reader(decl::InterTypeDecl)
         )
       end)
       quote
-        $tag = s[:tag]
+        $tag = s[:_type]
         $ifs
       end
     end
