@@ -5,7 +5,7 @@ using Test
 using CondaPkg
 using PythonCall
 
-CondaPkg.resolve()
+CondaPkg.add("pydantic")
 
 include(as_intertypes(), "ast.it")
 
