@@ -4,12 +4,40 @@ using ACSets.InterTypes
 using Test
 using CondaPkg
 using PythonCall
+import JSON3
 
 CondaPkg.add("pydantic")
 
 include(as_intertypes(), "ast.it")
 
 @test intertype(Term) isa InterType
+
+@test intertype_to_jsonschema(intertype(Term)) isa InterTypes.Object
+
+function testjson(x::T) where {T}
+  roundtrip = (x == jsonread(jsonwrite(x), T))
+  schema = intertype_to_jsonschema(intertype(T)) isa InterTypes.Object
+  roundtrip && schema
+end
+
+vals = Any[
+  Int32(5),
+  UInt32(5),
+  Int64(5),
+  UInt64(5),
+  "hello",
+  :hello,
+  UInt8[5, 3, 8],
+  true,
+  ["python"],
+  Dict(:jl => :py),
+  (name=:jake,),
+  (:finn,)
+]
+
+for val in vals
+  @test testjson(val)
+end
 
 t = Plus([Constant(ConstInt(1)), Constant(ConstInt(2))])
 

@@ -88,7 +88,7 @@ end
 
 intertype(::Type{OrderedDict{K,V}}) where {K,V} = Map(intertype(K), intertype(V))
 function read(format::JSONFormat, ::Type{OrderedDict{K, V}}, s::JSON3.Array) where {K, V}
-  res = OrderedDict{K, V}
+  res = OrderedDict{K, V}()
   for elt in s
     (;key, value) = read(format, NamedTuple{(:key, :value), Tuple{K, V}}, elt)
     res[key] = value
@@ -97,7 +97,7 @@ function read(format::JSONFormat, ::Type{OrderedDict{K, V}}, s::JSON3.Array) whe
 end
 function write(io::IO, format::JSONFormat, d::OrderedDict{K, V}) where {K, V}
   print(io, "[")
-  joinwith(io, (io, x) -> write(io, format, (key=x[1], value=x[2])), d, ",")
+  joinwith(io, (io, x) -> write(io, format, (key=x[1], value=x[2])), collect(pairs(d)), ",")
   print(io, "]")
 end
 
@@ -182,6 +182,10 @@ function intertype_to_jsonschema(type::InterType)
     Str => Object(
       "type" => "string",
       "\$comment" => "Str"
+    )
+    Sym => Object(
+      "type" => "string",
+      "\$comment" => "Sym"
     )
     Binary => Object(
       "type" => "string",
