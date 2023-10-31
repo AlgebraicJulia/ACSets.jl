@@ -2,12 +2,9 @@ module TestInterTypes
 
 using ACSets.InterTypes
 using Test
-using CondaPkg
-using PythonCall
 using OrderedCollections
 import JSON3
 
-CondaPkg.add("pydantic")
 
 include(as_intertypes(), "ast.it")
 
@@ -48,19 +45,27 @@ s = jsonwrite(t)
 
 @test jsonread(s, Term) == t
 
-dir = @__DIR__
-generate_python_classes(dir * "/ast.it", dir * "/ast_generated.py")
 
-pushfirst!(PyList(pyimport("sys")."path"), Py(dir))
+@static if !Sys.iswindows()
+  using CondaPkg
+  using PythonCall
 
-pyast = pyimport("ast_generated")
-pyjson = pyimport("json")
+  CondaPkg.add("pydantic")
 
-py_t = pyast.term_adapter.validate_python(pyjson.loads(Py(s)))
-s′ = string(py_t.model_dump_json())
+  dir = @__DIR__
+  generate_python_classes(dir * "/ast.it", dir * "/ast_generated.py")
 
-@test jsonread(s′, Term) == t
+  pushfirst!(PyList(pyimport("sys")."path"), Py(dir))
 
-rm(dir * "/ast_generated.py")
+  pyast = pyimport("ast_generated")
+  pyjson = pyimport("json")
+
+  py_t = pyast.term_adapter.validate_python(pyjson.loads(Py(s)))
+  s′ = string(py_t.model_dump_json())
+
+  @test jsonread(s′, Term) == t
+
+  rm(dir * "/ast_generated.py")
+end
 
 end

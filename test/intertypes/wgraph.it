@@ -1,4 +1,4 @@
-struct Weight
+struct EdgeData
   name::Symbol
   length::Float64
 end
@@ -8,7 +8,6 @@ end
   E::Ob
   src::Hom(E, V)
   tgt::Hom(E, V)
+  Weight::AttrType(EdgeData)
   weight::Attr(E, Weight)
-  label::Attr(V, String)
 end
-
