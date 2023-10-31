@@ -1,0 +1,9 @@
+struct Equation
+  lhs::simpleast.Term
+  rhs::simpleast.Term
+end
+
+struct Model
+  vars::Vector{Symbol}
+  eqs::Vector{Equation}
+end

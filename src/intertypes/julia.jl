@@ -1,23 +1,44 @@
-function parse_fields(fieldexprs; defined_types)
+function parse_fields(fieldexprs; mod)
   map(enumerate(fieldexprs)) do (i, fieldexpr)
     @match fieldexpr begin
-      Expr(:(::), name, type) => Field{InterType}(name, parse_intertype(type; defined_types))
-      Expr(:(::), type) => Field{InterType}(Symbol("_", i), parse_intertype(type; defined_types))
+      Expr(:(::), name, type) => Field{InterType}(name, parse_intertype(type; mod))
+      Expr(:(::), type) => Field{InterType}(Symbol("_", i), parse_intertype(type; mod))
     end
   end
 end
 
-function parse_variants(variantexprs; defined_types)
+function parse_variants(variantexprs; mod)
   map(variantexprs) do vexpr
     @match vexpr begin
       tag::Symbol => Variant{InterType}(tag, Field{InterType}[])
-      Expr(:call, tag, fieldexprs...) => Variant{InterType}(tag, parse_fields(fieldexprs; defined_types))
+      Expr(:call, tag, fieldexprs...) => Variant{InterType}(tag, parse_fields(fieldexprs; mod))
       _ => error("could not parse variant from $vexpr")
     end
   end
 end
 
-function parse_intertype(e; defined_types::AbstractSet{Symbol}=Set{Symbol}())
+function parse_typeref(p::RefPath; mod)
+  check_typeref(p; mod)
+  TypeRef(p)
+end
+
+function check_typeref(p::RefPath; mod)
+  @match p begin
+    RefHere(name) =>
+      if !haskey(mod.declarations, name)
+        error("name $name not found in module $(mod.name)")
+      end
+    RefThere(RefHere(extern), name) =>
+      if haskey(mod.imports, extern)
+        parse_typeref(RefHere(name); mod=mod.imports[extern])
+      else
+        error("module $mod is not an import of module $(mod.name)")
+      end
+    _ => error("nested references not supported yet")
+  end
+end
+
+function parse_intertype(e; mod::InterTypeModule)
   @match e begin
     :Int32 => InterTypes.I32
     :UInt32 => InterTypes.U32
@@ -28,64 +49,56 @@ function parse_intertype(e; defined_types::AbstractSet{Symbol}=Set{Symbol}())
     :String => InterTypes.Str
     :Symbol => InterTypes.Sym
     :Binary => InterTypes.Binary
-    T::Symbol && if T ∈ defined_types end => InterTypes.TypeRef(T)
+    T::Symbol => parse_typeref(RefPath(T); mod)
+    Expr(:(.), args...) => parse_typeref(RefPath(e); mod)
     Expr(:curly, :Vector, elemtype) =>
-      InterTypes.List(parse_intertype(elemtype; defined_types))
+      InterTypes.List(parse_intertype(elemtype; mod))
     Expr(:curly, :OrderedDict, keytype, valuetype) =>
-      InterTypes.Map(parse_intertype(keytype; defined_types), parse_intertype(valuetype; defined_types))
+      InterTypes.Map(parse_intertype(keytype; mod), parse_intertype(valuetype; mod))
     Expr(:curly, :Record, fieldexprs...) => begin
-      InterTypes.Record(parse_fields(fieldexprs; defined_types))
+      InterTypes.Record(parse_fields(fieldexprs; mod))
     end
     Expr(:curly, :Sum, variantexprs...) => begin
-      InterTypes.Sum(parse_variants(variantexprs; defined_types))
+      InterTypes.Sum(parse_variants(variantexprs; mod))
     end
     _ => error("could not parse intertype from $e")
   end
 end
 
-function parse_intertype_decl(e; defined_types::AbstractSet{Symbol}=Set{Symbol}())
+function parse_intertype_decl(e; mod::InterTypeModule)
   @match e begin
-    Expr(:const, Expr(:(=), name::Symbol, type)) => InterTypes.Alias(name, parse_intertype(type; defined_types))
+    Expr(:const, Expr(:(=), name::Symbol, type)) => Pair(name, Alias(parse_intertype(type; mod)))
     Expr(:struct, _, name::Symbol, body) => begin
       Base.remove_linenums!(body)
-      InterTypes.Struct(name, parse_fields(body.args; defined_types = Set([defined_types..., name])))
+      # this is a hack so we can have recursive data types
+      mod.declarations[name] = Alias(TypeRef(RefPath(:nothing)))
+      ret = Pair(name, Struct(parse_fields(body.args; mod)))
+      delete!(mod.declarations, name)
+      ret
     end
-    Expr(:sum_type, name::Symbol, body) => begin
+    Expr(:sum, name::Symbol, body) => begin
       Base.remove_linenums!(body)
-      InterTypes.SumType(name, parse_variants(body.args; defined_types = Set([defined_types..., name])))
+      mod.declarations[name] = Alias(TypeRef(RefPath(:nothing)))
+      ret = Pair(name, SumType(parse_variants(body.args; mod)))
+      delete!(mod.declarations, name)
+      ret
     end
-    Expr(:acset_schema, name::Symbol, body) => begin
+    Expr(:schema, name::Symbol, body) => begin
       Base.remove_linenums!(body)
-      InterTypes.SchemaDecl(name, parse_interschema(body; defined_types))
+      Pair(name, SchemaDecl(parse_interschema(body; defined_types)))
     end
     _ => error("could not parse intertype declaration from $e")
   end
 end
 
-function parse_intertype_decls(exprs)
-  defined_types = Set{Symbol}()
-  map(filter(e -> !(e isa LineNumberNode), exprs)) do expr
-    decl = parse_intertype_decl(expr; defined_types)
-    push!(defined_types, nameof(decl))
-    decl
-  end
-end
-
 module InterTypeDeclImplPrivate
 macro sum(head, body)
-  esc(Expr(:sum_type, head, body))
+  esc(Expr(:sum, head, body))
 end
 
 macro schema(head, body)
-  esc(Expr(:acset_schema, head, body))
+  esc(Expr(:schema, head, body))
 end
-end
-
-macro intertype_decls(e)
-  e.head == :block || error("expected a block as argument to @intertype_decls")
-  e = macroexpand(InterTypeDeclImplPrivate, e)
-  Base.remove_linenums!(e)
-  parse_intertype_decls(e.args)
 end
 
 function toexpr(field::Field)
@@ -114,16 +127,16 @@ function toexpr(intertype::InterType)
     Sum(variants) =>
       Expr(:curly, :Sum, toexpr.(variants)...)
     Annot(desc, innertype) => toexpr(innertype)
-    TypeRef(to) => to
+    TypeRef(to) => toexpr(to)
   end
 end
 
 Base.show(io::IO, intertype::InterType) = print(io, toexpr(intertype))
 
-function toexpr(intertype::InterTypeDecl; show=false)
-  @match intertype begin
-    Alias(name, type) => :(const $name = $type)
-    Struct(name, fields) =>
+function toexpr(name::Symbol, decl::InterTypeDecl; show=false)
+  @match decl begin
+    Alias(type) => :(const $name = $type)
+    Struct(fields) =>
       Expr(:macrocall,
         GlobalRef(MLStyle, :(var"@as_record")),
         nothing,
@@ -133,7 +146,7 @@ function toexpr(intertype::InterTypeDecl; show=false)
           Expr(:block, toexpr.(fields)...)
         )
       )
-    SumType(name, variants) =>
+    SumType(variants) =>
       Expr(:macrocall,
         GlobalRef(MLStyle, :(var"@data")),
         nothing, name,
@@ -142,43 +155,64 @@ function toexpr(intertype::InterTypeDecl; show=false)
   end
 end
 
-
-function Base.show(io::IO, decl::InterTypeDecl)
-  print(io, toexpr(decl; show=true))
+function Base.show(io::IO, declpair::Pair{Symbol, InterTypeDecl})
+  (name, decl) = declpair
+  print(io, toexpr(name, decl; show=true))
 end
 
-as_intertypes() = as_intertypes(OrderedDict{Symbol, InterType}())
-
-function as_intertypes(context::OrderedDict{Symbol, InterType})
+function as_intertypes(mod::InterTypeModule)
   function parse(in::Expr)
     Base.remove_linenums!(in)
     in = macroexpand(InterTypeDeclImplPrivate, in)
-    decl = parse_intertype_decl(in; defined_types=keys(context))
+    (name, decl) = parse_intertype_decl(in; mod)
+    mod.declarations[name] = decl
     out = Expr(:block)
-    push!(out.args, toexpr(decl))
+    push!(out.args, toexpr(name, decl))
     @match decl begin
-      Alias(name, type) => begin
-        context[name] = type
+      SumType(variants) => begin
+        for variant in variants
+          mod.declarations[variant.tag] = InterTypes.VariantOf(name)
+        end
       end
-      Struct(name, fields) => begin
-        type = InterTypes.Record(fields)
-        context[name] = type
-        push!(out.args, :($(GlobalRef(InterTypes, :intertype))(::Type{$name}) = $type))
-      end
-      SumType(name, variants) => begin
-        type = InterTypes.Sum(variants)
-        context[name] = type
-        push!(out.args,
-          :($(GlobalRef(InterTypes, :intertype))(::Type{$name}) = $type)
-        )
-      end
-      _ => println(decl)
+      _ => nothing
     end
-    push!(out.args, eqmethods(decl))
-    push!(out.args, reader(decl))
-    push!(out.args, :(eval($(Expr(:quote, writer(decl))))))
+    push!(out.args, eqmethods(name, decl))
+    push!(out.args, reader(name, decl))
+    push!(out.args, :(eval($(Expr(:quote, writer(name, decl))))))
     out
   end
+end
+
+function include_intertypes(into::Module, file::String, imports::AbstractVector)
+  endswith(file, ".it") || error("expected a file ending in \".it\"")
+  name = Symbol(chop(file; tail=3))
+  mod = InterTypeModule(name, OrderedDict{Symbol, InterTypeModule}(imports))
+  into.include(as_intertypes(mod), file)
+  into.eval(Expr(:export, keys(mod.declarations)...))
+  mod
+end
+
+macro intertypes(file, modexpr)
+  name, imports = @match modexpr begin
+    Expr(:module, _, name, body) => begin
+      imports = Symbol[]
+      for line in body.args
+        @match line begin
+          Expr(:import, Expr(:(.), :(.), :(.), name)) => push!(imports, name)
+          _ => nothing
+        end
+      end
+      (name, imports)
+    end
+    _ => error("expected a module expression, got $modexpr")
+  end
+  imports = Expr(:vect, [:($(Expr(:quote, name)) => $name.Meta) for name in imports]...)
+  Expr(
+    :toplevel,
+    esc(modexpr),
+    :($(esc(name)).Meta = include_intertypes($(esc(name)), $file, $(esc(imports)))),
+    esc(name),
+  )
 end
 
 function eqmethod(name::Symbol, fields::Vector{Field{InterType}})
@@ -189,11 +223,11 @@ function eqmethod(name::Symbol, fields::Vector{Field{InterType}})
   end
 end
 
-function eqmethods(decl::InterTypeDecl)
+function eqmethods(name, decl::InterTypeDecl)
   @match decl begin
-    Alias(_, _) => nothing
-    Struct(name, fields) => eqmethod(name, fields)
-    SumType(name, variants) =>
+    Alias(_) => nothing
+    Struct(fields) => eqmethod(name, fields)
+    SumType(variants) =>
       Expr(:block, map(variants) do variant
         eqmethod(variant.tag, variant.fields)
     end...)
@@ -223,11 +257,11 @@ function makeifs(branches, elsebody)
   Expr(:if, cond, body, expr)
 end
 
-function reader(decl::InterTypeDecl)
+function reader(name, decl::InterTypeDecl)
   body = @match decl begin
-    Alias(_, _) => nothing
-    Struct(name, fields) => variantreader(name, fields)
-    SumType(name, variants) => begin
+    Alias(_) => nothing
+    Struct(fields) => variantreader(name, fields)
+    SumType(variants) => begin
       tag = gensym(:tag)
       ifs = makeifs(map(variants) do variant
         (
@@ -240,10 +274,10 @@ function reader(decl::InterTypeDecl)
         $ifs
       end
     end
-    SchemaDecl(_, _) => nothing
+    SchemaDecl(_) => nothing
   end
   if !isnothing(body)
-    :(function $(GlobalRef(InterTypes, :read))(format::$(JSONFormat), ::Type{$(nameof(decl))}, s::$(JSON3.Object))
+    :(function $(GlobalRef(InterTypes, :read))(format::$(JSONFormat), ::Type{$(name)}, s::$(JSON3.Object))
       $body
     end)
   else
@@ -275,13 +309,13 @@ function objectwriter(fields)
   end
 end
 
-function writer(decl::InterTypeDecl)
+function writer(name, decl::InterTypeDecl)
   body = @match decl begin
-    Alias(_, _) => nothing
-    Struct(_, fields) => begin
+    Alias(_) => nothing
+    Struct(fields) => begin
       objectwriter([(field.name, :(d.$(field.name))) for field in fields])
     end
-    SumType(name, variants) => begin
+    SumType(variants) => begin
       variantlines = map(variants) do variant
         fieldnames = nameof.(variant.fields)
         fieldvars = gensym.(fieldnames)
@@ -306,7 +340,7 @@ function writer(decl::InterTypeDecl)
     _ => nothing
   end
   if !isnothing(body)
-    :(function $(GlobalRef(InterTypes, :write))(io::IO, format::$(JSONFormat), d::$(nameof(decl)))
+    :(function $(GlobalRef(InterTypes, :write))(io::IO, format::$(JSONFormat), d::$(name))
       $body
     end)
   else

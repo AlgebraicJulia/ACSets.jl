@@ -1,4 +1,4 @@
-export generate_python_classes
+export generate_python_module
 
 function topy(intertype::InterType)
   @match intertype begin
@@ -16,7 +16,7 @@ function topy(intertype::InterType)
     Record(_) => error("no native record type for python")
     Sum(_) => error("no native sum type for python")
     Annot(_, type) => topy(type)
-    TypeRef(to) => "\"$(string(to))\""
+    TypeRef(to) => "\"$(string(toexpr(to)))\""
   end
 end
 
@@ -28,13 +28,17 @@ function python_class(io::IO, name, fields)
   end
 end
 
-function topy(io::IO, decl::InterTypeDecl)
+function topy(io::IO, name, decl::InterTypeDecl)
   @match decl begin
-    Alias(name, type) =>
+    Alias(type) => begin
       println(io, "$name = $(topy(type))\n")
-    Struct(name, fields) =>
+      print(io, "\n\n")
+    end
+    Struct(fields) => begin
       python_class(io, name, [(field.name, topy(field.type)) for field in fields])
-    SumType(name, variants) => begin
+      print(io, "\n\n")
+    end
+    SumType(variants) => begin
       for variant in variants
         regularfields = [(field.name, topy(field.type)) for field in variant.fields]
         tagstr = "\"$(variant.tag)\""
@@ -49,14 +53,24 @@ function topy(io::IO, decl::InterTypeDecl)
       print(io, """
       $(lowercase(string(name)))_adapter: TypeAdapter[$name] = TypeAdapter($name)
       """)
+      print(io, "\n\n")
     end
+    _ => nothing
   end
 end
 
 PYTHON_PREAMBLE = """
-from typing import Annotated, Literal
+from typing import Literal, Annotated
 
-from pydantic import BaseModel, Field, PlainSerializer, TypeAdapter
+from pydantic import Field, TypeAdapter
+
+from intertypes import SafeInt, InterTypeBase
+"""
+
+INTERTYPE_PYTHON_MODULE = """
+from typing import Annotated
+
+from pydantic import BaseModel, PlainSerializer
 
 SafeInt = Annotated[
     int, PlainSerializer(lambda x: str(x), return_type=str, when_used="json")
@@ -68,17 +82,21 @@ class InterTypeBase(BaseModel):
         return super().model_dump_json(*args, **kwargs, by_alias=True)
 """
 
-function generate_python_classes(infile, outfile)
-  in = Meta.parseall(Base.read(infile, String))
-  Base.remove_linenums!(in)
-  in = macroexpand(InterTypeDeclImplPrivate, in)
-  decls = parse_intertype_decls(in.args)
+function generate_python_module(jmod::Module, outdir)
+  mod = jmod.Meta
+  outfile = outdir * "/" * string(mod.name) * ".py"
   open(outfile, "w") do io
     print(io, PYTHON_PREAMBLE)
+    for (name, importedmod) in mod.imports
+      if name != importedmod.name
+        println(io, "import $(importedmod.name) as $name")
+      else
+        println(io, "import $name")
+      end
+    end
     print(io, "\n\n")
-    for decl in decls
-      topy(io, decl)
-      print(io, "\n\n")
+    for (name, decl) in mod.declarations
+      topy(io, name, decl)
     end
   end
 end

@@ -5,17 +5,8 @@ using Test
 using OrderedCollections
 import JSON3
 
-
-include(as_intertypes(), "ast.it")
-
-@test intertype(Term) isa InterType
-
-@test intertype_to_jsonschema(intertype(Term)) isa InterTypes.Object
-
 function testjson(x::T) where {T}
-  roundtrip = (x == jsonread(jsonwrite(x), T))
-  schema = intertype_to_jsonschema(intertype(T)) isa InterTypes.Object
-  roundtrip && schema
+  (x == jsonread(jsonwrite(x), T))
 end
 
 vals = Any[
@@ -37,14 +28,29 @@ for val in vals
   @test testjson(val)
 end
 
-t = Plus([Constant(ConstInt(1)), Constant(ConstInt(2))])
+@intertypes "simpleast.it" module simpleast end
 
-@test jsonwrite(t) isa String
+using .simpleast
+
+t = Plus([Constant(ConstInt(1)), Constant(ConstInt(2))])
 
 s = jsonwrite(t)
 
+@test s isa String
+
 @test jsonread(s, Term) == t
 
+@intertypes "model.it" module model
+  import ..simpleast
+end
+
+using .model
+
+e = Equation(t, t)
+
+m = Model([:x], [e])
+
+@test testjson(m)
 
 @static if !Sys.iswindows()
   using CondaPkg
@@ -53,19 +59,20 @@ s = jsonwrite(t)
   CondaPkg.add("pydantic")
 
   dir = @__DIR__
-  generate_python_classes(dir * "/ast.it", dir * "/ast_generated.py")
+  write(dir * "/intertypes.py", InterTypes.INTERTYPE_PYTHON_MODULE)
+  generate_python_module(simpleast, dir)
+  generate_python_module(model, dir)
 
   pushfirst!(PyList(pyimport("sys")."path"), Py(dir))
 
-  pyast = pyimport("ast_generated")
+  pyast = pyimport("simpleast")
+  pymodel = pyimport("model")
   pyjson = pyimport("json")
 
-  py_t = pyast.term_adapter.validate_python(pyjson.loads(Py(s)))
-  s′ = string(py_t.model_dump_json())
+  py_m = pymodel.Model.model_validate_json(Py(jsonwrite(m)))
+  s′ = string(py_m.model_dump_json())
 
-  @test jsonread(s′, Term) == t
-
-  rm(dir * "/ast_generated.py")
+  @test jsonread(s′, Model) == m
 end
 
 end

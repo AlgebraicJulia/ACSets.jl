@@ -1,7 +1,8 @@
 module InterTypes
-export InterType, InterTypeDecl, Binary, intertype, as_intertypes
+export InterType, InterTypeDecl, Binary, intertype, @intertypes
 
 using MLStyle
+using OrderedCollections
 using ..Schemas
 
 struct Field{T}
@@ -17,6 +18,29 @@ struct Variant{T}
 end
 
 Base.nameof(variant::Variant) = variant.tag
+
+@data RefPath begin
+  RefHere(name::Symbol)
+  RefThere(mod::RefPath, name::Symbol)
+end
+
+function RefPath(s::Symbol)
+  RefHere(s)
+end
+
+function RefPath(e::Expr)
+  @match e begin
+    Expr(:(.), rest, QuoteNode(name)) => RefThere(RefPath(rest), name)
+    _ => error("could not parse refpath from $e")
+  end
+end
+
+function toexpr(p::RefPath)
+  @match p begin
+    RefHere(name) => name
+    RefThere(mod, name) => Expr(:(.), toexpr(mod), QuoteNode(name))
+  end
+end
 
 @data InterType begin
   I32
@@ -34,22 +58,31 @@ Base.nameof(variant::Variant) = variant.tag
   Sum(variants::Vector{Variant{InterType}})
   ACSetInterType(schema::TypedSchema{InterType})
   Annot(desc::String, type::InterType)
-  TypeRef(to::Symbol)
+  TypeRef(to::RefPath)
 end
 
 @data InterTypeDecl begin
-  Alias(name::Symbol, type::InterType)
-  SumType(name::Symbol, variants::Vector{Variant{InterType}})
-  Struct(name::Symbol, fields::Vector{Field{InterType}})
-  SchemaDecl(name::Symbol, schema::TypedSchema{Symbol, InterType})
-  NamedACSetType(name::Symbol, schemaname::Symbol)
+  Alias(type::InterType)
+  SumType(variants::Vector{Variant{InterType}})
+  VariantOf(parent::Symbol)
+  Struct(fields::Vector{Field{InterType}})
+  SchemaDecl(schema::TypedSchema{Symbol, InterType})
+  NamedACSetType(schemaname::Symbol)
 end
 
-Base.nameof(decl::InterTypeDecl) = @match decl begin
-  Alias(name, _) => name
-  SumType(name, _) => name
-  Struct(name, _) => name
+struct InterTypeModule
+  name::Symbol
+  imports::OrderedDict{Symbol, InterTypeModule}
+  declarations::OrderedDict{Symbol, InterTypeDecl}
+  function InterTypeModule(
+    name::Symbol,
+    imports::OrderedDict{Symbol, InterTypeModule}=OrderedDict{Symbol, InterTypeModule}(),
+    declarations::OrderedDict{Symbol, InterTypeDecl}=OrderedDict{Symbol, InterTypeDecl}()
+  )
+    new(name, imports, declarations)
+  end
 end
+
 
 function intertype end
 
