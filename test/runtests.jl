@@ -25,7 +25,7 @@ end
 end
 
 @testset "InterTypes" begin
-  include("InterTypes.jl")
+  include("intertypes/InterTypes.jl")
 end
 
 @testset "ADTs" begin
