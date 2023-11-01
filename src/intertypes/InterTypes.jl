@@ -70,23 +70,26 @@ end
   NamedACSetType(schemaname::Symbol)
 end
 
+function hashdecls end
+
 struct InterTypeModule
   name::Symbol
   imports::OrderedDict{Symbol, InterTypeModule}
   declarations::OrderedDict{Symbol, InterTypeDecl}
+  hash::String
   function InterTypeModule(
     name::Symbol,
     imports::OrderedDict{Symbol, InterTypeModule}=OrderedDict{Symbol, InterTypeModule}(),
     declarations::OrderedDict{Symbol, InterTypeDecl}=OrderedDict{Symbol, InterTypeDecl}()
   )
-    new(name, imports, declarations)
+    new(name, imports, declarations, hashdecls(declarations))
   end
 end
-
 
 function intertype end
 
 include("json.jl")
+include("sexp.jl")
 include("julia.jl")
 include("python.jl")
 

@@ -240,7 +240,10 @@ varianttype(variant) = Object(
   "required" => string.(nameof.(variant.fields))
 )
 
-function generate_jsonschema_module(mod::InterTypeModule, path=".")
+function generate_jsonschema_module(
+  mod::InterTypeModule, path="."
+  ;ac=JSON3.AlignmentContext(indent=2)
+)
   defs = Pair{String, Object}[]
   for (name, decl) in mod.declarations
     sname = string(name)
@@ -262,7 +265,7 @@ function generate_jsonschema_module(mod::InterTypeModule, path=".")
     "\$defs" => Object(defs)
   )
   open(string(mod.name) * "_schema.json", "w") do io
-    JSON3.pretty(io, schema)
+    JSON3.pretty(io, schema, ac)
   end
 end
 

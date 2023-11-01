@@ -188,6 +188,8 @@ function include_intertypes(into::Module, file::String, imports::AbstractVector)
   name = Symbol(chop(file; tail=3))
   mod = InterTypeModule(name, OrderedDict{Symbol, InterTypeModule}(imports))
   into.include(as_intertypes(mod), file)
+  # recompute the hash
+  mod = InterTypeModule(name, mod.imports, mod.declarations)
   into.eval(Expr(:export, keys(mod.declarations)...))
   mod
 end
