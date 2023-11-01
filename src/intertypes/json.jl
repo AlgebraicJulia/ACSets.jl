@@ -1,4 +1,4 @@
-export intertype_to_jsonschema, jsonwrite, jsonread, parse_intertype, toexpr, @intertype_decls, as_intertypes
+export tojsonschema, jsonwrite, jsonread, parse_intertype, toexpr, generate_jsonschema_module
 
 using OrderedCollections
 using Base64
@@ -145,11 +145,11 @@ const Object = OrderedDict{String, Any}
 
 function fieldproperties(fields::Vector{Field{InterType}})
   map(fields) do field
-    string(field.name) => intertype_to_jsonschema(field.type)
+    string(field.name) => tojsonschema(field.type)
   end
 end
 
-function intertype_to_jsonschema(type::InterType)
+function tojsonschema(type::InterType)
   @match type begin
     I32 => Object(
       "type" => "integer",
@@ -194,44 +194,78 @@ function intertype_to_jsonschema(type::InterType)
     )
     List(elemtype) => Object(
       "type" => "array",
-      "items" => intertype_to_jsonschema(elemtype)
+      "items" => tojsonschema(elemtype)
     )
     Map(keytype, valuetype) => Object(
       "type" => "array",
       "items" => Object(
         "type" => "object",
         "properties" => Object(
-          "key" => intertype_to_jsonschema(keytype),
-          "value" => intertype_to_jsonschema(valuetype)
+          "key" => tojsonschema(keytype),
+          "value" => tojsonschema(valuetype)
         )
       )
     )
-    Record(fields) => Object(
-      "type" => "object",
-      "properties" => Object(fieldproperties(fields)),
-      "required" => string.(nameof.(fields))
-    )
+    Record(fields) => recordtype(fields)
     Sum(variants) => Object(
-      "oneOf" => Vector{Object}(map(variants) do variant
-        Object(
-          "type" => "object",
-          "properties" => Object(
-            "tag" => Object(
-              "const" => string(variant.tag)
-            ),
-            fieldproperties(variant.fields)...
-          ),
-          "required" => string.(nameof.(variant.fields))
-        )
-      end)
+      "oneOf" => Vector{Object}(varianttype.(variants))
     )
     Annot(desc, innertype) => begin
-      innerschematype = intertype_to_jsonschema(innertype)
+      innerschematype = tojsonschema(innertype)
       innerschematype["description"] = desc
       innerschematype
     end
-    TypeRef(to) => Object(
-      "\$ref" => string(to)
-    )
+    TypeRef(to) => reftype(string(toexpr(to)))
   end
+end
+
+reftype(name) = Object(
+  "\$ref" => "#/\$defs/$(name)"
+)
+
+recordtype(fields) = Object(
+  "type" => "object",
+  "properties" => Object(fieldproperties(fields)),
+  "required" => string.(nameof.(fields))
+)
+
+varianttype(variant) = Object(
+  "type" => "object",
+  "properties" => Object(
+    "tag" => Object(
+      "const" => string(variant.tag)
+    ),
+    fieldproperties(variant.fields)...
+  ),
+  "required" => string.(nameof.(variant.fields))
+)
+
+function generate_jsonschema_module(mod::InterTypeModule, path=".")
+  defs = Pair{String, Object}[]
+  for (name, decl) in mod.declarations
+    sname = string(name)
+    @match decl begin
+      Alias(type) => push!(defs, sname => tojsonschema(type))
+      Struct(fields) => push!(defs, sname => recordtype(fields))
+      VariantOf(parent) => begin
+        sum = mod.declarations[parent]
+        variant = only(filter(v -> v.tag == name, sum.variants))
+        push!(defs, sname => varianttype(variant))
+      end
+      Sum(variants) => 
+        push!(defs, sname => Object("oneOf" => reftype.([v.tag for v in variants])))
+      _ => nothing
+    end
+  end
+  schema = Object(
+    "\$schema" => "http://json-schema.org/draft-07/schema#",
+    "\$defs" => Object(defs)
+  )
+  open(string(mod.name) * "_schema.json", "w") do io
+    JSON3.pretty(io, schema)
+  end
+end
+
+function generate_jsonschema_module(mod::Module, path=".")
+  generate_jsonschema_module(mod.Meta, path)
 end
