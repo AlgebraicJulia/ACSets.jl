@@ -1,4 +1,4 @@
-export tojsonschema, jsonwrite, jsonread, parse_intertype, toexpr, generate_jsonschema_module
+export tojsonschema, jsonwrite, jsonread, generate_jsonschema_module
 
 using OrderedCollections
 using Base64
