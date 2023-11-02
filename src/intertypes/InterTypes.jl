@@ -4,6 +4,7 @@ export InterType, InterTypeDecl, Binary, intertype, @intertypes
 using MLStyle
 using OrderedCollections
 using ..Schemas
+import ..Schemas: toexpr
 
 struct Field{T}
   name::Symbol

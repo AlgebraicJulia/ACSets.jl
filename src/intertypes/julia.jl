@@ -1,4 +1,3 @@
-import ..Schemas: toexpr
 using ...ACSets
 
 function parse_fields(fieldexprs; mod)

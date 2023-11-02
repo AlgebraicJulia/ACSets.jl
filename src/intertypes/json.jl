@@ -132,9 +132,12 @@ function read(format::JSONFormat, ::Type{NamedTuple{names, T}}, s::JSON3.Object)
   NamedTuple{names, T}(vals)
 end
 function write(io::IO, format::JSONFormat, d::NamedTuple{names, T}) where {names, T<:Tuple}
-  print(io, "{")
-  joinwith(io, writekv, [pairs(d)...], ",")
-  print(io, "}")
+  writeobject(io) do next
+    for p in pairs(d)
+      next()
+      writekv(io, p)
+    end
+  end
 end
 
 function read(format::JSONFormat, ::Type{T}, s::JSON3.Object) where {S, Ts, T <: StructACSet{S, Ts}}
@@ -142,7 +145,7 @@ function read(format::JSONFormat, ::Type{T}, s::JSON3.Object) where {S, Ts, T <:
   acs
 end
 
-writekey(io::IO, key) = print(io, "\"", ob, "\":")
+writekey(io::IO, key) = print(io, "\"", key, "\":")
 
 function writekv(io, kv::Pair{Symbol, T}) where {T}
   (k, v) = kv
@@ -168,13 +171,13 @@ function writeobject(f, io)
 end
 
 function writearray(f, io)
-  print(io, "{")
+  print(io, "[")
   writeitems(f, io)
-  print(io, "}")
+  print(io, "]")
 end
 
-function write(io::IO, format::JSONFormat, acs::T) where {S, Ts, T <: StructACSet{S, Ts}}
-  schema = BasicSchema(S)
+function write(io::IO, format::JSONFormat, acs::ACSet)
+  schema = acset_schema(acs)
   writeobject(io) do next
     for ob in objects(schema)
       next()
@@ -184,10 +187,10 @@ function write(io::IO, format::JSONFormat, acs::T) where {S, Ts, T <: StructACSe
           next()
           writeobject(io) do next
             next()
-            writekv(io, (:_id, i), comma=false)
+            writekv(io, :_id => i)
             for f in arrows(schema; from=ob, just_names=true)
               next()
-              writekv(io, (f, acs[i, f]))
+              writekv(io, f => acs[i, f])
             end
           end
         end
