@@ -1,5 +1,6 @@
 module TestInterTypes
 
+using ACSets
 using ACSets.InterTypes
 using Test
 using OrderedCollections
@@ -51,6 +52,16 @@ e = Equation(t, t)
 m = Model([:x], [e])
 
 @test testjson(m)
+
+@intertypes "wgraph.it" module wgraph end
+
+using .wgraph
+
+g = EDWeightedGraph()
+add_parts!(g, :V, 2)
+add_part!(g, :E, src=1, tgt=2, weight=EdgeData(:mass_ave, 42.0))
+
+@test jsonwrite(g) == JSON3.write(generate_json_acset(g))
 
 @static if !Sys.iswindows()
   using CondaPkg

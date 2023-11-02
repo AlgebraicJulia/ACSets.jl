@@ -5,6 +5,7 @@ using Base64
 using MLStyle
 import JSON3
 
+using ..ACSetInterface
 using ..DenseACSets
 
 struct JSONFormat
