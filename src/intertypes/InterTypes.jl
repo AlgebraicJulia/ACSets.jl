@@ -67,7 +67,7 @@ end
   VariantOf(parent::Symbol)
   Struct(fields::Vector{Field{InterType}})
   SchemaDecl(schema::TypedSchema{Symbol, InterType})
-  NamedACSetType(schemaname::Symbol)
+  NamedACSetType(genericname::Union{Symbol, Nothing}, schema::RefPath)
 end
 
 function hashdecls end

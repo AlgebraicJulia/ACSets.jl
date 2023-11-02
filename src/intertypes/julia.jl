@@ -1,3 +1,5 @@
+import ..Schemas: toexpr
+
 function parse_fields(fieldexprs; mod)
   map(enumerate(fieldexprs)) do (i, fieldexpr)
     @match fieldexpr begin
@@ -36,6 +38,27 @@ function check_typeref(p::RefPath; mod)
       end
     _ => error("nested references not supported yet")
   end
+end
+
+function parse_typedschema(e; mod::InterTypeModule)
+  schema = BasicSchema{Symbol}()
+  typing = Dict{Symbol, InterType}()
+  for line in e.args
+    @match line begin
+      Expr(:(::), name, schtype) => begin
+        @match schtype begin
+          :Ob => push!(schema.obs, name)
+          :(Hom($A, $B)) => push!(schema.homs, (name, A, B))
+          :(AttrType($type)) => begin
+            push!(schema.attrtypes, name)
+            typing[name] = parse_intertype(type; mod)
+          end
+          :(Attr($A, $X)) => push!(schema.attrs, (name, A, X))
+        end
+      end
+    end
+  end
+  TypedSchema{Symbol, InterType}(schema, typing)
 end
 
 function parse_intertype(e; mod::InterTypeModule)
@@ -85,7 +108,18 @@ function parse_intertype_decl(e; mod::InterTypeModule)
     end
     Expr(:schema, name::Symbol, body) => begin
       Base.remove_linenums!(body)
-      Pair(name, SchemaDecl(parse_interschema(body; defined_types)))
+      Pair(name, SchemaDecl(parse_typedschema(body; mod)))
+    end
+    Expr(:acset_type, Expr(:call, name, schemaname)) => begin
+      schema = mod.declarations[schemaname]
+      length(attrtypes(schema)) == 0 ||
+        error("need a name for the generic version when the schema has attrtypes")
+      Pair(name, NamedACSetType(nothing, RefHere(schemaname), schema))
+    end
+    Expr(:acset_type, Expr(:call, name, schemaname, Expr(:kw, :generic, genericname))) => begin
+      schema = mod.declarations[schemaname]
+      Pair(name, NamedACSetType(genericname, RefHere(schemaname), schema))
+    end
     end
     _ => error("could not parse intertype declaration from $e")
   end
@@ -98,6 +132,10 @@ end
 
 macro schema(head, body)
   esc(Expr(:schema, head, body))
+end
+
+macro acset_type(head)
+  esc(Expr(:acset_type, head))
 end
 end
 
@@ -152,6 +190,24 @@ function toexpr(name::Symbol, decl::InterTypeDecl; show=false)
         nothing, name,
         Expr(:block, toexpr.(variants)...)
       )
+    SchemaDecl(schema) =>
+      :(const $name = $schema)
+    NamedACSetType(genericname, RefHere(schemaname), schema) => begin
+      acset_type_decl(n) = Expr(
+        :macrocall,
+        GlobalRef(ACSets, :(var"@acset_type")),
+        nothing,
+        Expr(:call, n, schemaname)
+      )
+      if isnothing(genericname)
+        acset_type_decl(name)
+      else
+        quote
+          $(acset_type_decl(genericname))
+          const $name = $genericname{$(types...)}
+        end
+      end
+    end
   end
 end
 
@@ -227,12 +283,12 @@ end
 
 function eqmethods(name, decl::InterTypeDecl)
   @match decl begin
-    Alias(_) => nothing
     Struct(fields) => eqmethod(name, fields)
     SumType(variants) =>
       Expr(:block, map(variants) do variant
         eqmethod(variant.tag, variant.fields)
     end...)
+    _ => nothing
   end
 end
 
@@ -261,7 +317,6 @@ end
 
 function reader(name, decl::InterTypeDecl)
   body = @match decl begin
-    Alias(_) => nothing
     Struct(fields) => variantreader(name, fields)
     SumType(variants) => begin
       tag = gensym(:tag)
@@ -276,7 +331,7 @@ function reader(name, decl::InterTypeDecl)
         $ifs
       end
     end
-    SchemaDecl(_) => nothing
+    _ => nothing
   end
   if !isnothing(body)
     :(function $(GlobalRef(InterTypes, :read))(format::$(JSONFormat), ::Type{$(name)}, s::$(JSON3.Object))
@@ -313,7 +368,6 @@ end
 
 function writer(name, decl::InterTypeDecl)
   body = @match decl begin
-    Alias(_) => nothing
     Struct(fields) => begin
       objectwriter([(field.name, :(d.$(field.name))) for field in fields])
     end

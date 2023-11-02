@@ -11,3 +11,5 @@ end
   Weight::AttrType(EdgeData)
   weight::Attr(E, Weight)
 end
+
+@acset_type EDWeightedGraph(SchWeightedGraph), generic=WeightedGraph
