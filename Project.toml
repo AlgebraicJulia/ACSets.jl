@@ -1,8 +1,13 @@
 name = "ACSets"
 uuid = "227ef7b5-1206-438b-ac65-934d6da304b8"
 license = "MIT"
-authors = ["Owen Lynch <owen@topos.institute>", "Kris Brown <kris@topos.institute>", "Evan Patterson <evan@epatters.org>", "AlgebraicJulia Team"]
-version = "0.2.9"
+authors = [
+  "Owen Lynch <owen@topos.institute>",
+  "Kris Brown <kris@topos.institute>",
+  "Evan Patterson <evan@epatters.org>",
+  "AlgebraicJulia Team",
+]
+version = "0.3.0"
 
 [deps]
 AlgebraicInterfaces = "23cfdc9f-0504-424a-be1f-4892b28e2f0c"
@@ -36,10 +41,13 @@ AlgebraicInterfaces = "0.1"
 CompTime = "0.1"
 DataStructures = "0.18"
 JSON = "0.21"
+JSON3 = "1.13.2"
 MLStyle = "0.4"
+OrderedCollections = "1.6.2"
 Permutations = "0.4"
 PrettyTables = "2.2"
 Reexport = "1"
+SHA = "0.7"
 StaticArrays = "1"
 StructEquality = "2.1"
 Tables = "1"
