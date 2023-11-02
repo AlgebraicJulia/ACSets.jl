@@ -141,6 +141,9 @@ function write(io::IO, format::JSONFormat, d::NamedTuple{names, T}) where {names
   print(io, "}")
 end
 
+function read(format::JSONFormat, ::Type{T}, s::JSON3.Object) where {T <: StructACSet{S, Ts}}
+end
+
 const Object = OrderedDict{String, Any}
 
 function fieldproperties(fields::Vector{Field{InterType}})

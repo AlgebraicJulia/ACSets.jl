@@ -12,4 +12,4 @@ end
   weight::Attr(E, Weight)
 end
 
-@acset_type EDWeightedGraph(SchWeightedGraph), generic=WeightedGraph
+@acset_type EDWeightedGraph(SchWeightedGraph, generic=WeightedGraph)

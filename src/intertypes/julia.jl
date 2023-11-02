@@ -1,4 +1,5 @@
 import ..Schemas: toexpr
+using ...ACSets
 
 function parse_fields(fieldexprs; mod)
   map(enumerate(fieldexprs)) do (i, fieldexpr)
@@ -117,9 +118,8 @@ function parse_intertype_decl(e; mod::InterTypeModule)
       Pair(name, NamedACSetType(nothing, RefHere(schemaname), schema))
     end
     Expr(:acset_type, Expr(:call, name, schemaname, Expr(:kw, :generic, genericname))) => begin
-      schema = mod.declarations[schemaname]
+      schema = mod.declarations[schemaname].schema
       Pair(name, NamedACSetType(genericname, RefHere(schemaname), schema))
-    end
     end
     _ => error("could not parse intertype declaration from $e")
   end
@@ -202,6 +202,7 @@ function toexpr(name::Symbol, decl::InterTypeDecl; show=false)
       if isnothing(genericname)
         acset_type_decl(name)
       else
+        types = [toexpr(schema.typing[at]) for at in attrtypes(schema)]
         quote
           $(acset_type_decl(genericname))
           const $name = $genericname{$(types...)}

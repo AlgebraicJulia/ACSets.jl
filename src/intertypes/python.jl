@@ -20,12 +20,18 @@ function topy(intertype::InterType)
   end
 end
 
+indent = "    "
+
 function python_class(io::IO, name, fields)
   println(io, "class ", name, "(InterTypeBase):")
-  indent = "    "
   for (name, typestr) in fields
     println(io, indent, name, ": ", typestr)
   end
+end
+
+function python_schema(io::IO, name, schema::TypedSchema{Symbol, InterType})
+  println(io, "class ", name, ":")
+
 end
 
 function topy(io::IO, name, decl::InterTypeDecl)
