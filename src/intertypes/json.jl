@@ -187,8 +187,12 @@ function write(io::IO, format::JSONFormat, acs::ACSet)
           next()
           writeobject(io) do next
             next()
-            writekv(io, :_id => i)
-            for f in arrows(schema; from=ob, just_names=true)
+            writekv(io, :_id => Int32(i))
+            for f in homs(schema; from=ob, just_names=true)
+              next()
+              writekv(io, f => Int32(acs[i, f]))
+            end
+            for f in attrs(schema; from=ob, just_names=true)
               next()
               writekv(io, f => acs[i, f])
             end
