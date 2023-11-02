@@ -5,6 +5,8 @@ using Base64
 using MLStyle
 import JSON3
 
+using ..DenseACSets
+
 struct JSONFormat
 end
 
@@ -131,17 +133,77 @@ function read(format::JSONFormat, ::Type{NamedTuple{names, T}}, s::JSON3.Object)
 end
 function write(io::IO, format::JSONFormat, d::NamedTuple{names, T}) where {names, T<:Tuple}
   print(io, "{")
-  function writekv(io, kv::Pair{Symbol, T}) where {T}
-    (k, v) = kv
-    JSON3.write(io, k)
-    print(io, ":")
-    write(io, format, v)
-  end
   joinwith(io, writekv, [pairs(d)...], ",")
   print(io, "}")
 end
 
-function read(format::JSONFormat, ::Type{T}, s::JSON3.Object) where {T <: StructACSet{S, Ts}}
+function read(format::JSONFormat, ::Type{T}, s::JSON3.Object) where {S, Ts, T <: StructACSet{S, Ts}}
+  acs = T()
+  acs
+end
+
+writekey(io::IO, key) = print(io, "\"", ob, "\":")
+
+function writekv(io, kv::Pair{Symbol, T}) where {T}
+  (k, v) = kv
+  writekey(io, k)
+  write(io, JSONFormat(), v)
+end
+
+function writeitems(f, io)
+  first = true
+  function next()
+    if !first
+      print(io, ",")
+    end
+    first = false
+  end
+  f(next)
+end
+
+function writeobject(f, io)
+  print(io, "{")
+  writeitems(f, io)
+  print(io, "}")
+end
+
+function writearray(f, io)
+  print(io, "{")
+  writeitems(f, io)
+  print(io, "}")
+end
+
+function write(io::IO, format::JSONFormat, acs::T) where {S, Ts, T <: StructACSet{S, Ts}}
+  schema = BasicSchema(S)
+  writeobject(io) do next
+    for ob in objects(schema)
+      next()
+      writekey(io, ob)
+      writearray(io) do next
+        for i in parts(acs, ob)
+          next()
+          writeobject(io) do next
+            next()
+            writekv(io, (:_id, i), comma=false)
+            for f in arrows(schema; from=ob, just_names=true)
+              next()
+              writekv(io, (f, acs[i, f]))
+            end
+          end
+        end
+      end
+    end
+    for at in attrtypes(schema)
+      next()
+      writekey(io, at)
+      writearray(io) do next
+        for i in parts(acs, at)
+          next()
+          write(io, format, (:_id, i))
+        end
+      end
+    end
+  end
 end
 
 const Object = OrderedDict{String, Any}
