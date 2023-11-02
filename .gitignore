@@ -27,3 +27,5 @@ Manifest.toml
 .DS_Store
 .vscode
 .ipynb_checkpoints
+test/.CondaPkg
+test/intertypes/__pycache__

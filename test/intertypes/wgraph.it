@@ -1,0 +1,13 @@
+struct EdgeData
+  name::Symbol
+  length::Float64
+end
+
+@schema SchWeightedGraph begin
+  V::Ob
+  E::Ob
+  src::Hom(E, V)
+  tgt::Hom(E, V)
+  Weight::AttrType(EdgeData)
+  weight::Attr(E, Weight)
+end

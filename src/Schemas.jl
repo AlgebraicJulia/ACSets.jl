@@ -2,7 +2,8 @@ module Schemas
 
 export Schema, TypeLevelSchema, BasicSchema, TypeLevelBasicSchema, typelevel,
   objects, attrtypes, attrtype_instantiation, homs, attrs, arrows, dom, codom,
-  ob, hom, attrtype, attr, dom_nums, codom_nums, adom_nums, acodom_nums, types
+  ob, hom, attrtype, attr, dom_nums, codom_nums, adom_nums, acodom_nums, types,
+  TypedSchema
 
 using StructEquality
 import AlgebraicInterfaces: dom, codom, ob, hom, attr, attrtype
@@ -249,5 +250,13 @@ dom_nums(s) = Tuple(findfirst(objects(s) .== d) for (_,d,_) in homs(s))
 codom_nums(s) = Tuple(findfirst(objects(s) .== c) for (_,_,c) in homs(s))
 adom_nums(s) = Tuple(findfirst(objects(s) .== d) for (_,d,_) in attrs(s))
 acodom_nums(s) = Tuple(findfirst(attrtypes(s) .== c) for (_,_,c) in attrs(s))
+
+# Typed Schemas
+###############
+
+struct TypedSchema{Name, T}
+  schema::BasicSchema{Name}
+  types::Dict{Symbol, T}
+end
 
 end

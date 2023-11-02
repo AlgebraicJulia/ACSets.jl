@@ -24,6 +24,10 @@ end
   include("serialization/Serialization.jl")
 end
 
+@testset "InterTypes" begin
+  include("intertypes/InterTypes.jl")
+end
+
 @testset "ADTs" begin
   include("ADTs.jl")
 end
