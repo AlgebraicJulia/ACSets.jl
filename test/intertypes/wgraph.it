@@ -1,6 +1,6 @@
 struct EdgeData
   name::Symbol
-  length::Float64
+  length::UInt64
 end
 
 @schema SchWeightedGraph begin

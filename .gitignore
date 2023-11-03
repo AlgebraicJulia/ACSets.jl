@@ -29,3 +29,4 @@ Manifest.toml
 .ipynb_checkpoints
 test/.CondaPkg
 test/intertypes/__pycache__
+test/intertypes/*.py

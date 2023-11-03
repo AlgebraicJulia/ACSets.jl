@@ -4,6 +4,7 @@ using OrderedCollections
 using Base64
 using MLStyle
 import JSON3
+using CompTime
 
 using ..ACSetInterface
 using ..DenseACSets
@@ -45,10 +46,12 @@ write(io::IO, ::JSONFormat, d::UInt32) = print(io, d)
 
 intertype(::Type{Int64}) = I64
 read(::JSONFormat, ::Type{Int64}, s::String) = parse(Int64, s)
+read(::JSONFormat, ::Type{Int64}, s::Integer) = Int64(s)
 write(io::IO, ::JSONFormat, d::Int64) = print(io, "\"", d, "\"")
 
 intertype(::Type{UInt64}) = U64
 read(::JSONFormat, ::Type{UInt64}, s::String) = parse(UInt64, s)
+read(::JSONFormat, ::Type{UInt64}, s::Integer) = UInt64(s)
 write(io::IO, ::JSONFormat, d::UInt64) = print(io, "\"", d, "\"")
 
 intertype(::Type{Float64}) = F64
@@ -142,7 +145,28 @@ function write(io::IO, format::JSONFormat, d::NamedTuple{names, T}) where {names
 end
 
 function read(format::JSONFormat, ::Type{T}, s::JSON3.Object) where {S, Ts, T <: StructACSet{S, Ts}}
+  schema = Schema(S)
   acs = T()
+  for ob in objects(schema)
+    add_parts!(acs, ob, length(s[ob]))
+  end
+  for at in attrtypes(schema)
+    if haskey(s, at)
+      add_parts!(acs, at, length(s[at]))
+    end
+  end
+  typing = Dict{Symbol, Type}(zip(attrtypes(schema), Ts.parameters))
+  for ob in objects(schema)
+    for jsonobject in s[ob]
+      i = jsonobject[:_id]
+      for f in homs(schema; from=ob, just_names=true)
+        acs[i, f] = read(format, Int, jsonobject[f])
+      end
+      for (f, _, t) in attrs(schema; from=ob)
+        acs[i, f] = read(format, typing[t], jsonobject[f])
+      end
+    end
+  end
   acs
 end
 

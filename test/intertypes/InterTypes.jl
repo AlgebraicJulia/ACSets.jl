@@ -59,9 +59,9 @@ using .wgraph
 
 g = EDWeightedGraph()
 add_parts!(g, :V, 2)
-add_part!(g, :E, src=1, tgt=2, weight=EdgeData(:mass_ave, 42.0))
+add_part!(g, :E, src=1, tgt=2, weight=EdgeData(:mass_ave, 42))
 
-@test jsonwrite(g) == JSON3.write(generate_json_acset(g))
+@test testjson(m)
 
 @static if !Sys.iswindows()
   using CondaPkg
