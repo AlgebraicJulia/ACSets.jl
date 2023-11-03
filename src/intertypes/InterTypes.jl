@@ -62,17 +62,23 @@ end
   TypeRef(to::RefPath)
 end
 
+struct ACSetTypeSpec
+  genericname::Union{Symbol, Nothing}
+  abstract_type::Union{Symbol, Nothing}
+  schemaname::Symbol
+  schema::TypedSchema{Symbol, InterType}
+  index::Vector{Symbol}
+  unique_index::Vector{Symbol}
+end
+
 @data InterTypeDecl begin
   Alias(type::InterType)
   SumType(variants::Vector{Variant{InterType}})
   VariantOf(parent::Symbol)
   Struct(fields::Vector{Field{InterType}})
   SchemaDecl(schema::TypedSchema{Symbol, InterType})
-  NamedACSetType(
-    genericname::Union{Symbol, Nothing},
-    schemaname::RefPath,
-    schema::TypedSchema{Symbol, InterType}
-  )
+  AbstractACSetType(parent::Union{Symbol, Nothing})
+  NamedACSetType(typespec::ACSetTypeSpec)
 end
 
 function hashdecls end

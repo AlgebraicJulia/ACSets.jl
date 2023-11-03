@@ -3,13 +3,17 @@ struct EdgeData
   length::UInt64
 end
 
-@schema SchWeightedGraph begin
-  V::Ob
-  E::Ob
-  src::Hom(E, V)
-  tgt::Hom(E, V)
+@schema SchGraph begin
+  (E,V)::Ob
+  (src, tgt)::Hom(E, V)
+end
+
+@schema SchWeightedGraph <: SchGraph begin
   Weight::AttrType(EdgeData)
   weight::Attr(E, Weight)
 end
 
-@acset_type EDWeightedGraph(SchWeightedGraph, generic=WeightedGraph)
+@abstract_acset_type AbstractGraph
+
+@acset_type EDWeightedGraph(SchWeightedGraph,
+                            generic=WeightedGraph, index=[:src, :tgt]) <: AbstractGraph

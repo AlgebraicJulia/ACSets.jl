@@ -40,25 +40,57 @@ function check_typeref(p::RefPath; mod)
   end
 end
 
-function parse_typedschema(e; mod::InterTypeModule)
-  schema = BasicSchema{Symbol}()
-  typing = Dict{Symbol, InterType}()
+function parse_typedschema!(e, tschema::TypedSchema{Symbol, InterType}; mod::InterTypeModule)
+  schema = tschema.schema
+  typing = tschema.typing
   for line in e.args
     @match line begin
-      Expr(:(::), name, schtype) => begin
+      Expr(:(::), names, schtype) => begin
+        names = @match names begin
+          Expr(:tuple, names...) => [names...]
+          name::Symbol => [name]
+          _ => error("expected a symbol or a tuple, got $names")
+        end
         @match schtype begin
-          :Ob => push!(schema.obs, name)
-          :(Hom($A, $B)) => push!(schema.homs, (name, A, B))
+          :Ob => append!(schema.obs, names)
+          :(Hom($A, $B)) => append!(schema.homs, map(name -> (name, A, B), names))
           :(AttrType($type)) => begin
-            push!(schema.attrtypes, name)
-            typing[name] = parse_intertype(type; mod)
+            type = parse_intertype(type; mod)
+            for name in names
+              push!(schema.attrtypes, name)
+              typing[name] = type
+            end
           end
-          :(Attr($A, $X)) => push!(schema.attrs, (name, A, X))
+          :(Attr($A, $X)) => append!(schema.attrs, map(name -> (name, A, X), names))
         end
       end
     end
   end
-  TypedSchema{Symbol, InterType}(schema, typing)
+  tschema
+end
+
+unquote(q::QuoteNode) = q.value
+
+function extract_vect(vectexpr)
+  @match vectexpr begin
+    Expr(:vect, args...) => Vector(unquote.(args))
+    _ => error("expected a vector expression, got: $vectexpr")
+  end
+end
+
+function NamedACSetType(abstract_type, schemaname::Symbol, kwargs; mod)
+  kwargs = map(kwargs) do kv
+    @match kv begin
+      Expr(:kw, k, v) => (k => v)
+      _ => error("got unexpected argument to @acset_type: $kv")
+    end
+  end |> Dict
+  genericname = get(kwargs, :generic, nothing)
+  index = extract_vect(get(kwargs, :index, :([])))
+  unique_index = extract_vect(get(kwargs, :unique_index, :([])))
+  schema = mod.declarations[schemaname].schema
+  spec = ACSetTypeSpec(genericname, abstract_type, schemaname, schema, index, unique_index)
+  NamedACSetType(spec)
 end
 
 function parse_intertype(e; mod::InterTypeModule)
@@ -106,20 +138,22 @@ function parse_intertype_decl(e; mod::InterTypeModule)
       delete!(mod.declarations, name)
       ret
     end
-    Expr(:schema, name::Symbol, body) => begin
+    Expr(:schema, head, body) => begin
+      (name, tschema) = @match head begin
+        Expr(:(<:), name, parent) => (name, copy(mod.declarations[parent].schema))
+        name::Symbol => (name, TypedSchema{Symbol, InterType}())
+      end
       Base.remove_linenums!(body)
-      Pair(name, SchemaDecl(parse_typedschema(body; mod)))
+      Pair(name, SchemaDecl(parse_typedschema!(body, tschema; mod)))
     end
-    Expr(:acset_type, Expr(:call, name, schemaname)) => begin
-      schema = mod.declarations[schemaname]
-      length(attrtypes(schema)) == 0 ||
-        error("need a name for the generic version when the schema has attrtypes")
-      Pair(name, NamedACSetType(nothing, RefHere(schemaname), schema))
-    end
-    Expr(:acset_type, Expr(:call, name, schemaname, Expr(:kw, :generic, genericname))) => begin
-      schema = mod.declarations[schemaname].schema
-      Pair(name, NamedACSetType(genericname, RefHere(schemaname), schema))
-    end
+    Expr(:abstract_acset_type, Expr(:(<:), name, parent)) =>
+      Pair(name, AbstractACSetType(parent))
+    Expr(:abstract_acset_type, name) =>
+      Pair(name, AbstractACSetType(nothing))
+    Expr(:acset_type, :($name($schemaname, $(kwargs...)))) =>
+      Pair(name, NamedACSetType(nothing, schemaname, kwargs; mod))
+    Expr(:acset_type, Expr(:(<:), :($name($schemaname, $(kwargs...))), abstract_type)) =>
+      Pair(name, NamedACSetType(abstract_type, schemaname, kwargs; mod))
     _ => error("could not parse intertype declaration from $e")
   end
 end
@@ -135,6 +169,10 @@ end
 
 macro acset_type(head)
   esc(Expr(:acset_type, head))
+end
+
+macro abstract_acset_type(head)
+  esc(Expr(:abstract_acset_type, head))
 end
 end
 
@@ -170,6 +208,25 @@ end
 
 Base.show(io::IO, intertype::InterType) = print(io, toexpr(intertype))
 
+
+function acset_type_decl(spec, name)
+  callexpr = Expr(
+    :call,
+    name, spec.schemaname,
+    Expr(:kw, :index, spec.index),
+    Expr(:kw, :unique_index, spec.unique_index)
+  )
+  if !isnothing(spec.abstract_type)
+    callexpr = Expr(:(<:), callexpr, spec.abstract_type)
+  end
+  Expr(
+    :macrocall,
+    GlobalRef(ACSets, :(var"@acset_type")),
+    nothing,
+    callexpr
+  )
+end
+
 function toexpr(name::Symbol, decl::InterTypeDecl; show=false)
   @match decl begin
     Alias(type) => :(const $name = $type)
@@ -191,20 +248,27 @@ function toexpr(name::Symbol, decl::InterTypeDecl; show=false)
       )
     SchemaDecl(schema) =>
       :(const $name = $schema)
-    NamedACSetType(genericname, RefHere(schemaname), schema) => begin
-      acset_type_decl(n) = Expr(
-        :macrocall,
-        GlobalRef(ACSets, :(var"@acset_type")),
-        nothing,
-        Expr(:call, n, schemaname)
-      )
-      if isnothing(genericname)
-        acset_type_decl(name)
+    AbstractACSetType(parent) => begin
+      body = if isnothing(parent)
+        name
       else
-        types = [toexpr(schema.typing[at]) for at in attrtypes(schema)]
+        Expr(:(<:), name, parent)
+      end
+      Expr(
+        :macrocall,
+        GlobalRef(ACSets, :(var"@abstract_acset_type")),
+        nothing,
+        body
+      )
+    end
+    NamedACSetType(spec) => begin
+      if isnothing(spec.genericname)
+        acset_type_decl(spec, name)
+      else
+        types = [toexpr(spec.schema.typing[at]) for at in attrtypes(spec.schema)]
         quote
-          $(acset_type_decl(genericname))
-          const $name = $genericname{$(types...)}
+          $(acset_type_decl(spec, spec.genericname))
+          const $name = $(spec.genericname){$(types...)}
         end
       end
     end

@@ -69,8 +69,9 @@ function tosexp(d::InterTypeDecl)
     VariantOf(parent) => SExp(:VariantOf, parent)
     Struct(fields) => SExp(:Struct, fieldsexps(fields)...)
     SchemaDecl(schema) => SExp(:SchemaDecl, schemasexp(schema)...)
-    NamedACSetType(genericname, RefHere(schemaname), _) =>
-      SExp(:NamedACSetType, genericname, schemaname)
+    AbstractACSetType(parent) => SExp(:AbstractACSetType, Symbol(parent))
+    NamedACSetType(spec) =>
+      SExp(:NamedACSetType, spec.schemaname)
   end
 end
 
