@@ -14,7 +14,7 @@ vals = Any[
   Int32(5),
   UInt32(5),
   Int64(5),
-  UInt64(5),
+  hash("hello"),
   "hello",
   :hello,
   UInt8[5, 3, 8],
