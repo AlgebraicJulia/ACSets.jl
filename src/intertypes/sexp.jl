@@ -9,6 +9,10 @@ function SExp(args...)
   SExp(Union{Symbol, SExp}[args...])
 end
 
+function SExp(arg::Symbol)
+  SExp(Union{Symbol, SExp}[arg])
+end
+
 function Base.print(io::IO, s::SExp)
   print(io, "(")
   join(io, s.args, " ")
