@@ -73,11 +73,14 @@ add_part!(g, :E, src=1, tgt=2, weight=EdgeData(:mass_ave, 42))
   write(dir * "/intertypes.py", InterTypes.INTERTYPE_PYTHON_MODULE)
   generate_python_module(simpleast, dir)
   generate_python_module(model, dir)
+  generate_python_module(wgraph, dir)
 
   pushfirst!(PyList(pyimport("sys")."path"), Py(dir))
 
   pyast = pyimport("simpleast")
   pymodel = pyimport("model")
+  # TODO: install py-acsets in this environment
+  # pywgraph = pyimport("wgraph")
   pyjson = pyimport("json")
 
   py_m = pymodel.Model.model_validate_json(Py(jsonwrite(m)))
