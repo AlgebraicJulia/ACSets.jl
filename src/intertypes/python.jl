@@ -130,7 +130,7 @@ function topy(io::IO, name, decl::InterTypeDecl)
     SumType(variants) => python_sumtype(io, name, variants)
     VariantOf(_) => nothing
     SchemaDecl(schema) => python_schema(io, name, schema)
-    AbstractACSetType(parent) => python_abstract_acset(parent)
+    AbstractACSetType(parent) => python_abstract_acset(io, name, parent)
     NamedACSetType(spec) => python_named_acset_type(io, name, spec)
   end
 end
