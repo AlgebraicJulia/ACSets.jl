@@ -92,7 +92,7 @@ Inverse to [`read_json_acset`](@ref).
 """
 function write_json_acset(x::ACSet, fname::AbstractString)
   open(fname, "w") do f
-    write(f, JSON.json(generate_json_acset(x)))
+    write(f, JSON3.json(generate_json_acset(x)))
   end
 end
 
@@ -152,7 +152,7 @@ function parse_json_acset_schema(::Type{BasicSchema}, data::AbstractDict)
 end
 
 function parse_json_acset_schema(T, input::AbstractString)
-  parse_json_acset_schema(T, JSON.parse(input))
+  parse_json_acset_schema(T, JSON3.parse(input))
 end
 
 """ Deserialize ACSet schema from JSON file.
@@ -161,7 +161,7 @@ Similar to [`parse_json_acset_schema`](@ref) except reads from a file.
 Inverse to [`write_json_acset_schema`](@ref).
 """
 function read_json_acset_schema(T, fname::AbstractString)
-  parse_json_acset_schema(T, JSON.parsefile(fname))
+  parse_json_acset_schema(T, JSON3.parsefile(fname))
 end
 
 """ Serialize ACSet schema to JSON file.
@@ -171,7 +171,7 @@ Inverse to [`read_json_acset_schema`](@ref).
 """
 function write_json_acset_schema(schema, fname::AbstractString)
   open(fname, "w") do f
-    write(f, JSON.json(generate_json_acset_schema(schema)))
+    write(f, JSON3.json(generate_json_acset_schema(schema)))
   end
 end
 
@@ -181,7 +181,7 @@ The result is a JSON-able object (dictionary) from which a `JSONSchema.Schema`
 can be constructed, using the package JSONSchema.jl.
 """
 function acset_schema_json_schema(; kw...)
-  JSON.parsefile(joinpath(@__DIR__, "data", "acset.schema.json");
+  JSON3.parsefile(joinpath(@__DIR__, "data", "acset.schema.json");
                  dicttype=OrderedDict{String,Any}, kw...)
 end
 
