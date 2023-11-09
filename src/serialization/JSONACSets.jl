@@ -1,11 +1,13 @@
 """ JSON serialization of acsets and acset schemas.
 """
 module JSONACSets
+
+import JSON3
+
 export generate_json_acset, parse_json_acset, read_json_acset, write_json_acset,
   generate_json_acset_schema, parse_json_acset_schema,
-  read_json_acset_schema, write_json_acset_schema, acset_schema_json_schema
+  read_json_acset_schema, write_json_acset_schema, acset_schema_json_schema, write
 
-import JSON
 using DataStructures: OrderedDict
 import Pkg
 import Tables
@@ -183,4 +185,12 @@ function acset_schema_json_schema(; kw...)
                  dicttype=OrderedDict{String,Any}, kw...)
 end
 
+""" Dispatch for ACSet
+
+Dispatches write to accept ACSets
+"""
+JSON3.write(io::IO, acs::ACSet; kwargs...) = JSON3.write(io, generate_json_acset(acs); kwargs...)
+
 end
+
+
