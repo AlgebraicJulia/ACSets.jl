@@ -1,7 +1,7 @@
 [deps]
 ACSets = "227ef7b5-1206-438b-ac65-934d6da304b8"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 JSONSchema = "7d188eb4-7ad8-530c-ae41-71a32a6d4692"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 MLStyle = "d8e11817-5142-5d16-987a-aa16d5891078"

@@ -78,7 +78,7 @@ end
   end) # can't test this without CombinatorialSpaces.jl
 end
 
-using JSON
+using JSON3
 @testset "to_dict" begin
   gspec = ACSetSpec(
       :(LabeledGraph{Symbol}),
@@ -92,9 +92,9 @@ using JSON
   )
 
   @test to_dict(gspec) isa AbstractDict
-  @test JSON.json(to_dict(gspec)) isa String
-  @test JSON.Parser.parse(JSON.json(to_dict(gspec))) isa AbstractDict
-  @test JSON.Parser.parse(JSON.json(to_dict(gspec))) == symb2string(to_dict(gspec))
+  @test JSON3.write(to_dict(gspec)) isa String
+  @test JSON3.read(JSON3.write(to_dict(gspec))) isa AbstractDict
+  @test JSON3.read(JSON3.write(to_dict(gspec)), Dict{String, Any}) == symb2string(to_dict(gspec))
 end
 
 @testset "Labeled Vertices" begin
