@@ -90,11 +90,7 @@ end
 
 Inverse to [`read_json_acset`](@ref).
 """
-function write_json_acset(x::ACSet, fname::AbstractString)
-  open(fname, "w") do f
-    write(f, JSON3.write(generate_json_acset(x)))
-  end
-end
+write_json_acset(x::ACSet, fname::AbstractString) = JSON3.write(fname, x)
 
 """ Dispatch for ACSet
 
