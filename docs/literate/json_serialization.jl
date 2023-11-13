@@ -4,7 +4,7 @@
 # This functionality should allow you to interoperate with database representations
 # in other languages by serializing both the data and the type into a network interoperability layer.
 
-import JSON, JSONSchema
+import JSON3, JSONSchema
 
 using ACSets
 
@@ -30,7 +30,7 @@ end
 # Attrs are the names of columns that point into the AttrTypes.
 
 json_schema = JSONSchema.Schema(acset_schema_json_schema())
-JSON.print(json_schema, 2)
+JSON3.print(json_schema, 2)
 
 # ## Example 1: Discrete Dynamical Systems
 #
@@ -40,7 +40,7 @@ JSON.print(json_schema, 2)
 
 SchDDS = BasicSchema([:X], [(:next,:X,:X)])
 
-JSON.print(generate_json_acset_schema(SchDDS), 2)
+JSON3.print(generate_json_acset_schema(SchDDS), 2)
 
 # LabeledDDS are a variation on DDS where the states can have symbolic names. In Catlab, every element of an object has to be identified by its integer row number.
 # This comes out of a tradition in database design where every table has a natural number primary key. In mathematics, we often want to think of the state space not as a set of integers, but as an arbitrary set. In Catlab, we call that set the Labels and use a `label` attribute to implement the mapping of state numbers to state labels. This way the underlying database implementation can still be designed aroung natural number primary keys, but the user can use symbolic labels. Note also that this shows the schema inheritance. We state that a `SchLabeledDDS` inherits from `SchDDS` by adding a `label` attribute of type `Label`.
@@ -48,7 +48,7 @@ JSON.print(generate_json_acset_schema(SchDDS), 2)
 SchLabeledDDS = BasicSchema([:X], [(:next,:X,:X)],
                             [:Label], [(:label,:X,:Label)])
 
-JSON.print(generate_json_acset_schema(SchLabeledDDS), 2)
+JSON3.print(generate_json_acset_schema(SchLabeledDDS), 2)
 
 # ## Example 2: Labeled DDS
 #
@@ -66,7 +66,7 @@ JSON.print(generate_json_acset_schema(SchLabeledDDS), 2)
 
 ldds = LabeledDDS{Int}()
 add_parts!(ldds, :X, 4, next=[2,3,4,1], label=[100, 101, 102, 103])
-JSON.print(generate_json_acset(ldds),2)
+JSON3.print(generate_json_acset(ldds),2)
 
 # ## Example 3: Graphs
 #
@@ -82,7 +82,7 @@ JSON.print(generate_json_acset(ldds),2)
 
 SchGraph = BasicSchema([:V,:E], [(:src,:E,:V),(:tgt,:E,:V)])
 
-JSON.print(generate_json_acset_schema(SchGraph), 2)
+JSON3.print(generate_json_acset_schema(SchGraph), 2)
 
 # An example graph with 4 vertices and 2 edges.
 
@@ -94,7 +94,7 @@ add_parts!(g, :E, 2, src=[1,2], tgt=[2,3])
 
 # Note that the vertices are listed out in a somewhat silly way. They are given as a table with no columns, so they show up in the JSON as a bunch of empty objects. This is for consistency with our next example. 
 
-JSON.print(generate_json_acset(g), 2)
+JSON3.print(generate_json_acset(g), 2)
 
 # ## Example 4: Vertex and Edge Labeled Graph Graph Schema
 #
@@ -110,7 +110,7 @@ JSON.print(generate_json_acset(g), 2)
 SchVELabeledGraph = BasicSchema([:V,:E], [(:src,:E,:V),(:tgt,:E,:V)],
   [:Label], [(:vlabel,:V,:Label),(:elabel,:E,:Label)])
 
-JSON.print(generate_json_acset_schema(SchVELabeledGraph), 2)
+JSON3.print(generate_json_acset_schema(SchVELabeledGraph), 2)
 
 # An example labeled graph using symbols for the vertex and edge names. Note that you can use unicode symbols in Julia.
 
@@ -122,4 +122,4 @@ add_parts!(lg, :E, 2, src=[1,2], tgt=[2,3], elabel=[:e₁, :e₂])
 
 # This Graph is represented by the following JSON. Now you can see that the vertices have their `vlabels`
 
-JSON.print(generate_json_acset(lg), 2)
+JSON3.print(generate_json_acset(lg), 2)
