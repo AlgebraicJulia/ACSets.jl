@@ -1,5 +1,6 @@
 module TestInterTypes
 
+using ACSets
 using ACSets.InterTypes
 using Test
 using OrderedCollections
@@ -13,7 +14,7 @@ vals = Any[
   Int32(5),
   UInt32(5),
   Int64(5),
-  UInt64(5),
+  hash("hello"),
   "hello",
   :hello,
   UInt8[5, 3, 8],
@@ -52,27 +53,45 @@ m = Model([:x], [e])
 
 @test testjson(m)
 
+@intertypes "wgraph.it" module wgraph end
+
+using .wgraph
+
+g = EDWeightedGraph()
+add_parts!(g, :V, 2)
+add_part!(g, :E, src=1, tgt=2, weight=EdgeData(:mass_ave, 42))
+
+@test testjson(m)
+
 @static if !Sys.iswindows()
   using CondaPkg
   using PythonCall
 
   CondaPkg.add("pydantic")
+  CondaPkg.add_pip("acsets")
 
   dir = @__DIR__
   write(dir * "/intertypes.py", InterTypes.INTERTYPE_PYTHON_MODULE)
   generate_python_module(simpleast, dir)
   generate_python_module(model, dir)
+  generate_python_module(wgraph, dir)
 
   pushfirst!(PyList(pyimport("sys")."path"), Py(dir))
 
   pyast = pyimport("simpleast")
   pymodel = pyimport("model")
+  pywgraph = pyimport("wgraph")
   pyjson = pyimport("json")
 
   py_m = pymodel.Model.model_validate_json(Py(jsonwrite(m)))
-  s′ = string(py_m.model_dump_json())
+  py_m_str = string(py_m.model_dump_json())
 
-  @test jsonread(s′, Model) == m
+  @test jsonread(py_m_str, Model) == m
+
+  py_g = pywgraph.EDWeightedGraph.read_json(Py(jsonwrite(g)))
+  py_g_str = string(py_g.to_json_str())
+
+  @test jsonread(py_g_str, EDWeightedGraph) == g
 end
 
 end

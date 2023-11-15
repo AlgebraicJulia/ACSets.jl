@@ -1,3 +1,5 @@
+using ...ACSets
+
 function parse_fields(fieldexprs; mod)
   map(enumerate(fieldexprs)) do (i, fieldexpr)
     @match fieldexpr begin
@@ -36,6 +38,59 @@ function check_typeref(p::RefPath; mod)
       end
     _ => error("nested references not supported yet")
   end
+end
+
+function parse_typedschema!(e, tschema::TypedSchema{Symbol, InterType}; mod::InterTypeModule)
+  schema = tschema.schema
+  typing = tschema.typing
+  for line in e.args
+    @match line begin
+      Expr(:(::), names, schtype) => begin
+        names = @match names begin
+          Expr(:tuple, names...) => [names...]
+          name::Symbol => [name]
+          _ => error("expected a symbol or a tuple, got $names")
+        end
+        @match schtype begin
+          :Ob => append!(schema.obs, names)
+          :(Hom($A, $B)) => append!(schema.homs, map(name -> (name, A, B), names))
+          :(AttrType($type)) => begin
+            type = parse_intertype(type; mod)
+            for name in names
+              push!(schema.attrtypes, name)
+              typing[name] = type
+            end
+          end
+          :(Attr($A, $X)) => append!(schema.attrs, map(name -> (name, A, X), names))
+        end
+      end
+    end
+  end
+  tschema
+end
+
+unquote(q::QuoteNode) = q.value
+
+function extract_vect(vectexpr)
+  @match vectexpr begin
+    Expr(:vect, args...) => Vector(unquote.(args))
+    _ => error("expected a vector expression, got: $vectexpr")
+  end
+end
+
+function NamedACSetType(abstract_type, schemaname::Symbol, kwargs; mod)
+  kwargs = map(kwargs) do kv
+    @match kv begin
+      Expr(:kw, k, v) => (k => v)
+      _ => error("got unexpected argument to @acset_type: $kv")
+    end
+  end |> Dict
+  genericname = get(kwargs, :generic, nothing)
+  index = extract_vect(get(kwargs, :index, :([])))
+  unique_index = extract_vect(get(kwargs, :unique_index, :([])))
+  schema = mod.declarations[schemaname].schema
+  spec = ACSetTypeSpec(genericname, abstract_type, schemaname, schema, index, unique_index)
+  NamedACSetType(spec)
 end
 
 function parse_intertype(e; mod::InterTypeModule)
@@ -83,10 +138,22 @@ function parse_intertype_decl(e; mod::InterTypeModule)
       delete!(mod.declarations, name)
       ret
     end
-    Expr(:schema, name::Symbol, body) => begin
+    Expr(:schema, head, body) => begin
+      (name, tschema) = @match head begin
+        Expr(:(<:), name, parent) => (name, copy(mod.declarations[parent].schema))
+        name::Symbol => (name, TypedSchema{Symbol, InterType}())
+      end
       Base.remove_linenums!(body)
-      Pair(name, SchemaDecl(parse_interschema(body; defined_types)))
+      Pair(name, SchemaDecl(parse_typedschema!(body, tschema; mod)))
     end
+    Expr(:abstract_acset_type, Expr(:(<:), name, parent)) =>
+      Pair(name, AbstractACSetType(parent))
+    Expr(:abstract_acset_type, name) =>
+      Pair(name, AbstractACSetType(nothing))
+    Expr(:acset_type, :($name($schemaname, $(kwargs...)))) =>
+      Pair(name, NamedACSetType(nothing, schemaname, kwargs; mod))
+    Expr(:acset_type, Expr(:(<:), :($name($schemaname, $(kwargs...))), abstract_type)) =>
+      Pair(name, NamedACSetType(abstract_type, schemaname, kwargs; mod))
     _ => error("could not parse intertype declaration from $e")
   end
 end
@@ -98,6 +165,14 @@ end
 
 macro schema(head, body)
   esc(Expr(:schema, head, body))
+end
+
+macro acset_type(head)
+  esc(Expr(:acset_type, head))
+end
+
+macro abstract_acset_type(head)
+  esc(Expr(:abstract_acset_type, head))
 end
 end
 
@@ -133,6 +208,25 @@ end
 
 Base.show(io::IO, intertype::InterType) = print(io, toexpr(intertype))
 
+
+function acset_type_decl(spec, name)
+  callexpr = Expr(
+    :call,
+    name, spec.schemaname,
+    Expr(:kw, :index, spec.index),
+    Expr(:kw, :unique_index, spec.unique_index)
+  )
+  if !isnothing(spec.abstract_type)
+    callexpr = Expr(:(<:), callexpr, spec.abstract_type)
+  end
+  Expr(
+    :macrocall,
+    GlobalRef(ACSets, :(var"@acset_type")),
+    nothing,
+    callexpr
+  )
+end
+
 function toexpr(name::Symbol, decl::InterTypeDecl; show=false)
   @match decl begin
     Alias(type) => :(const $name = $type)
@@ -152,6 +246,32 @@ function toexpr(name::Symbol, decl::InterTypeDecl; show=false)
         nothing, name,
         Expr(:block, toexpr.(variants)...)
       )
+    SchemaDecl(schema) =>
+      :(const $name = $schema)
+    AbstractACSetType(parent) => begin
+      body = if isnothing(parent)
+        name
+      else
+        Expr(:(<:), name, parent)
+      end
+      Expr(
+        :macrocall,
+        GlobalRef(ACSets, :(var"@abstract_acset_type")),
+        nothing,
+        body
+      )
+    end
+    NamedACSetType(spec) => begin
+      if isnothing(spec.genericname)
+        acset_type_decl(spec, name)
+      else
+        types = [toexpr(spec.schema.typing[at]) for at in attrtypes(spec.schema)]
+        quote
+          $(acset_type_decl(spec, spec.genericname))
+          const $name = $(spec.genericname){$(types...)}
+        end
+      end
+    end
   end
 end
 
@@ -227,12 +347,12 @@ end
 
 function eqmethods(name, decl::InterTypeDecl)
   @match decl begin
-    Alias(_) => nothing
     Struct(fields) => eqmethod(name, fields)
     SumType(variants) =>
       Expr(:block, map(variants) do variant
         eqmethod(variant.tag, variant.fields)
     end...)
+    _ => nothing
   end
 end
 
@@ -261,7 +381,6 @@ end
 
 function reader(name, decl::InterTypeDecl)
   body = @match decl begin
-    Alias(_) => nothing
     Struct(fields) => variantreader(name, fields)
     SumType(variants) => begin
       tag = gensym(:tag)
@@ -276,7 +395,7 @@ function reader(name, decl::InterTypeDecl)
         $ifs
       end
     end
-    SchemaDecl(_) => nothing
+    _ => nothing
   end
   if !isnothing(body)
     :(function $(GlobalRef(InterTypes, :read))(format::$(JSONFormat), ::Type{$(name)}, s::$(JSON3.Object))
@@ -313,7 +432,6 @@ end
 
 function writer(name, decl::InterTypeDecl)
   body = @match decl begin
-    Alias(_) => nothing
     Struct(fields) => begin
       objectwriter([(field.name, :(d.$(field.name))) for field in fields])
     end

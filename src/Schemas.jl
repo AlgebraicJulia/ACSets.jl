@@ -130,6 +130,18 @@ const TypeLevelBasicCSetSchema{Name, obs, homs} = TypeLevelBasicSchema{Name, obs
   function BasicSchema(obs::Vector{Name}, homs) where {Name}
     new{Name}(obs, homs, Name[], Tuple{Name,Name,Name}[])
   end
+  function BasicSchema{Name}() where {Name}
+    new(
+      Vector{Name}(),
+      Vector{Tuple{Name,Name,Name}}(),
+      Vector{Name}(),
+      Vector{Tuple{Name,Name,Name}}()
+    )
+  end
+end
+
+function Base.copy(s::BasicSchema{Name}) where {Name}
+  BasicSchema{Name}(copy(s.obs), copy(s.homs), copy(s.attrtypes), copy(s.attrs))
 end
 
 function Schema(::Type{TypeLevelBasicSchema{Name, obs, homs, attrtypes, attrs}}) where {Name, obs, homs, attrtypes, attrs}
@@ -254,9 +266,24 @@ acodom_nums(s) = Tuple(findfirst(attrtypes(s) .== c) for (_,_,c) in attrs(s))
 # Typed Schemas
 ###############
 
-struct TypedSchema{Name, T}
+@struct_hash_equal struct TypedSchema{Name, T} <: Schema{Name}
   schema::BasicSchema{Name}
-  types::Dict{Symbol, T}
+  typing::Dict{Name, T}
 end
+
+TypedSchema{Name, T}() where {Name, T} =
+  TypedSchema{Name, T}(BasicSchema{Name}(), Dict{Name, T}())
+
+Base.copy(t::TypedSchema{Name, T}) where {Name, T} =
+  TypedSchema{Name, T}(copy(t.schema), copy(t.typing))
+
+objects(s::TypedSchema) = objects(s.schema)
+homs(s::TypedSchema; kwargs...) = homs(s.schema; kwargs...)
+attrtypes(s::TypedSchema) = attrtypes(s.schema)
+attrs(s::TypedSchema; kwargs...) = attrs(s.schema; kwargs...)
+
+function toexpr end
+
+typelevel(s::TypedSchema) = typelevel(s.schema)
 
 end

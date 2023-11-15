@@ -9,6 +9,10 @@ function SExp(args...)
   SExp(Union{Symbol, SExp}[args...])
 end
 
+function SExp(arg::Symbol)
+  SExp(Union{Symbol, SExp}[arg])
+end
+
 function Base.print(io::IO, s::SExp)
   print(io, "(")
   join(io, s.args, " ")
@@ -17,8 +21,27 @@ end
 
 fieldsexps(fields) =
   [SExp(field.name, tosexp(field.type)) for field in fields]
+
 variantsexps(variants) =
   [SExp(variant.tag, fieldsexps(variant.fields)...) for variant in variants] 
+
+function schemasexp(tschema::TypedSchema{Symbol, InterType})
+  schema = tschema.schema
+  args = Union{Symbol, SExp}[]
+  for ob in sort(schema.obs)
+    push!(args, SExp(:Ob, ob))
+  end
+  for (f, c, d) in sort(schema.homs)
+    push!(args, SExp(:Hom, f, c, d))
+  end
+  for t in sort(schema.attrtypes)
+    push!(args, SExp(:AttrType, t, tosexp(tschema.typing[t])))
+  end
+  for (f, c, d) in sort(schema.attrs)
+    push!(args, SExp(:Attrs, f, c, d))
+  end
+  args
+end
 
 function tosexp(t::InterType)
   @match t begin
@@ -49,8 +72,10 @@ function tosexp(d::InterTypeDecl)
     SumType(variants) => SExp(:SumType, variantsexps(variants)...)
     VariantOf(parent) => SExp(:VariantOf, parent)
     Struct(fields) => SExp(:Struct, fieldsexps(fields)...)
-    SchemaDecl(schema) => nothing
-    NamedACSetType(schemaname::Symbol) => nothing
+    SchemaDecl(schema) => SExp(:SchemaDecl, schemasexp(schema)...)
+    AbstractACSetType(parent) => SExp(:AbstractACSetType, Symbol(parent))
+    NamedACSetType(spec) =>
+      SExp(:NamedACSetType, spec.schemaname)
   end
 end
 

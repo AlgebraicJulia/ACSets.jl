@@ -1,2 +1,5 @@
 [deps]
 pydantic = ""
+
+[pip.deps]
+acsets = ""

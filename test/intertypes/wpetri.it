@@ -1,0 +1,40 @@
+@sum ElemFun begin
+  Sine
+  Cosine
+  Tangent
+  Exp
+end
+
+@sum Term begin
+  Var(name::Symbol)
+  Const(val::Float64)
+  Sum(summands::Vector{Term})
+  Prod(summands::Vector{Term})
+  Ap(f::ElemFun, arg::Term)
+end
+
+@schema SchPetri begin
+  (S,T,I,O)::Ob
+  is::Hom(I,S)
+  it::Hom(I,T)
+  os::Hom(O,S)
+  ot::Hom(O,T)
+end
+
+@schema SchNamedPetri <: SchPetri begin
+  Name::AttrType(Symbol)
+  sname::Attr(S, Name)
+  tname::Attr(T, Name)
+end
+
+@schema SchWeightedPetri <: SchNamedPetri begin
+  Rate::AttrType(Term)
+  Init::AttrType(Term)
+  rate::Attr(T, Rate)
+  init::Attr(T, Init)
+end
+
+@acset_type TermWeightedPetri(
+  SchWeightedPetri,
+  generic=WeightedPetri
+)
