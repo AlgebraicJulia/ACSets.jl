@@ -64,7 +64,7 @@ function python_schema(io::IO, name, schema::TypedSchema{Symbol, InterType})
     println(io, indent, "$T = AttrType(name=\"$T\", ty=$(topy(schema.typing[T]; forward_ref=false)))")
   end
   for (a, d, c) in attrs(schema)
-    println(io, indent, "$a = Attr(name=\"$a\", dom=$d, codom=$d)")
+    println(io, indent, "$a = Attr(name=\"$a\", dom=$d, codom=$c)")
   end
   println(
     io,
@@ -106,12 +106,8 @@ function python_named_acset_type(io::IO, name, spec)
             super($name, self).__init__(name, schema)
 
         @classmethod
-        def import_pydantic(cls, d: Any):
-            return ACSet.import_pydantic(cls, \"$name\", $(spec.schemaname).schema, d)
-
-        @classmethod
         def read_json(cls, s: str):
-            return ACSet.read_json(cls, \"$name\", $(spec.schemaname).schema, s)
+            return super($(name), cls).read_json(\"$name\", $(spec.schemaname).schema, s)
     """
   )
   print(io, "\n\n")
@@ -136,11 +132,13 @@ function topy(io::IO, name, decl::InterTypeDecl)
 end
 
 PYTHON_PREAMBLE = """
-from typing import Literal, Annotated
+from typing import Literal, Annotated, Any
 
 from pydantic import Field, TypeAdapter
 
 from intertypes import SafeInt, InterTypeBase
+
+from acsets import Ob, Hom, Attr, AttrType, Schema, ACSet
 """
 
 INTERTYPE_PYTHON_MODULE = """

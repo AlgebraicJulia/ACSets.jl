@@ -68,6 +68,7 @@ add_part!(g, :E, src=1, tgt=2, weight=EdgeData(:mass_ave, 42))
   using PythonCall
 
   CondaPkg.add("pydantic")
+  CondaPkg.add_pip("acsets")
 
   dir = @__DIR__
   write(dir * "/intertypes.py", InterTypes.INTERTYPE_PYTHON_MODULE)
@@ -79,14 +80,18 @@ add_part!(g, :E, src=1, tgt=2, weight=EdgeData(:mass_ave, 42))
 
   pyast = pyimport("simpleast")
   pymodel = pyimport("model")
-  # TODO: install py-acsets in this environment
-  # pywgraph = pyimport("wgraph")
+  pywgraph = pyimport("wgraph")
   pyjson = pyimport("json")
 
   py_m = pymodel.Model.model_validate_json(Py(jsonwrite(m)))
-  s′ = string(py_m.model_dump_json())
+  py_m_str = string(py_m.model_dump_json())
 
-  @test jsonread(s′, Model) == m
+  @test jsonread(py_m_str, Model) == m
+
+  py_g = pywgraph.EDWeightedGraph.read_json(Py(jsonwrite(g)))
+  py_g_str = string(py_g.to_json_str())
+
+  @test jsonread(py_g_str, EDWeightedGraph) == g
 end
 
 end
