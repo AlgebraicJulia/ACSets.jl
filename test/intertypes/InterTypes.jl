@@ -4,7 +4,9 @@ using ACSets
 using ACSets.InterTypes
 using Test
 using OrderedCollections
+import JSON
 import JSON3
+import JSONSchema
 
 function testjson(x::T) where {T}
   (x == jsonread(jsonwrite(x), T))
@@ -41,6 +43,12 @@ s = jsonwrite(t)
 
 @test jsonread(s, Term) == t
 
+generate_jsonschema_module(simpleast, ".")
+
+simpleast_schema = JSONSchema.Schema(read("simpleast_schema.json", String))
+
+@test JSONSchema._validate(simpleast_schema, JSON.parse(s), "Term") === nothing
+
 @intertypes "model.it" module model
   import ..simpleast
 end
@@ -62,6 +70,12 @@ add_parts!(g, :V, 2)
 add_part!(g, :E, src=1, tgt=2, weight=EdgeData(:mass_ave, 42))
 
 @test testjson(m)
+
+generate_jsonschema_module(wgraph, ".")
+
+wgraph_schema = JSONSchema.Schema(read("wgraph_schema.json", String))
+
+@test JSONSchema._validate(wgraph_schema, JSON.parse(jsonwrite(g)), "EDWeightedGraph") === nothing
 
 @static if !Sys.iswindows()
   using CondaPkg

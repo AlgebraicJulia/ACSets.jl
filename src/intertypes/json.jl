@@ -337,6 +337,23 @@ varianttype(variant) = Object(
   "required" => string.(nameof.(variant.fields))
 )
 
+function acsettype(spec)
+  tablespecs = map(objects(spec.schema)) do ob
+    idfield = Field{InterType}(:_id, U32)
+    homfields = map(homs(spec.schema; from=ob, just_names=true)) do f
+      Field{InterType}(f, U32)
+    end
+    attrfields = map(attrs(spec.schema; from=ob)) do (f, _, t)
+      Field{InterType}(f, spec.schema.typing[t])
+    end
+    Field{InterType}(ob, List(Record([idfield; homfields; attrfields])))
+  end
+  Object(
+    "type" => "object",
+    "properties" => recordtype(tablespecs)
+  )
+end
+
 function generate_jsonschema_module(
   mod::InterTypeModule, path="."
   ;ac=JSON3.AlignmentContext(indent=2)
@@ -352,8 +369,10 @@ function generate_jsonschema_module(
         variant = only(filter(v -> v.tag == name, sum.variants))
         push!(defs, sname => varianttype(variant))
       end
-      Sum(variants) => 
+      SumType(variants) => 
         push!(defs, sname => Object("oneOf" => reftype.([v.tag for v in variants])))
+      NamedACSetType(spec) => 
+        push!(defs, sname => acsettype(spec))
       _ => nothing
     end
   end
