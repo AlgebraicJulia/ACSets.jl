@@ -78,7 +78,7 @@ intertype(::Type{Vector{UInt8}}) = Binary
 read(::JSONFormat, ::Type{Vector{UInt8}}, s::String) = base64decode(s)
 function write(io::IO, ::JSONFormat, d::Vector{UInt8})
   print(io, "\"")
-  Base.write(Base64EncodePipe(io), d)
+  Base.write(io, base64encode(d))
   print(io, "\"")
 end
 
