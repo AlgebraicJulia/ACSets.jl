@@ -36,6 +36,10 @@ function jsonread(s::String, ::Type{T}) where {T}
   read(JSONFormat(), T, json)
 end
 
+intertype(::Type{Nothing}) = Unit
+read(::JSONFormat, ::Type{Nothing}, ::Nothing) = nothing
+write(io::IO, ::JSONFormat, ::Nothing) = print(io, "null")
+
 intertype(::Type{Int32}) = I32
 read(::JSONFormat, ::Type{Int32}, s::Real) = Int32(s)
 write(io::IO, ::JSONFormat, d::Int32) = print(io, d)
@@ -74,7 +78,7 @@ intertype(::Type{Vector{UInt8}}) = Binary
 read(::JSONFormat, ::Type{Vector{UInt8}}, s::String) = base64decode(s)
 function write(io::IO, ::JSONFormat, d::Vector{UInt8})
   print(io, "\"")
-  Base.write(Base64EncodePipe(io), d)
+  Base.write(io, base64encode(d))
   print(io, "\"")
 end
 
