@@ -44,6 +44,7 @@ function toexpr(p::RefPath)
 end
 
 @data InterType begin
+  Unit
   I32
   U32
   I64

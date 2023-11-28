@@ -95,6 +95,7 @@ end
 
 function parse_intertype(e; mod::InterTypeModule)
   @match e begin
+    :Nothing => InterTypes.Unit
     :Int32 => InterTypes.I32
     :UInt32 => InterTypes.U32
     :Int64 => InterTypes.I64
@@ -186,6 +187,7 @@ end
 
 function toexpr(intertype::InterType)
   @match intertype begin
+    Unit => :Nothing
     I32 => :Int32
     U32 => :UInt32
     I64 => :Int64
@@ -194,7 +196,7 @@ function toexpr(intertype::InterType)
     Boolean => :Bool
     Str => :String
     Sym => :Symbol
-    Binary => :Binary
+    Binary => :(Vector{UInt8})
     List(elemtype) => Expr(:curly, :Vector, toexpr(elemtype))
     Map(keytype, valuetype) => Expr(:curly, :OrderedDict, toexpr(keytype), toexpr(valuetype))
     Record(fields) =>
