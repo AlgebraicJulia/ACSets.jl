@@ -21,6 +21,29 @@ SchDDS = BasicSchema([:X], [(:Φ,:X,:X)])
 @test DDS <: StructCSet
 @test DDS <: ACSet
 
+# Test cascading rem part results in a natural transformation
+#------------------------------------------------------------
+DDS(i::Int) = DDS(rand(1:i, i))
+function DDS(v::Vector{Int})
+  x = DDS()
+  add_parts!(x, :X, length(v))
+  set_subpart!(x, :Φ, v)
+  x
+end
+
+function is_natural(i::Int)
+  X = DDS(i)
+  X′ = copy(X)
+  d = cascading_rem_part!(X,:X,1)[:X]
+  all(enumerate(X[:Φ])) do (i, ϕᵢ) 
+    X′[d[i], :Φ] == d[ϕᵢ]
+  end
+end
+
+for _ in 1:100
+  @test is_natural(10)
+end
+
 dds_makers = [
   DDS,
   BitSetDDS,
