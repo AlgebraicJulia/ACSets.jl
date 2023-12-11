@@ -3,6 +3,7 @@ using Test
 
 using StaticArrays: StaticVector
 using Tables
+using Random
 
 using ACSets
 using ACSets.Columns: ColumnView
@@ -24,6 +25,7 @@ SchDDS = BasicSchema([:X], [(:Φ,:X,:X)])
 # Test cascading rem part results in a natural transformation
 #------------------------------------------------------------
 DDS(i::Int) = DDS(rand(1:i, i))
+
 function DDS(v::Vector{Int})
   x = DDS()
   add_parts!(x, :X, length(v))
@@ -31,17 +33,19 @@ function DDS(v::Vector{Int})
   x
 end
 
-function is_natural(i::Int)
+function cascading_delete_is_natural(i::Int)
   X = DDS(i)
   X′ = copy(X)
-  d = cascading_rem_part!(X,:X,1)[:X]
+  d = cascading_rem_part!(X, :X, 1)[:X]
   all(enumerate(X[:Φ])) do (i, ϕᵢ) 
     X′[d[i], :Φ] == d[ϕᵢ]
   end
 end
 
+Random.seed!(100)
+
 for _ in 1:100
-  @test is_natural(10)
+  @test cascading_delete_is_natural(10)
 end
 
 dds_makers = [
