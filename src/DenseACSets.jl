@@ -634,18 +634,16 @@ Return a mapping of from parts of updated X to the old X
 Note: the correctness is dependent on the implementation details of `rem_parts!`
 """
 function delete_subobj!(X::ACSet, delparts)
-  dels = delete_subobj(X, delparts)
+  dels = delete_subobj(X, delparts) # find all of the things that need to go
   return NamedTuple(map(ob(acset_schema(X))) do o
-    ps = collect(parts(X,o))
-    for r in dels[o]
-      idx  = findfirst(==(r), ps)
-      idx2 = pop!(ps) 
-      if idx <= length(ps) 
-        ps[idx] = idx2
-      end
-    end 
-    rem_parts!(X, o, dels[o])
-    return o => ps
+    map_to_old = collect(parts(X, o)) # injective map from curr to original X
+    for delᵢ in reverse(dels[o])
+      currᵢ = findfirst(==(delᵢ), map_to_old) # where to delete in curr acset
+      rem_part!(X, o, currᵢ) # remove the part
+      map_to_old[currᵢ] = map_to_old[end] # update map to original X
+      pop!(map_to_old) # (assumes rem_part! popped and swapped from the end)
+    end
+    o => map_to_old
   end)
 end
 
