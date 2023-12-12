@@ -92,7 +92,7 @@ function read(format::JSONFormat, ::Type{Vector{T}}, s::JSON3.Array) where {T}
 end
 function write(io::IO, format::JSONFormat, d::Vector{T}) where {T}
   print(io, "[")
-  joinwith(io, (io, x) -> write(io, format, x), d, ",")
+  if length(d) > 0 joinwith(io, (io, x) -> write(io, format, x), d, ",") end
   print(io, "]")
 end
 
