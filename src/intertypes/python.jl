@@ -156,8 +156,7 @@ class InterTypeBase(BaseModel):
         return super().model_dump_json(*args, **kwargs, by_alias=True)
 """
 
-function generate_python_module(jmod::Module, path)
-  mod = jmod.Meta
+function generate_python_module(mod::InterTypeModule, path)
   outfile = joinpath(path, string(mod.name) * ".py")
   open(outfile, "w") do io
     print(io, PYTHON_PREAMBLE)
