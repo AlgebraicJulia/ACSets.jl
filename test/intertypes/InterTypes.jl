@@ -43,7 +43,7 @@ s = jsonwrite(t)
 
 @test jsonread(s, Term) == t
 
-generate_jsonschema_module(simpleast, ".")
+generate_module(simpleast, JSONTarget)
 
 simpleast_schema = JSONSchema.Schema(read("simpleast_schema.json", String))
 
@@ -71,7 +71,7 @@ add_part!(g, :E, src=1, tgt=2, weight=EdgeData(:mass_ave, 42))
 
 @test testjson(m)
 
-generate_jsonschema_module(wgraph, ".")
+generate_module(wgraph, JSONTarget)
 
 wgraph_schema = JSONSchema.Schema(read("wgraph_schema.json", String))
 
@@ -86,9 +86,9 @@ wgraph_schema = JSONSchema.Schema(read("wgraph_schema.json", String))
 
   dir = @__DIR__
   write(dir * "/intertypes.py", InterTypes.INTERTYPE_PYTHON_MODULE)
-  generate_python_module(simpleast, dir)
-  generate_python_module(model, dir)
-  generate_python_module(wgraph, dir)
+  generate_module(simpleast, PydanticTarget, dir)
+  generate_module(model, PydanticTarget, dir)
+  generate_module(wgraph, PydanticTarget, dir)
 
   pushfirst!(PyList(pyimport("sys")."path"), Py(dir))
 
