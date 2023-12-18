@@ -156,9 +156,9 @@ class InterTypeBase(BaseModel):
         return super().model_dump_json(*args, **kwargs, by_alias=True)
 """
 
-function generate_python_module(jmod::Module, outdir)
+function generate_python_module(jmod::Module, path)
   mod = jmod.Meta
-  outfile = outdir * "/" * string(mod.name) * ".py"
+  outfile = joinpath(path, string(mod.name) * ".py")
   open(outfile, "w") do io
     print(io, PYTHON_PREAMBLE)
     for (name, importedmod) in mod.imports
@@ -173,4 +173,9 @@ function generate_python_module(jmod::Module, outdir)
       topy(io, name, decl)
     end
   end
+end
+
+
+function generate_python_module(mod::Module, path=".")
+  generate_python_module(mod.Meta, path)
 end

@@ -384,7 +384,8 @@ function generate_jsonschema_module(
     "\$schema" => "http://json-schema.org/draft-07/schema#",
     "\$defs" => Object(defs)
   )
-  open(string(mod.name) * "_schema.json", "w") do io
+  schema_filepath = joinpath(path, string(mod.name)*"_schema.json") 
+  open(schema_filepath, "w") do io
     JSON3.pretty(io, schema, ac)
   end
 end
