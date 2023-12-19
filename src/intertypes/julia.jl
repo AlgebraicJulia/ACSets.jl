@@ -307,7 +307,7 @@ end
 
 function include_intertypes(into::Module, file::String, imports::AbstractVector)
   endswith(file, ".it") || error("expected a file ending in \".it\"")
-  name = Symbol(chop(file; tail=3))
+  name = Symbol(basename(chop(file; tail=3)))
   mod = InterTypeModule(name, OrderedDict{Symbol, InterTypeModule}(imports))
   into.include(as_intertypes(mod), file)
   # recompute the hash

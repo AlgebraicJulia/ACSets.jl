@@ -1,5 +1,5 @@
 module InterTypes
-export InterType, InterTypeDecl, Binary, intertype, @intertypes
+export InterType, InterTypeDecl, Binary, LanguageTarget, SerializationTarget, generate_module, intertype, @intertypes
 
 using MLStyle
 using OrderedCollections
@@ -99,6 +99,19 @@ struct InterTypeModule
 end
 
 function intertype end
+
+abstract type ExportTarget end
+abstract type LanguageTarget <: ExportTarget end
+abstract type SerializationTarget <: ExportTarget end
+
+"""
+    generate_module(mod::Module, target::Type{<:ExportTarget}, path="."; target_specific_args...)
+  
+Generate files that define the intertypes for the specified target. 
+"""
+function generate_module(mod::Module, target::Type{<:ExportTarget}, path="."; target_specific_args...)
+  generate_module(mod.Meta, target, path; target_specific_args...)
+end
 
 include("json.jl")
 include("sexp.jl")
