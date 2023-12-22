@@ -1,5 +1,6 @@
 module InterTypes
-export InterType, InterTypeDecl, Binary, LanguageTarget, SerializationTarget, generate_module, intertype, @intertypes
+export InterType, InterTypeDecl, Object, Optional,
+  LanguageTarget, SerializationTarget, generate_module, intertype, @intertypes
 
 using MLStyle
 using OrderedCollections
@@ -56,6 +57,8 @@ end
   Binary
   List(elemtype::InterType)
   Map(keytype::InterType, valuetype::InterType)
+  ObjectType(elemtype::InterType)
+  OptionalType(elemtype::InterType)
   Record(fields::Vector{Field{InterType}})
   Sum(variants::Vector{Variant{InterType}})
   ACSetInterType(schema::TypedSchema{InterType})
@@ -112,6 +115,27 @@ Generate files that define the intertypes for the specified target.
 function generate_module(mod::Module, target::Type{<:ExportTarget}, path="."; target_specific_args...)
   generate_module(mod.Meta, target, path; target_specific_args...)
 end
+
+module InterTypeSupport
+using OrderedCollections
+export Object, Optional
+
+struct Object{T}
+  fields::OrderedDict{Symbol, T}
+end
+
+function Object{T}(pairs::(Pair{Symbol, S} where {S<:T})...) where {T}
+  Object{T}(OrderedDict{Symbol, T}(pairs...))
+end
+
+function Object(pairs::(Pair{Symbol, T} where {T})...)
+  Object{Any}(pairs...)
+end
+
+const Optional{T} = Union{T, Nothing}
+end
+
+using .InterTypeSupport
 
 include("json.jl")
 include("sexp.jl")

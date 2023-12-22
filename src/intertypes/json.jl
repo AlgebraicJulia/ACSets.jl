@@ -242,8 +242,6 @@ function write(io::IO, format::JSONFormat, acs::ACSet)
   end
 end
 
-const Object = OrderedDict{String, Any}
-
 function fieldproperties(fields::Vector{Field{InterType}})
   map(fields) do field
     string(field.name) => tojsonschema(field.type)
@@ -253,57 +251,57 @@ end
 function tojsonschema(type::InterType)
   @match type begin
     I32 => Object(
-      "type" => "integer",
-      "\$comment" => "I32",
-      "minimum" => typemin(Int32),
-      "maximum" => typemax(Int32)
+      :type => "integer",
+      Symbol("\$comment") => "I32",
+      :minimum => typemin(Int32),
+      :maximum => typemax(Int32)
     )
     U32 => Object(
-      "type" => "integer",
-      "\$comment" => "U32",
-      "minimum" => typemin(UInt32),
-      "maximum" => typemax(UInt32)
+      :type => "integer",
+      Symbol("\$comment") => "U32",
+      :minimum => typemin(UInt32),
+      :maximum => typemax(UInt32)
     )
     I64 => Object(
-      "type" => "string",
-      "\$comment" => "I64"
+      :type => "string",
+      Symbol("\$comment") => "I64"
     )
     U64 => Object(
-      "type" => "string",
-      "\$comment" => "U64"
+      :type => "string",
+      Symbol("\$comment") => "U64"
     )
     F64 => Object(
-      "type" => "number",
-      "\$comment" => "F64"
+      :type => "number",
+      Symbol("\$comment") => "F64"
     )
     Boolean => Object(
-      "type" => "boolean",
-      "\$comment" => "Boolean"
+      :type => "boolean",
+      Symbol("\$comment") => "Boolean"
     )
     Str => Object(
-      "type" => "string",
-      "\$comment" => "Str"
+      :type => "string",
+      Symbol("\$comment") => "Str"
     )
     Sym => Object(
-      "type" => "string",
-      "\$comment" => "Sym"
+      :type => "string",
+      Symbol("\$comment") => "Sym"
     )
     Binary => Object(
-      "type" => "string",
-      "contentEncoding" => "base64",
-      "\$comment" => "Binary"
+      :type => "string",
+      :contentEncoding => "base64",
+      Symbol("\$comment") => "Binary"
     )
     List(elemtype) => Object(
-      "type" => "array",
-      "items" => tojsonschema(elemtype)
+      :type => "array",
+      :items => tojsonschema(elemtype)
     )
     Map(keytype, valuetype) => Object(
-      "type" => "array",
-      "items" => Object(
-        "type" => "object",
-        "properties" => Object(
-          "key" => tojsonschema(keytype),
-          "value" => tojsonschema(valuetype)
+      :type => "array",
+      :items => Object(
+        :type => "object",
+        :properties => Object(
+          :key => tojsonschema(keytype),
+          :value => tojsonschema(valuetype)
         )
       )
     )
@@ -321,24 +319,24 @@ function tojsonschema(type::InterType)
 end
 
 reftype(name) = Object(
-  "\$ref" => "#/\$defs/$(name)"
+  Symbol("\$ref") => "#/\$defs/$(name)"
 )
 
 recordtype(fields) = Object(
-  "type" => "object",
-  "properties" => Object(fieldproperties(fields)),
-  "required" => string.(nameof.(fields))
+  :type => "object",
+  :properties => Object(fieldproperties(fields)),
+  :required => string.(nameof.(fields))
 )
 
 varianttype(variant) = Object(
-  "type" => "object",
-  "properties" => Object(
-    "tag" => Object(
-      "const" => string(variant.tag)
+  :type => "object",
+  :properties => Object(
+    :tag => Object(
+      :const => string(variant.tag)
     ),
     fieldproperties(variant.fields)...
   ),
-  "required" => string.(nameof.(variant.fields))
+  :required => string.(nameof.(variant.fields))
 )
 
 function acsettype(spec)
@@ -353,8 +351,8 @@ function acsettype(spec)
     Field{InterType}(ob, List(Record([idfield; homfields; attrfields])))
   end
   Object(
-    "type" => "object",
-    "properties" => recordtype(tablespecs)
+    :type => "object",
+    :properties => recordtype(tablespecs)
   )
 end
 
@@ -389,8 +387,8 @@ function generate_module(
     end
   end
   schema = Object(
-    "\$schema" => "http://json-schema.org/draft-07/schema#",
-    "\$defs" => Object(defs)
+    Symbol("\$schema") => "http://json-schema.org/draft-07/schema#",
+    Symbol("\$defs") => Object(defs)
   )
   schema_filepath = joinpath(path, string(mod.name)*"_schema.json") 
   open(schema_filepath, "w") do io

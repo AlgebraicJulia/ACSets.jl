@@ -2,6 +2,7 @@ module TestInterTypes
 
 using ACSets
 using ACSets.InterTypes
+
 using Test
 using OrderedCollections
 import JSON
@@ -76,6 +77,12 @@ generate_module(wgraph, JSONTarget)
 wgraph_schema = JSONSchema.Schema(read("wgraph_schema.json", String))
 
 @test JSONSchema._validate(wgraph_schema, JSON.parse(jsonwrite(g)), "EDWeightedGraph") === nothing
+
+@intertypes "objects.it" module objects end
+
+using .objects
+
+m = Metadata("lion", Object{String}(:fierceness => "high"))
 
 @static if !Sys.iswindows()
   using CondaPkg
