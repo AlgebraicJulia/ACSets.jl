@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Specifying acsets using Algebraic Data Types · ACSets.jl</title><meta name="title" content="Specifying acsets using Algebraic Data Types · ACSets.jl"/><meta property="og:title" content="Specifying acsets using Algebraic Data Types · ACSets.jl"/><meta property="twitter:title" content="Specifying acsets using Algebraic Data Types · ACSets.jl"/><meta name="description" content="Documentation for ACSets.jl."/><meta property="og:description" content="Documentation for ACSets.jl."/><meta property="twitter:description" content="Documentation for ACSets.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">ACSets.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">ACSets.jl</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../json_serialization/">Serializing acsets as JSON</a></li><li class="is-active"><a class="tocitem" href>Specifying acsets using Algebraic Data Types</a></li></ul></li><li><a class="tocitem" href="../../api/">Library Reference</a></li><li><a class="tocitem" href="../../ADTs/">Specification Language</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Specifying acsets using Algebraic Data Types</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Specifying acsets using Algebraic Data Types</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/AlgebraicJulia/ACSets.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/AlgebraicJulia/ACSets.jl/blob/main/docs/literate/ADTs.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Specifying-acsets-using-Algebraic-Data-Types"><a class="docs-heading-anchor" href="#Specifying-acsets-using-Algebraic-Data-Types">Specifying acsets using Algebraic Data Types</a><a id="Specifying-acsets-using-Algebraic-Data-Types-1"></a><a class="docs-heading-anchor-permalink" href="#Specifying-acsets-using-Algebraic-Data-Types" title="Permalink"></a></h1><p>ACSets are an extremely flexible data representation that can store anything you can put in a database. But in order to construct them, you might want something that feels more like a custom programming language. The Graphviz software comes with a custom language called dot files for specifying the data of a graph that Graphviz will draw. In order to make implementing these linguisting interfaces easier, ACSets.jl supports an Algebraic Data Types approach to specification of ACSets.</p><pre><code class="language-julia hljs">using ACSets, ACSets.ADTs
+using MLStyle
+using Test
+import ACSets.ADTs: symb2string</code></pre><p>Our schema will be labeled graphs. These are graphs with vertex labels.</p><pre><code class="language-julia hljs">SchLabeledGraph = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)],
+                          [:L], [(:label,:V,:L)])
+
+@acset_type LabeledGraph(SchLabeledGraph, index=[:src,:tgt])</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Main.LabeledGraph</code></pre><p>The basic principle is a nested expression syntax for specifying the ACSet.</p><pre><code class="language-julia hljs">s = Statement(:E, [Value(2), Value(3)])</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">  E(2,3)</code></pre><p>You can extract information from an expression with pattern matching from MLStyle.jl</p><pre><code class="language-julia hljs">get_table(s) = @match s begin
+    Statement(t, e) =&gt; t
+    _ =&gt; nothing
+end
+get_arg1(s) = @match s begin
+    Statement(t, e) =&gt; e[1]
+end
+
+@test get_table(s) == :E
+@test get_arg1(s) == Value(2)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr32"><span class="sgr1">Test Passed</span></span></code></pre><p>These statements can be grouped together into a list an tagged with the type of ACSet you want to make.</p><pre><code class="language-julia hljs">gspec = ACSetSpec(
+    :(LabeledGraph{Symbol}),
+    [
+        Statement(:V, [Kwarg(:label, Value(:a))])
+        Statement(:V, [Kwarg(:label, Value(:b))])
+        Statement(:V, [Kwarg(:label, Value(:c))])
+        Statement(:E, [Value(1), Value(3)])
+        Statement(:E, [Value(2), Value(3)])
+    ]
+)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">LabeledGraph{Symbol} begin 
+  V(label=a)
+  V(label=b)
+  V(label=c)
+  E(1,3)
+  E(2,3)
+ end</code></pre><p>These expressions can be serialized as strings:</p><pre><code class="language-julia hljs">sprint(show, gspec)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">&quot;LabeledGraph{Symbol} begin \n  V(label=a)\n  V(label=b)\n  V(label=c)\n  E(1,3)\n  E(2,3)\n end&quot;</code></pre><p>Or as Julia code:</p><pre><code class="language-julia hljs">generate_expr(gspec)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">quote
+    <span class="sgr90">#= /home/runner/work/ACSets.jl/ACSets.jl/src/ADTs.jl:96 =#</span>
+    X = LabeledGraph{Symbol}()
+    <span class="sgr90">#= /home/runner/work/ACSets.jl/ACSets.jl/src/ADTs.jl:97 =#</span>
+    add_part!(X, :V, label = :a)
+    add_part!(X, :V, label = :b)
+    add_part!(X, :V, label = :c)
+    add_part!(X, :E, 1, 3)
+    add_part!(X, :E, 2, 3)
+end</code></pre><p>From the ACSetSpec you can construct the ACSet that it specifies.</p><pre><code class="language-julia hljs">gspec = ACSetSpec(
+    :(LabeledGraph{Symbol}),
+    [
+        Statement(:V, [Kwarg(:label, Value(:a))])
+        Statement(:V, [Kwarg(:label, Value(:b))])
+        Statement(:V, [Kwarg(:label, Value(:c))])
+        Statement(:E, [Kwarg(:src, Value(1)), Kwarg(:tgt, Value(3))])
+        Statement(:E, [Kwarg(:src, Value(2)), Kwarg(:tgt, Value(3))])
+    ]
+)
+g = construct(LabeledGraph{Symbol}, gspec)</code></pre><div class="c-set">
+<span class="c-set-summary">Main.__atexample__named__ADTs.LabeledGraph{Symbol} {E:2, V:3, L:0}</span>
+<table>
+  <thead>
+    <tr class = "header headerLastRow">
+      <th class = "rowLabel" style = "font-weight: bold; text-align: right;">E</th>
+      <th style = "text-align: right;">src</th>
+      <th style = "text-align: right;">tgt</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class = "rowLabel" style = "font-weight: bold; text-align: right;">1</td>
+      <td style = "text-align: right;">1</td>
+      <td style = "text-align: right;">3</td>
+    </tr>
+    <tr>
+      <td class = "rowLabel" style = "font-weight: bold; text-align: right;">2</td>
+      <td style = "text-align: right;">2</td>
+      <td style = "text-align: right;">3</td>
+    </tr>
+  </tbody>
+</table>
+<table>
+  <thead>
+    <tr class = "header headerLastRow">
+      <th class = "rowLabel" style = "font-weight: bold; text-align: right;">V</th>
+      <th style = "text-align: right;">label</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class = "rowLabel" style = "font-weight: bold; text-align: right;">1</td>
+      <td style = "text-align: right;">a</td>
+    </tr>
+    <tr>
+      <td class = "rowLabel" style = "font-weight: bold; text-align: right;">2</td>
+      <td style = "text-align: right;">b</td>
+    </tr>
+    <tr>
+      <td class = "rowLabel" style = "font-weight: bold; text-align: right;">3</td>
+      <td style = "text-align: right;">c</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<p>There is an embedding of <code>ACSetSpec</code> into <code>Expr</code>:</p><pre><code class="language-julia hljs">hspec = acsetspec(:(LabeledGraph{Symbol}),quote
+    V(label=a)
+    V(label=b)
+    V(label=c)
+    E(src=1,tgt=3)
+    E(src=2,tgt=3)
+end
+)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">LabeledGraph{Symbol} begin 
+  V(label=a)
+  V(label=b)
+  V(label=c)
+  E(src=1,tgt=3)
+  E(src=2,tgt=3)
+ end</code></pre><p>The <code>acsetspec</code> function is a good example of embedding your custom language into Julia syntax That save you the trouble of writing your own lexer and parser for your custom language.</p><pre><code class="language-julia hljs">construct(LabeledGraph{Symbol}, hspec) == construct(LabeledGraph{Symbol}, gspec)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre><p>You can export your specification to a dictionary and put that dictionary into a JSON document this gives you a nice way of serializing the ACSet that is machine readable and row oriented. The ACSet serialization is by column oriented which might be inconvenient for your consumers.</p><pre><code class="language-julia hljs">to_dict(gspec)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Dict{Symbol, Any} with 2 entries:
+  :type =&gt; &quot;LabeledGraph{Symbol}&quot;
+  :data =&gt; Dict{Symbol, Any}[Dict(:table=&gt;:V, :fields=&gt;Dict(:label=&gt;:a)), Dict(…</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../json_serialization/">« Serializing acsets as JSON</a><a class="docs-footer-nextpage" href="../../api/">Library Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Wednesday 3 January 2024 00:40">Wednesday 3 January 2024</span>. Using Julia version 1.10.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
