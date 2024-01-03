@@ -7,7 +7,7 @@ authors = [
   "Evan Patterson <evan@epatters.org>",
   "AlgebraicJulia Team",
 ]
-version = "0.2.11"
+version = "0.2.12"
 
 [deps]
 AlgebraicInterfaces = "23cfdc9f-0504-424a-be1f-4892b28e2f0c"
