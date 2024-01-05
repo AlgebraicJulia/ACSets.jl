@@ -96,6 +96,27 @@ function write(io::IO, format::JSONFormat, d::Vector{T}) where {T}
   print(io, "]")
 end
 
+intertype(::Type{Object{T}}) where {T} = ObjectType{intertype(T)}
+function read(format::JSONFormat, ::Type{Object{T}}, s::JSON3.Object) where {T}
+  Object{T}(
+    [k => read(format, T, v) for (k, v) in pairs(s)]...
+  )
+end
+function write(io::IO, format::JSONFormat, d::Object)
+  writeobject(io) do next
+    for p in pairs(d)
+      next()
+      writekv(io, p)
+    end
+  end
+end
+
+intertype(::Type{Optional{T}}) where {T} = Optional{intertype(T)}
+read(::JSONFormat, ::Type{Optional{T}}, ::Nothing) where {T} = nothing
+read(format::JSONFormat, ::Type{Optional{T}}, s) where {T} =
+  read(format, T, s)
+write(io::IO, format::JSONFormat, d::Nothing) = print(io, "null")
+
 intertype(::Type{OrderedDict{K,V}}) where {K,V} = Map(intertype(K), intertype(V))
 function read(format::JSONFormat, ::Type{OrderedDict{K, V}}, s::JSON3.Array) where {K, V}
   res = OrderedDict{K, V}()

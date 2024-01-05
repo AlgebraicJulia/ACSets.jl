@@ -118,10 +118,11 @@ end
 
 module InterTypeSupport
 using OrderedCollections
+using StructEquality
 import StructTypes
 export Object, Optional
 
-struct Object{T}
+@struct_hash_equal struct Object{T}
   fields::OrderedDict{Symbol, T}
 end
 

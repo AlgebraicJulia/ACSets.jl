@@ -70,7 +70,7 @@ g = EDWeightedGraph()
 add_parts!(g, :V, 2)
 add_part!(g, :E, src=1, tgt=2, weight=EdgeData(:mass_ave, 42))
 
-@test testjson(m)
+@test testjson(g)
 
 generate_module(wgraph, JSONTarget)
 
@@ -87,6 +87,8 @@ md = Metadata("lion", Object{String}(:fierceness => "high"))
 @test md.name == "lion"
 @test md.attributes[:fierceness] == "high"
 
+@test testjson(md)
+
 @intertypes "optionals.it" module optionals end
 
 using .optionals
@@ -95,9 +97,13 @@ x = NullableInt(nothing)
 
 @test isnothing(x.value)
 
+@test testjson(x)
+
 y = NullableInt(5)
 
 @test y.value == 5
+
+@test testjson(y)
 
 @static if !Sys.iswindows()
   using CondaPkg
