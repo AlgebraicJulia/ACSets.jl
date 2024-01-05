@@ -244,7 +244,7 @@ end
 
 function fieldproperties(fields::Vector{Field{InterType}})
   map(fields) do field
-    string(field.name) => tojsonschema(field.type)
+    field.name => tojsonschema(field.type)
   end
 end
 
@@ -324,7 +324,7 @@ reftype(name) = Object(
 
 recordtype(fields) = Object(
   :type => "object",
-  :properties => Object(fieldproperties(fields)),
+  :properties => Object(fieldproperties(fields)...),
   :required => string.(nameof.(fields))
 )
 
@@ -368,27 +368,26 @@ function generate_module(
   mod::InterTypeModule, ::Type{JSONTarget}, path
   ;ac=JSON3.AlignmentContext(indent=2)
 )
-  defs = Pair{String, Object}[]
+  defs = Pair{Symbol, Object}[]
   for (name, decl) in mod.declarations
-    sname = string(name)
     @match decl begin
-      Alias(type) => push!(defs, sname => tojsonschema(type))
-      Struct(fields) => push!(defs, sname => recordtype(fields))
+      Alias(type) => push!(defs, name => tojsonschema(type))
+      Struct(fields) => push!(defs, name => recordtype(fields))
       VariantOf(parent) => begin
         sum = mod.declarations[parent]
         variant = only(filter(v -> v.tag == name, sum.variants))
-        push!(defs, sname => varianttype(variant))
+        push!(defs, name => varianttype(variant))
       end
       SumType(variants) => 
-        push!(defs, sname => Object("oneOf" => reftype.([v.tag for v in variants])))
+        push!(defs, name => Object(:oneOf => reftype.([v.tag for v in variants])))
       NamedACSetType(spec) => 
-        push!(defs, sname => acsettype(spec))
+        push!(defs, name => acsettype(spec))
       _ => nothing
     end
   end
   schema = Object(
     Symbol("\$schema") => "http://json-schema.org/draft-07/schema#",
-    Symbol("\$defs") => Object(defs)
+    Symbol("\$defs") => Object(defs...)
   )
   schema_filepath = joinpath(path, string(mod.name)*"_schema.json") 
   open(schema_filepath, "w") do io

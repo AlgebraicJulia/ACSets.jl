@@ -58,6 +58,10 @@ function tosexp(t::InterType)
       SExp(:List, tosexp(elemtype))
     Map(keytype, valuetype) =>
       SExp(:Map, tosexp(keytype), tosexp(valuetype))
+    ObjectType(elemtype) =>
+      SExp(:Object, tosexp(elemtype))
+    OptionalType(elemtype) =>
+      SExp(:Optional, tosexp(elemtype))
     Record(fields) => SExp(:Record, fieldsexps(fields)...)
     Sum(variants) => SExp(:Sum, variantsexps(variants)...)
     ACSetInterType(schema) => :ACset

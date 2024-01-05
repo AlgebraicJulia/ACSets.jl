@@ -118,6 +118,7 @@ end
 
 module InterTypeSupport
 using OrderedCollections
+import StructTypes
 export Object, Optional
 
 struct Object{T}
@@ -131,6 +132,13 @@ end
 function Object(pairs::(Pair{Symbol, T} where {T})...)
   Object{Any}(pairs...)
 end
+
+Base.getindex(obj::Object, key::Symbol) = obj.fields[key]
+Base.setindex!(obj::Object, x, key::Symbol) = (obj.fields[key] = x)
+
+Base.pairs(obj::Object) = pairs(obj.fields)
+
+StructTypes.StructType(::Type{<:Object}) = StructTypes.DictType()
 
 const Optional{T} = Union{T, Nothing}
 end

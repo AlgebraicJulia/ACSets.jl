@@ -82,7 +82,22 @@ wgraph_schema = JSONSchema.Schema(read("wgraph_schema.json", String))
 
 using .objects
 
-m = Metadata("lion", Object{String}(:fierceness => "high"))
+md = Metadata("lion", Object{String}(:fierceness => "high"))
+
+@test md.name == "lion"
+@test md.attributes[:fierceness] == "high"
+
+@intertypes "optionals.it" module optionals end
+
+using .optionals
+
+x = NullableInt(nothing)
+
+@test isnothing(x.value)
+
+y = NullableInt(5)
+
+@test y.value == 5
 
 @static if !Sys.iswindows()
   using CondaPkg

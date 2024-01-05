@@ -1,0 +1,3 @@
+struct NullableInt
+  value::Optional{Int64}
+end
