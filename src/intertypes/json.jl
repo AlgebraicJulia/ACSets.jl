@@ -312,6 +312,15 @@ function tojsonschema(type::InterType)
       :contentEncoding => "base64",
       Symbol("\$comment") => "Binary"
     )
+    OptionalType(elemtype) => begin
+      schema = tojsonschema(elemtype)
+      schema[:type] = [schema[:type], "null"]
+      schema
+    end
+    ObjectType(elemtype) => Object(
+      :type => "object",
+      :additionalProperties => tojsonschema(elemtype)
+    )
     List(elemtype) => Object(
       :type => "array",
       :items => tojsonschema(elemtype)

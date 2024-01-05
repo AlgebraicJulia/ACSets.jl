@@ -89,6 +89,12 @@ md = Metadata("lion", Object{String}(:fierceness => "high"))
 
 @test testjson(md)
 
+generate_module(objects, JSONTarget)
+
+objects_schema = JSONSchema.Schema(read("objects_schema.json", String))
+
+@test JSONSchema._validate(objects_schema, JSON.parse(jsonwrite(md)), "Metadata") === nothing
+
 @intertypes "optionals.it" module optionals end
 
 using .optionals
@@ -104,6 +110,13 @@ y = NullableInt(5)
 @test y.value == 5
 
 @test testjson(y)
+
+generate_module(optionals, JSONTarget)
+
+optionals_schema = JSONSchema.Schema(read("optionals_schema.json", String))
+
+@test JSONSchema._validate(optionals_schema, JSON.parse(jsonwrite(x)), "NullableInt") === nothing
+@test JSONSchema._validate(optionals_schema, JSON.parse(jsonwrite(y)), "NullableInt") === nothing
 
 @static if !Sys.iswindows()
   using CondaPkg
