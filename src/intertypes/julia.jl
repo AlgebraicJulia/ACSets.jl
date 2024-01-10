@@ -313,7 +313,7 @@ function include_intertypes(into::Module, file::String, imports::AbstractVector)
   into.include(as_intertypes(mod), file)
   # recompute the hash
   mod = InterTypeModule(name, mod.imports, mod.declarations)
-  into.eval(Expr(:export, keys(mod.declarations)...))
+  into.eval(Expr(:export, exports(mod)...))
   mod
 end
 
