@@ -69,7 +69,14 @@ g = EDWeightedGraph()
 add_parts!(g, :V, 2)
 add_part!(g, :E, src=1, tgt=2, weight=EdgeData(:mass_ave, 42))
 
-@test testjson(m)
+@test testjson(g)
+
+sg = WeightedGraph{Symbol}()
+
+add_parts!(sg, :V, 2)
+add_part!(sg, :E, src=1, tgt=2, weight=:mass_ave)
+
+@test testjson(sg)
 
 generate_module(wgraph, JSONTarget)
 
