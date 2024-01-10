@@ -143,6 +143,7 @@ function parse_intertype_decl(e; mod::InterTypeModule)
       (name, tschema) = @match head begin
         Expr(:(<:), name, parent) => (name, copy(mod.declarations[parent].schema))
         name::Symbol => (name, TypedSchema{Symbol, InterType}())
+        _ => error("expected schema head of the form `\$SchemaName` or `\$SchemaName <: Parent`.")
       end
       Base.remove_linenums!(body)
       Pair(name, SchemaDecl(parse_typedschema!(body, tschema; mod)))
