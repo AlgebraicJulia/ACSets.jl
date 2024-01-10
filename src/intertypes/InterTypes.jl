@@ -85,6 +85,16 @@ end
   NamedACSetType(typespec::ACSetTypeSpec)
 end
 
+exports(::InterTypeDecl) = Symbol[]
+
+function exports(acset_type::NamedACSetType)
+  if !isnothing(acset_type.typespec.genericname)
+    [acset_type.typespec.genericname]
+  else
+    []
+  end
+end
+
 function hashdecls end
 
 struct InterTypeModule
@@ -99,6 +109,15 @@ struct InterTypeModule
   )
     new(name, imports, declarations, hashdecls(declarations))
   end
+end
+
+function exports(mod::InterTypeModule)
+  export_list = Symbol[]
+  for (name, decl) in pairs(mod.declarations)
+    push!(export_list, name)
+    append!(export_list, exports(decl))
+  end
+  export_list
 end
 
 function intertype end

@@ -148,6 +148,7 @@ function parse_intertype_decl(e; mod::InterTypeModule)
       (name, tschema) = @match head begin
         Expr(:(<:), name, parent) => (name, copy(mod.declarations[parent].schema))
         name::Symbol => (name, TypedSchema{Symbol, InterType}())
+        _ => error("expected schema head of the form `\$SchemaName` or `\$SchemaName <: Parent`.")
       end
       Base.remove_linenums!(body)
       Pair(name, SchemaDecl(parse_typedschema!(body, tschema; mod)))
@@ -319,7 +320,7 @@ function include_intertypes(into::Module, file::String, imports::AbstractVector)
   into.include(as_intertypes(mod), file)
   # recompute the hash
   mod = InterTypeModule(name, mod.imports, mod.declarations)
-  into.eval(Expr(:export, keys(mod.declarations)...))
+  into.eval(Expr(:export, exports(mod)...))
   mod
 end
 
