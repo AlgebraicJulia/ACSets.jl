@@ -335,7 +335,8 @@ for lset_maker in lset_makers
   @test incident(lset, :foo, :label) == []
   @test subpart_type(lset, :label) == Symbol
   @test subpart_type(lset, :Label) == Symbol
-
+  @test_throws Exception subpart_type(lset, :abel)
+  
   # Labeled set with compound label (tuple).
   lset = lset_maker(Tuple{Int,Int})
   add_parts!(lset, :X, 2, label=[(1,1), (1,2)])
