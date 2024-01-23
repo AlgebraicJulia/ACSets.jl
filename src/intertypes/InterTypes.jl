@@ -7,6 +7,15 @@ using OrderedCollections
 using ..Schemas
 import ..Schemas: toexpr
 
+# InterType Definitions
+#######################
+
+"""
+A field of a struct. Used in [`Variant`](@ref) and [`Record`](@ref).
+
+The `T` parameter will always be [`InterType`](@ref), but this is mutually-recursive
+with `InterType` so we have to be generic here.
+"""
 struct Field{T}
   name::Symbol
   type::T
@@ -14,6 +23,12 @@ end
 
 Base.nameof(field::Field) = field.name
 
+"""
+One of the summands of a sum type.
+
+Like [`Field`](@ref), the `T` parameter will always be [`InterType`](@ref), but
+this is mutually-recursive with `InterType` so we have to be generic here.
+"""
 struct Variant{T}
   tag::Symbol
   fields::Vector{Field{T}}
@@ -21,8 +36,12 @@ end
 
 Base.nameof(variant::Variant) = variant.tag
 
+"""
+A non-empty linked list of symbols representing something like `foo.bar.baz`.
+"""
 @data RefPath begin
   RefHere(name::Symbol)
+  """mod.name"""
   RefThere(mod::RefPath, name::Symbol)
 end
 
@@ -44,6 +63,21 @@ function toexpr(p::RefPath)
   end
 end
 
+"""
+An intertype expression representing a type.
+
+TODO: Generic types
+TODO: Remove anonymous sums, anonymous products
+TODO: Separate out primitives, so that this is something like
+
+```julia
+@data InterType begin
+  PrimType(prim::InterTypePrimitive)
+  TypeRef(path::RefPath)
+  TypeApp(type::InterType, args::Vector{InterType})
+end
+```
+"""
 @data InterType begin
   Unit
   I32
@@ -61,11 +95,27 @@ end
   OptionalType(elemtype::InterType)
   Record(fields::Vector{Field{InterType}})
   Sum(variants::Vector{Variant{InterType}})
-  ACSetInterType(schema::TypedSchema{InterType})
+  ACSetInterType(schema::TypedSchema{Symbol, InterType})
   Annot(desc::String, type::InterType)
   TypeRef(to::RefPath)
 end
 
+"""
+A specification for the type of an acset.
+
+## Fields
+- `genericname::Union{Symbol, Nothing}`: The name for the generic version of the acset, with type parameters.
+
+  Note that the name assigned to this in the declaration is the name *with*
+  type parameters pre-specified.
+
+  If there are no attribute types, then this is nothing.
+- `abstract_type::Union{Symbol, Nothing}`: The parent abstract type for the acset.
+- `schemaname::Symbol`
+- `schema::TypedSchema{Symbol, InterType}`
+- `index::Vector{Symbol}`
+- `unique_index::Vector{Symbol}`
+"""
 struct ACSetTypeSpec
   genericname::Union{Symbol, Nothing}
   abstract_type::Union{Symbol, Nothing}
@@ -75,13 +125,37 @@ struct ACSetTypeSpec
   unique_index::Vector{Symbol}
 end
 
+"""
+An intertype declaration.
+
+Does not include the name of the declaration.
+"""
 @data InterTypeDecl begin
+  """An alias for an existing type"""
   Alias(type::InterType)
+  """A sum type, also known as a tagged union."""
   SumType(variants::Vector{Variant{InterType}})
+  """
+  A variant of a sum type, i.e. one of the summands. These are implicitly
+  produced when declaring a sum type, and the data of the variant (i.e. the
+  fields) are in the parent sum type.
+  """
   VariantOf(parent::Symbol)
+  """A struct type, also known as a product type or record type."""
   Struct(fields::Vector{Field{InterType}})
+  """
+  A schema for acsets. Does not declare the acset type yet, however, that is
+  done by [`NamedACSetType`](@ref).
+  """
   SchemaDecl(schema::TypedSchema{Symbol, InterType})
+  """
+  An abstract acset type which ACSets can subtype. Mostly used for backwards
+  compatibility with AlgebraicJulia code.
+  """
   AbstractACSetType(parent::Union{Symbol, Nothing})
+  """
+  An acset type, customized in certain ways.
+  """
   NamedACSetType(typespec::ACSetTypeSpec)
 end
 
