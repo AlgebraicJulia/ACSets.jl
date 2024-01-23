@@ -171,6 +171,10 @@ end
 
 function hashdecls end
 
+"""
+A collection of intertype declarations packaged together. May refer to other
+InterTypeModules via the `imports` field.
+"""
 struct InterTypeModule
   name::Symbol
   imports::OrderedDict{Symbol, InterTypeModule}
