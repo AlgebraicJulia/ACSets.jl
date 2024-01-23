@@ -2,6 +2,7 @@ module TestInterTypes
 
 using ACSets
 using ACSets.InterTypes
+
 using Test
 using OrderedCollections
 import JSON
@@ -84,6 +85,46 @@ wgraph_schema = JSONSchema.Schema(read("wgraph_schema.json", String))
 
 @test JSONSchema._validate(wgraph_schema, JSON.parse(jsonwrite(g)), "EDWeightedGraph") === nothing
 
+@intertypes "objects.it" module objects end
+
+using .objects
+
+md = Metadata("lion", Object{String}(:fierceness => "high"))
+
+@test md.name == "lion"
+@test md.attributes[:fierceness] == "high"
+
+@test testjson(md)
+
+generate_module(objects, JSONTarget)
+
+objects_schema = JSONSchema.Schema(read("objects_schema.json", String))
+
+@test JSONSchema._validate(objects_schema, JSON.parse(jsonwrite(md)), "Metadata") === nothing
+
+@intertypes "optionals.it" module optionals end
+
+using .optionals
+
+x = NullableInt(nothing)
+
+@test isnothing(x.value)
+
+@test testjson(x)
+
+y = NullableInt(5)
+
+@test y.value == 5
+
+@test testjson(y)
+
+generate_module(optionals, JSONTarget)
+
+optionals_schema = JSONSchema.Schema(read("optionals_schema.json", String))
+
+@test JSONSchema._validate(optionals_schema, JSON.parse(jsonwrite(x)), "NullableInt") === nothing
+@test JSONSchema._validate(optionals_schema, JSON.parse(jsonwrite(y)), "NullableInt") === nothing
+
 @static if !Sys.iswindows()
   using CondaPkg
   using PythonCall
@@ -96,18 +137,29 @@ wgraph_schema = JSONSchema.Schema(read("wgraph_schema.json", String))
   generate_module(simpleast, PydanticTarget, dir)
   generate_module(model, PydanticTarget, dir)
   generate_module(wgraph, PydanticTarget, dir)
+  generate_module(objects, PydanticTarget, dir)
+  generate_module(optionals, PydanticTarget, dir)
 
   pushfirst!(PyList(pyimport("sys")."path"), Py(dir))
 
   pyast = pyimport("simpleast")
   pymodel = pyimport("model")
   pywgraph = pyimport("wgraph")
+  pyobjects = pyimport("objects")
+  pyoptionals = pyimport("optionals")
   pyjson = pyimport("json")
 
-  py_m = pymodel.Model.model_validate_json(Py(jsonwrite(m)))
-  py_m_str = string(py_m.model_dump_json())
+  function python_roundtrip(pythontype, val)
+    py_val = pythontype.model_validate_json(Py(jsonwrite(val)))
+    py_val_str = string(py_val.model_dump_json())
 
-  @test jsonread(py_m_str, Model) == m
+    jsonread(py_val_str, typeof(val)) == val
+  end
+
+  @test python_roundtrip(pymodel.Model, m)
+  @test python_roundtrip(pyobjects.Metadata, md)
+  @test python_roundtrip(pyoptionals.NullableInt, x)
+  @test python_roundtrip(pyoptionals.NullableInt, y)
 
   py_g = pywgraph.EDWeightedGraph.read_json(Py(jsonwrite(g)))
   py_g_str = string(py_g.to_json_str())

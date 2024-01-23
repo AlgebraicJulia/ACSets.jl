@@ -1,0 +1,4 @@
+struct Metadata
+  name::String
+  attributes::Object{String}
+end

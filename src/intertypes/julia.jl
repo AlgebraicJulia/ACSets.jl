@@ -1,5 +1,6 @@
 using ...ACSets
 
+
 function parse_fields(fieldexprs; mod)
   map(enumerate(fieldexprs)) do (i, fieldexpr)
     @match fieldexpr begin
@@ -111,6 +112,10 @@ function parse_intertype(e; mod::InterTypeModule)
       InterTypes.List(parse_intertype(elemtype; mod))
     Expr(:curly, :OrderedDict, keytype, valuetype) =>
       InterTypes.Map(parse_intertype(keytype; mod), parse_intertype(valuetype; mod))
+    Expr(:curly, :Object, elemtype) =>
+      InterTypes.ObjectType(parse_intertype(elemtype; mod))
+    Expr(:curly, :Optional, elemtype) =>
+      InterTypes.OptionalType(parse_intertype(elemtype; mod))
     Expr(:curly, :Record, fieldexprs...) => begin
       InterTypes.Record(parse_fields(fieldexprs; mod))
     end
@@ -200,6 +205,8 @@ function toexpr(intertype::InterType)
     Binary => :(Vector{UInt8})
     List(elemtype) => Expr(:curly, :Vector, toexpr(elemtype))
     Map(keytype, valuetype) => Expr(:curly, :OrderedDict, toexpr(keytype), toexpr(valuetype))
+    ObjectType(elemtype) => Expr(:curly, InterTypeSupport.Object, toexpr(elemtype))
+    OptionalType(elemtype) => Expr(:curly, InterTypeSupport.Optional, toexpr(elemtype))
     Record(fields) =>
       Expr(:curly, :Record, toexpr.(fields)...)
     Sum(variants) =>
