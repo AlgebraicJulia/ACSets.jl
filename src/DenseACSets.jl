@@ -198,14 +198,16 @@ datatypes(x::DynamicACSet) = x.type_assignment
 constructor(X::DynamicACSet) = ()->DynamicACSet(X.name,X.schema,
   type_assignment=X.type_assignment, 
   index=indices(X), unique_index=unique_indices(X))
+
 function ACSetInterface.subpart_type(x::DynamicACSet,s::Symbol) 
   try
     if s in [a[1] for a in x.schema.attrs]
       attr_type(x,s)
-    else attrtype_type(x,s)
+    else
+      attrtype_type(x,s)
     end
   catch e
-    error("$s is not a valid attr/attrtype.")
+    error("$s is neither a valid attr nor attrtype.")
   end
 end
 
