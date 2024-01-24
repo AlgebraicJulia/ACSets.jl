@@ -216,6 +216,8 @@ abstract type ExportTarget end
 abstract type LanguageTarget <: ExportTarget end
 abstract type SerializationTarget <: ExportTarget end
 
+abstract type SerializationFormat end
+
 """
     generate_module(mod::Module, target::Type{<:ExportTarget}, path="."; target_specific_args...)
   
