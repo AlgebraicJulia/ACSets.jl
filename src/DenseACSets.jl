@@ -270,6 +270,18 @@ function ACSetInterface.constructor(X::DynamicACSet{PT}; type_assignment=nothing
                   index=index, unique_index=unique_index, part_type=part_type)
 end
 
+function ACSetInterface.subpart_type(x::DynamicACSet,s::Symbol) 
+  try
+    if s in [a[1] for a in x.schema.attrs]
+      attr_type(x,s)
+    else
+      attrtype_type(x,s)
+    end
+  catch e
+    error("$s is neither a valid attr nor attrtype.")
+  end
+end
+
 """Cast StructACSet into a DynamicACSet"""
 function DynamicACSet(X::StructACSet{S}) where S 
   Y = DynamicACSet(string(typeof(X).name.name), Schema(S); type_assignment=datatypes(X))
@@ -351,6 +363,18 @@ function ACSetInterface.constructor(X::StructACSet{S,Ts,PT};
     part_type = isnothing(part_type) ? PT : part_type
     return () -> AnonACSet(Schema(S), type_assignment=type_assignment, index=index, 
                            unique_index=unique_index, part_type=part_type)
+  end
+end
+
+function ACSetInterface.subpart_type(x::StructACSet{S}, s::Symbol) where {S}
+  try 
+    if s in [a[1] for a in Schema(S).attrs]
+      attr_type(x,s)
+    else
+      attrtype_type(x,s)
+    end
+  catch e
+    error("$s is not a valid attr/attrtype.")
   end
 end
 
