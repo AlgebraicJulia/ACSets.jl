@@ -7,6 +7,7 @@ end
 @sum Term begin
   Constant(val::Const)
   Plus(terms::Vector{Term})
+  Times(terms::Vector{Plus}) # to test referring to other variants
   IfThenElse(ifcase::Term, thencase::Term, elsecase::Term)
 end
 
