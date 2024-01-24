@@ -9,7 +9,10 @@ using CompTime
 using ..ACSetInterface
 using ..DenseACSets
 
-struct JSONFormat
+"""
+A signifier for serialization to and from JSON.
+"""
+struct JSONFormat <: SerializationFormat
 end
 
 struct InterTypeConversionError <: Exception
@@ -17,10 +20,33 @@ struct InterTypeConversionError <: Exception
   got::Any
 end
 
-function read(format, type::Type, x)
+"""
+    read(format::SerializationFormat, type::Type, x)
+
+A generic read method dispatch-controlled by format of the input and expected
+type.
+
+TODO: Currently this *shadows* Base.read, instead of overloading it. Would it
+be type piracy to overload it instead?
+"""
+function read(format::SerializationFormat, type::Type, x)
   throw(InterTypeConversionError(intertype(type), x))
 end
 
+"""
+    write(io::IO, format::SerializationFormat, x)
+
+Writes `x` the the provided IO stream, using serialization format `format`.
+
+See docstring for [`read`](@ref) about shadowing vs. overloading Base.write.
+"""
+function write end
+
+"""
+    joinwith(io::IO, f, xs, separator)
+
+Prints the elements in `xs` using `x -> f(io, x)`, separated by `separator`.
+"""
 function joinwith(io::IO, f, xs, separator)
   for x in xs[1:end-1]
     f(io, x)
@@ -29,12 +55,37 @@ function joinwith(io::IO, f, xs, separator)
   f(io, xs[end])
 end
 
+"""
+    jsonwrite(x)
+    jsonwrite(io::IO, x)
+
+A wrapper around [`write`](@ref) which calls it with [`JSONFormat`](@ref).
+
+TODO: Should we just overload JSON3.write instead? See [1]
+
+[1]: https://github.com/AlgebraicJulia/ACSets.jl/issues/83
+"""
 jsonwrite(x) = sprint(jsonwrite, x)
 jsonwrite(io::IO, x) = write(io, JSONFormat(), x)
+
+"""
+    jsonread(s::String, T::Type)
+
+A wrapper around [`read`](@ref) which calls it with [`JSONFormat`](@ref)
+
+TODO: See comment for [`jsonwrite`](@ref)
+"""
 function jsonread(s::String, ::Type{T}) where {T}
   json = JSON3.read(s)
   read(JSONFormat(), T, json)
 end
+
+# JSON Serialization for basic types
+####################################
+
+# We write our own serialization methods instead of using JSON3.write directly
+# because we want to serialize 64 bit integers as strings rather than integers
+# which get lossily converted to floats.
 
 intertype(::Type{Nothing}) = Unit
 read(::JSONFormat, ::Type{Nothing}, ::Nothing) = nothing
@@ -115,7 +166,6 @@ intertype(::Type{Optional{T}}) where {T} = Optional{intertype(T)}
 read(::JSONFormat, ::Type{Optional{T}}, ::Nothing) where {T} = nothing
 read(format::JSONFormat, ::Type{Optional{T}}, s) where {T} =
   read(format, T, s)
-write(io::IO, format::JSONFormat, d::Nothing) = print(io, "null")
 
 intertype(::Type{OrderedDict{K,V}}) where {K,V} = Map(intertype(K), intertype(V))
 function read(format::JSONFormat, ::Type{OrderedDict{K, V}}, s::JSON3.Array) where {K, V}
@@ -263,12 +313,23 @@ function write(io::IO, format::JSONFormat, acs::ACSet)
   end
 end
 
+# JSONSchema Export
+###################
+
 function fieldproperties(fields::Vector{Field{InterType}})
   map(fields) do field
     field.name => tojsonschema(field.type)
   end
 end
 
+"""
+    tojsonschema(type::InterType)
+
+Convert an InterType to a JSONSchema representation.
+
+TODO: We could use multiple dispatch instead of the `@match` here, which might
+be cleaner
+"""
 function tojsonschema(type::InterType)
   @match type begin
     I32 => Object(
@@ -391,9 +452,13 @@ end
 
 Specifies a serialization target of JSON Schema when
 generating a module.
+
+TODO: This should really be called something like JSONSchemaTarget.
 """
 struct JSONTarget <: SerializationTarget end
 
+# TODO: Should this be ::JSONTarget instead of ::Type{JSONTarget} so
+# that we pass in `JSONTarget()` instead of `JSONTarget`?
 function generate_module(
   mod::InterTypeModule, ::Type{JSONTarget}, path
   ;ac=JSON3.AlignmentContext(indent=2)
