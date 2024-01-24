@@ -125,6 +125,16 @@ function parse_intertype(e; mod::InterTypeModule)
   end
 end
 
+function extract_variant_names(variantexprs)
+  map(variantexprs) do vexpr
+    @match vexpr begin
+      tag::Symbol => tag
+      Expr(:call, tag, fieldexprs...) => tag
+      _ => error("could not parse variant from $vexpr")
+    end
+  end
+end
+
 function parse_intertype_decl(e; mod::InterTypeModule)
   @match e begin
     Expr(:const, Expr(:(=), name::Symbol, type)) => Pair(name, Alias(parse_intertype(type; mod)))
@@ -139,8 +149,15 @@ function parse_intertype_decl(e; mod::InterTypeModule)
     Expr(:sum, name::Symbol, body) => begin
       Base.remove_linenums!(body)
       mod.declarations[name] = Alias(TypeRef(RefPath(:nothing)))
+      variant_names = extract_variant_names(body.args)
+      for vname in variant_names
+        mod.declarations[vname] = Alias(TypeRef(RefPath(:nothing)))
+      end
       ret = Pair(name, SumType(parse_variants(body.args; mod)))
       delete!(mod.declarations, name)
+      for vname in variant_names
+        delete!(mod.declarations, vname)
+      end
       ret
     end
     Expr(:schema, head, body) => begin
@@ -412,30 +429,37 @@ function makeifs(branches, elsebody)
   Expr(:if, cond, body, expr)
 end
 
-function reader(name, decl::InterTypeDecl)
-  body = @match decl begin
-    Struct(fields) => variantreader(name, fields)
-    SumType(variants) => begin
-      tag = gensym(:tag)
-      ifs = makeifs(map(variants) do variant
-        (
-          :($tag == $(string(variant.tag))),
-          variantreader(variant.tag, variant.fields)
-        )
-      end)
-      quote
-        $tag = s[:_type]
-        $ifs
-      end
-    end
-    _ => nothing
-  end
-  if !isnothing(body)
-    :(function $(GlobalRef(InterTypes, :read))(format::$(JSONFormat), ::Type{$(name)}, s::$(JSON3.Object))
+reader(name, decl::InterTypeDecl) = nothing
+
+function reader(name, decl::Union{Struct, Variant})
+  body = variantreader(name, decl.fields)
+  quote
+    function $(GlobalRef(InterTypes, :read))(
+      format::$(JSONFormat), ::Type{$(name)}, s::$(JSON3.Object)
+    )
       $body
-    end)
-  else
-    nothing
+    end
+  end
+end
+
+function reader(name, decl::SumType)
+  tag = gensym(:tag)
+  variants = decl.variants
+  variantreaders = map(variants) do variant
+    reader(variant.tag, variant)
+  end
+  ifs = makeifs(map(variants) do variant
+    (
+      :($tag == $(string(variant.tag))),
+      :($(GlobalRef(InterTypes, :read))($(JSONFormat()), $(variant.tag), s))
+    )
+  end)
+  quote
+    $(variantreaders...)
+    function $(GlobalRef(InterTypes, :read))(format::$(JSONFormat), ::Type{$(name)}, s::$(JSON3.Object))
+      $tag = s[:_type]
+      $ifs
+    end
   end
 end
 

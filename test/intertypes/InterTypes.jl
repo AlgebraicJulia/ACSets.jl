@@ -43,6 +43,7 @@ s = jsonwrite(t)
 @test s isa String
 
 @test jsonread(s, Term) == t
+@test jsonread(s, Plus) == t
 
 generate_module(simpleast, JSONTarget)
 
