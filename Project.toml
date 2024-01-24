@@ -1,12 +1,7 @@
 name = "ACSets"
 uuid = "227ef7b5-1206-438b-ac65-934d6da304b8"
 license = "MIT"
-authors = [
-  "Owen Lynch <owen@topos.institute>",
-  "Kris Brown <kris@topos.institute>",
-  "Evan Patterson <evan@epatters.org>",
-  "AlgebraicJulia Team",
-]
+authors = ["Owen Lynch <owen@topos.institute>", "Kris Brown <kris@topos.institute>", "Evan Patterson <evan@epatters.org>", "AlgebraicJulia Team"]
 version = "0.2.13"
 
 [deps]
@@ -52,6 +47,7 @@ Reexport = "1"
 SHA = "0.7"
 StaticArrays = "1"
 StructEquality = "2.1"
+StructTypes = "1"
 Tables = "1"
 XLSX = "0.10"
 julia = "1.9"
