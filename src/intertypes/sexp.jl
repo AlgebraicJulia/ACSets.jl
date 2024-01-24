@@ -1,6 +1,12 @@
 using SHA
 using Random
 
+"""
+A very simple s-expression data structure.
+
+We use this to write the intertype schema to a string and then hash it to get a
+version identifier.
+"""
 struct SExp
   args::Vector{Union{Symbol, SExp}}
 end

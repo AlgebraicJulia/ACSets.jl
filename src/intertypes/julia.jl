@@ -1,6 +1,5 @@
 using ...ACSets
 
-
 function parse_fields(fieldexprs; mod)
   map(enumerate(fieldexprs)) do (i, fieldexpr)
     @match fieldexpr begin
@@ -165,7 +164,13 @@ function parse_intertype_decl(e; mod::InterTypeModule)
   end
 end
 
+"""
+We use these macros so that we don't have to, for instance, pattern match on
+`Expr(:macrocall, var"@sum", _, args...)`, and can instead pattern match on
+`Expr(:sum, args...)`.
+"""
 module InterTypeDeclImplPrivate
+
 macro sum(head, body)
   esc(Expr(:sum, head, body))
 end
@@ -182,6 +187,17 @@ macro abstract_acset_type(head)
   esc(Expr(:abstract_acset_type, head))
 end
 end
+
+"""
+    function toexpr(x) end
+
+Used to convert intertype data types to `Expr`.
+
+TODO: Should we unify [`tojsonschema`](@ref), [`toexpr`](@ref), and
+[`topy`](@ref) into a single function with an extra argument to control
+dispatch?
+"""
+function toexpr end
 
 function toexpr(field::Field)
   Expr(:(::), field.name, toexpr(field.type))
@@ -324,6 +340,13 @@ function include_intertypes(into::Module, file::String, imports::AbstractVector)
   mod
 end
 
+"""
+    @intertypes "file.it" module modulename end
+
+Used to import an intertypes file into Julia.
+
+TODO: maybe we should just build a .jl file from an .it file directly.
+"""
 macro intertypes(file, modexpr)
   name, imports = @match modexpr begin
     Expr(:module, _, name, body) => begin

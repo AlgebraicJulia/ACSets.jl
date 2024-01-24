@@ -1,5 +1,16 @@
 export PydanticTarget
 
+"""
+    topy(intertype::InterType; forward_ref=true)
+
+Converts an intertype into a python code string.
+
+TODO: See comment for [`toexpr`](@ref)
+
+TODO: Should we use something like a stringbuilder instead of manually
+concatenating strings? I.e., a tree of strings with O(1) append/splice,
+that we write out to a single string at the end?
+"""
 function topy(intertype::InterType; forward_ref=true)
   @match intertype begin
     I32 => "int"
