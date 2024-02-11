@@ -492,6 +492,44 @@ Base.view(acs::SimpleACSet, ::Colon, f) = view(acs, dom_parts(acs,f), f)
 @inline ACSetInterface.subpart(acs::ACSet, part::Union{Colon,AbstractVector}, name::Symbol) =
   collect_column(view(acs, part, name))
 
+# mysch = BasicSchema([:X,:Y,:Z,:W], [(:f,:X,:Y), (:g,:Y,:Z), (:h,:X,:W)])
+# @acset_type mydata(mysch, index=[:f,:g,:h])
+# dat = @acset mydata begin
+#   X=3
+#   Y=3
+#   Z=3
+#   W=3
+#   f=[1,2,3]
+#   g=[1,2,3]
+#   h=[1,2,3]
+# end
+
+# practice with comptime
+test_comptime(::StructACSet{S}, ob::Symbol) where {S} =
+_test_comptime(Val{S}, Val{ob})
+
+test_comptime(acs::DynamicACSet, ob::Symbol) =
+  runtime(_test_comptime, acs.schema, ob)
+
+@ct_enable function _test_comptime(@ct(S), @ct(ob))
+  @ct s = Schema(S)
+  @ct ob ∈ types(s)
+end
+
+test_comptime1(::StructACSet{S}, names::Tuple{Vararg{Symbol}}) where {S} =
+  _test_comptime1(Val{S}, Val{names})
+
+test_comptime1(acs::DynamicACSet, names::Tuple{Vararg{Symbol}}) =
+  runtime(_has_part, acs.schema, names)
+
+@ct_enable function _test_comptime1(@ct(S), @ct(names))
+  @ct begin
+    s = Schema(S)
+    return length(names)
+  end  
+end
+
+# back to your normal programming
 function collect_column(x::AbstractVector)
   if isempty(x)
     Base.typesplit(eltype(x), AttrVar)[]
