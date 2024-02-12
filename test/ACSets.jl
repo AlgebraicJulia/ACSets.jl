@@ -714,4 +714,36 @@ cascading_rem_parts!(dataattr, :Node, 1)
 @test only(subpart(dataattr,:attr2)) == :c
 @test all(map(x -> x ∈ subpart(dataattr,:attr3), [12.0,11.0]))
 
+# Composites of subparts
+#-----------------------
+
+CompositesSch = BasicSchema([:X,:Y,:Z,:W], [(:f,:X,:Y), (:g,:Y,:Z), (:h,:X,:W)], [:Zattr], [(:zattr,:Z,:Zattr)])
+@acset_type CompositesData(CompositesSch, index=[:f,:g,:h])
+datcomp = @acset CompositesData{Symbol} begin
+  X=5
+  Y=4
+  Z=3
+  W=3
+  f=[1,2,3,1,2]
+  g=[3,2,1,3]
+  h=[1,2,3,1,2]
+  zattr=[:a,:b,:c]
+end
+
+@test subpart(datcomp, :, (:f,:g)) == [3,2,1,3,2]
+@test subpart(datcomp, (:f,:g)) == [3,2,1,3,2]
+@test subpart(datcomp, 1:5, (:f,:g)) == [3,2,1,3,2]
+@test subpart(datcomp, 1, (:f,:g)) == 3
+
+@test subpart(datcomp, 1, (:f,)) ==1 
+
+datcompdyn = DynamicACSet(datcomp)
+
+@test subpart(datcompdyn, :, (:f,:g)) == [3,2,1,3,2]
+@test subpart(datcompdyn, (:f,:g)) == [3,2,1,3,2]
+@test subpart(datcompdyn, 1:5, (:f,:g)) == [3,2,1,3,2]
+@test subpart(datcompdyn, 1, (:f,:g)) == 3
+
+@test subpart(datcompdyn, 1, (:f,)) ==1
+
 end
