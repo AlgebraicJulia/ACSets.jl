@@ -731,19 +731,33 @@ datcomp = @acset CompositesData{Symbol} begin
 end
 
 @test subpart(datcomp, :, (:f,:g)) == [3,2,1,3,2]
+@test subpart(datcomp, :, (:f,:g, :zattr)) == [:c,:b,:a,:c,:b]
 @test subpart(datcomp, (:f,:g)) == [3,2,1,3,2]
 @test subpart(datcomp, 1:5, (:f,:g)) == [3,2,1,3,2]
 @test subpart(datcomp, 1, (:f,:g)) == 3
 
-@test subpart(datcomp, 1, (:f,)) ==1 
+@test datcomp[:, (:f,:g)] == [3,2,1,3,2]
+@test datcomp[1:5, (:f,:g)] == [3,2,1,3,2]
+@test datcomp[1, (:f,:g)] == 3
+
+@test subpart(datcomp, 1, (:f,)) == 1
+@test subpart(datcomp, :, (:f,)) == [1,2,3,1,2]
+@test subpart(datcomp, (:f,)) == [1,2,3,1,2]
 
 datcompdyn = DynamicACSet(datcomp)
 
 @test subpart(datcompdyn, :, (:f,:g)) == [3,2,1,3,2]
+@test subpart(datcompdyn, :, (:f,:g, :zattr)) == [:c,:b,:a,:c,:b]
 @test subpart(datcompdyn, (:f,:g)) == [3,2,1,3,2]
 @test subpart(datcompdyn, 1:5, (:f,:g)) == [3,2,1,3,2]
 @test subpart(datcompdyn, 1, (:f,:g)) == 3
 
-@test subpart(datcompdyn, 1, (:f,)) ==1
+@test datcompdyn[:, (:f,:g)] == [3,2,1,3,2]
+@test datcompdyn[1:5, (:f,:g)] == [3,2,1,3,2]
+@test datcompdyn[1, (:f,:g)] == 3
+
+@test subpart(datcompdyn, 1, (:f,)) == 1
+@test subpart(datcompdyn, :, (:f,)) == [1,2,3,1,2]
+@test subpart(datcompdyn, (:f,)) == [1,2,3,1,2]
 
 end

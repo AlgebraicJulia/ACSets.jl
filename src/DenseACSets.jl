@@ -492,22 +492,22 @@ Base.view(acs::SimpleACSet, ::Colon, f) = view(acs, dom_parts(acs,f), f)
 @inline ACSetInterface.subpart(acs::ACSet, part::Union{Colon,AbstractVector}, name::Symbol) =
   collect_column(view(acs, part, name))
 
-@inline ACSetInterface.subpart(acs::SimpleACSet, f::Tuple{Vararg{Symbol,1}}) = subpart(acs, dom_parts(acs, only(f)), only(f))
-@inline ACSetInterface.subpart(acs::SimpleACSet, part, f::Tuple{Vararg{Symbol,1}}) = subpart(acs, part, only(f))
-
 @inline ACSetInterface.subpart(acs::SimpleACSet, names::Tuple{Vararg{Symbol}}) = subpart(acs, dom_parts(acs, first(names)), names)
 
 ACSetInterface.subpart(acs::StructACSet{S}, part, names::Tuple{Vararg{Symbol}}) where {S} = _subpart(acs, part, Val{S}, Val{names})
 ACSetInterface.subpart(acs::DynamicACSet, part, names::Tuple{Vararg{Symbol}}) = runtime(_subpart, acs, part, acs.schema, names)
-  
+
 @ct_enable function _subpart(acs::SimpleACSet, part, @ct(S), @ct(names))
   @ct s = Schema(S)
   out = ACSetInterface.collect_or_id(subpart(acs, part, @ct first(names)))
-  @ct_ctrl for i in 2:length(names)
-    @ct begin
-      codom(s, names[i-1]) == dom(s, names[i]) || error("morphisms $(names[i-1]) and $(names[i]) are not composable")
+  # necessary because Tuple{Symbol} is still ambigious with presence of Tuple{Vararg{Symbol}}
+  @ct_ctrl if length(names) > 1
+    @ct_ctrl for i in 2:length(names)
+      @ct begin
+        codom(s, names[i-1]) == dom(s, names[i]) || error("morphisms $(names[i-1]) and $(names[i]) are not composable")
+      end
+      out = ACSetInterface.collect_or_id(subpart(acs, out, @ct names[i]))
     end
-    out = ACSetInterface.collect_or_id(subpart(acs, out, @ct names[i]))
   end
   return out
 end
