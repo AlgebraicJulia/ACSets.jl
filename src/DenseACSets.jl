@@ -492,8 +492,8 @@ Base.view(acs::SimpleACSet, ::Colon, f) = view(acs, dom_parts(acs,f), f)
 @inline ACSetInterface.subpart(acs::ACSet, part::Union{Colon,AbstractVector}, name::Symbol) =
   collect_column(view(acs, part, name))
 
-@inline ACSetInterface.subpart(acs::SimpleACSet, f::Tuple{Symbol}) = subpart(acs, dom_parts(acs, only(f)), only(f))
-@inline ACSetInterface.subpart(acs::SimpleACSet, part, f::Tuple{Symbol}) = subpart(acs, part, only(f))
+@inline ACSetInterface.subpart(acs::SimpleACSet, f::Tuple{Vararg{Symbol,1}}) = subpart(acs, dom_parts(acs, only(f)), only(f))
+@inline ACSetInterface.subpart(acs::SimpleACSet, part, f::Tuple{Vararg{Symbol,1}}) = subpart(acs, part, only(f))
 
 @inline ACSetInterface.subpart(acs::SimpleACSet, names::Tuple{Vararg{Symbol}}) = subpart(acs, dom_parts(acs, first(names)), names)
 
