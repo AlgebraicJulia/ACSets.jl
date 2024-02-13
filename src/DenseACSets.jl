@@ -492,6 +492,17 @@ Base.view(acs::SimpleACSet, ::Colon, f) = view(acs, dom_parts(acs,f), f)
 @inline ACSetInterface.subpart(acs::ACSet, part::Union{Colon,AbstractVector}, name::Symbol) =
   collect_column(view(acs, part, name))
 
+function collect_column(x::AbstractVector)
+  if isempty(x)
+    Base.typesplit(eltype(x), AttrVar)[]
+  else
+    map(identity, x)
+  end
+end
+
+@inline ACSetInterface.subpart(acs::SimpleACSet, part::Int, f::Symbol) =
+  get(acs.subparts[f], part, default_value(acs, f))
+
 @inline ACSetInterface.subpart(acs::SimpleACSet, names::Tuple{Vararg{Symbol}}) = subpart(acs, dom_parts(acs, first(names)), names)
 
 ACSetInterface.subpart(acs::StructACSet{S}, part, names::Tuple{Vararg{Symbol}}) where {S} = _subpart(acs, part, Val{S}, Val{names})
@@ -511,17 +522,6 @@ ACSetInterface.subpart(acs::DynamicACSet, part, names::Tuple{Vararg{Symbol}}) = 
   end
   return out
 end
-
-function collect_column(x::AbstractVector)
-  if isempty(x)
-    Base.typesplit(eltype(x), AttrVar)[]
-  else
-    map(identity, x)
-  end
-end
-
-@inline ACSetInterface.subpart(acs::SimpleACSet, part::Int, f::Symbol) =
-  get(acs.subparts[f], part, default_value(acs, f))
 
 @inline ACSetInterface.has_subpart(::StructACSet{S}, f::Symbol) where {S} =
   _has_subpart(Val{S}, Val{f})
@@ -574,6 +574,23 @@ ACSetInterface.incident(acs::DynamicACSet, ::Colon, f::Symbol) =
 @ct_enable function _incident(acs::SimpleACSet, @ct(S), ::Colon, @ct(f))
   @ct s = Schema(S)
   incident(acs, parts(acs, @ct(codom(s, f))), @ct(f))
+end
+
+ACSetInterface.incident(acs::StructACSet{S}, part, names::Tuple{Vararg{Symbol}}) where {S} = _incident(acs, part, Val{S}, Val{names})
+ACSetInterface.incident(acs::DynamicACSet, part, names::Tuple{Vararg{Symbol}}) = runtime(_incident, acs, part, acs.schema, names)
+
+@ct_enable function _incident(acs::SimpleACSet, part, @ct(S), @ct(names))
+  @ct s = Schema(S)
+  out = reduce(vcat, collect.(incident(acs, part, @ct last(names))), init=Int[])
+  @ct_ctrl if length(names) > 1
+    @ct_ctrl for i in length(names):-1:2
+      @ct begin
+        dom(s, names[i]) == codom(s, names[i-1]) || error("morphisms $(names[i-1]) and $(names[i]) are not composable")
+      end
+      out = reduce(vcat, collect.(incident(acs, out, @ct names[i-1])), init=Int[])
+    end
+  end
+  return out
 end
 
 @inline ACSetInterface.set_subpart!(acs::StructACSet{S,Ts}, part::Int, f::Symbol, subpart) where {S,Ts} =

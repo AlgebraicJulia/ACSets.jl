@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$defs": {
+    "EdgeData": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "$comment": "Sym"
+        },
+        "length": {
+          "type": "string",
+          "$comment": "U64"
+        }
+      },
+      "required": [
+        "name",
+        "length"
+      ]
+    },
+    "EDWeightedGraph": {
+      "type": "object",
+      "properties": {
+        "type": "object",
+        "properties": {
+          "E": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "_id": {
+                  "type": "integer",
+                  "$comment": "U32",
+                  "minimum": 0,
+                  "maximum": 4294967295
+                },
+                "src": {
+                  "type": "integer",
+                  "$comment": "U32",
+                  "minimum": 0,
+                  "maximum": 4294967295
+                },
+                "tgt": {
+                  "type": "integer",
+                  "$comment": "U32",
+                  "minimum": 0,
+                  "maximum": 4294967295
+                },
+                "weight": {
+                  "$ref": "#/$defs/EdgeData"
+                }
+              },
+              "required": [
+                "_id",
+                "src",
+                "tgt",
+                "weight"
+              ]
+            }
+          },
+          "V": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "_id": {
+                  "type": "integer",
+                  "$comment": "U32",
+                  "minimum": 0,
+                  "maximum": 4294967295
+                }
+              },
+              "required": [
+                "_id"
+              ]
+            }
+          }
+        },
+        "required": [
+          "E",
+          "V"
+        ]
+      }
+    }
+  }
+}
