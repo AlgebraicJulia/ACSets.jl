@@ -988,6 +988,11 @@ Tables.columnnames(row::ACSetRow) = Base.propertynames(row)
     s = Schema(S)
   end
   acs = T()
+  @ct begin
+    for n in names
+      (n ∈ types(s) || n ∈ arrows(s; just_names=true)) || error("$(n) is not defined in schema")
+    end
+  end 
   @ct_ctrl for ob in intersect(types(s), names)
     add_parts!(acs, @ct(ob), rows[@ct ob])
   end
