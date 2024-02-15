@@ -7,8 +7,6 @@ using MLStyle
 using ..ACSetInterface
 
 import Base: show
-# using Catlab
-# using Catlab.CategoricalAlgebra
 
 abstract type AbstractACSetSpec end
 @data Args{T} <: AbstractACSetSpec begin
@@ -64,7 +62,7 @@ escape_if_symbol(v::Symbol) = QuoteNode(v)
 
 """    generate_expr(s::ACSetSpec)
 
-creates a julia Expr that will generate_expr the specified ACSet. 
+creates a julia Expr that will generate the specified ACSet. 
 """
 function generate_expr(e::Args)
   @match e begin
