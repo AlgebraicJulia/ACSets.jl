@@ -530,6 +530,13 @@ l = @acset DecGraph{String} begin
   dec = ["a","a"]
 end
 
+# errors when user inputs nonexistent names
+@test_throws Exception @acset DDS begin
+  W=3
+  Φ=[1,2,3]
+end
+
+
 # Test mapping
 #-------------
 
