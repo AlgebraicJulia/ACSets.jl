@@ -3,6 +3,7 @@
 module JSONACSets
 
 import JSON3
+import StructTypes
 
 export generate_json_acset, parse_json_acset, read_json_acset, write_json_acset,
   generate_json_acset_schema, parse_json_acset_schema,
@@ -69,7 +70,7 @@ function parse_json_acset!(out::ACSet, input::AbstractDict)
         if k ∈ attrs(schema; just_names=true)
           vtype = attr_type(out, k)
           v = v isa AbstractDict && haskey(v, "_var") ?
-            AttrVar(v["_var"]) : vtype(v)
+            AttrVar(v["_var"]) : StructTypes.construct(vtype, v)
         end
         set_subpart!(out, parts[dom(schema, k)][rownum], k, v)
       end
@@ -185,6 +186,17 @@ can be constructed, using the package JSONSchema.jl.
 function acset_schema_json_schema(; kw...)
   JSON3.read(joinpath(@__DIR__, "data", "acset.schema.json"),
                  OrderedDict{String,Any}, kw...)
+end
+
+StructTypes.StructType(::Type{<:ACSet}) = StructTypes.CustomStruct()
+
+StructTypes.lower(X::ACSet) = generate_json_acset(X)
+
+StructTypes.lowertype(::Type{<:ACSet}) = OrderedDict{Symbol, Any}
+
+function StructTypes.construct(::Type{T}, x) where {T<:ACSet}
+  X = T()
+  parse_json_acset!(X, x)
 end
 
 end

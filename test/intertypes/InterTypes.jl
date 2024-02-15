@@ -10,7 +10,7 @@ import JSON3
 import JSONSchema
 
 function testjson(x::T) where {T}
-  (x == jsonread(jsonwrite(x), T))
+  (x == JSON3.read(JSON3.write(x), T))
 end
 
 vals = Any[
@@ -38,12 +38,12 @@ using .simpleast
 
 t = Plus([Constant(ConstInt(1)), Constant(ConstInt(2))])
 
-s = jsonwrite(t)
+s = JSON3.write(t)
 
 @test s isa String
 
-@test jsonread(s, Term) == t
-@test jsonread(s, Plus) == t
+@test JSON3.read(s, Term) == t
+@test JSON3.read(s, Plus) == t
 
 generate_module(simpleast, JSONTarget)
 
@@ -84,7 +84,7 @@ generate_module(wgraph, JSONTarget)
 
 wgraph_schema = JSONSchema.Schema(read("wgraph_schema.json", String))
 
-@test JSONSchema._validate(wgraph_schema, JSON.parse(jsonwrite(g)), "EDWeightedGraph") === nothing
+@test JSONSchema._validate(wgraph_schema, JSON.parse(JSON3.write(g)), "EDWeightedGraph") === nothing
 
 @intertypes "objects.it" module objects end
 
@@ -101,7 +101,7 @@ generate_module(objects, JSONTarget)
 
 objects_schema = JSONSchema.Schema(read("objects_schema.json", String))
 
-@test JSONSchema._validate(objects_schema, JSON.parse(jsonwrite(md)), "Metadata") === nothing
+@test JSONSchema._validate(objects_schema, JSON.parse(JSON3.write(md)), "Metadata") === nothing
 
 @intertypes "optionals.it" module optionals end
 
@@ -123,8 +123,8 @@ generate_module(optionals, JSONTarget)
 
 optionals_schema = JSONSchema.Schema(read("optionals_schema.json", String))
 
-@test JSONSchema._validate(optionals_schema, JSON.parse(jsonwrite(x)), "NullableInt") === nothing
-@test JSONSchema._validate(optionals_schema, JSON.parse(jsonwrite(y)), "NullableInt") === nothing
+@test JSONSchema._validate(optionals_schema, JSON.parse(JSON3.write(x)), "NullableInt") === nothing
+@test JSONSchema._validate(optionals_schema, JSON.parse(JSON3.write(y)), "NullableInt") === nothing
 
 @static if !Sys.iswindows()
   using CondaPkg
@@ -151,10 +151,10 @@ optionals_schema = JSONSchema.Schema(read("optionals_schema.json", String))
   pyjson = pyimport("json")
 
   function python_roundtrip(pythontype, val)
-    py_val = pythontype.model_validate_json(Py(jsonwrite(val)))
+    py_val = pythontype.model_validate_json(Py(JSON3.write(val)))
     py_val_str = string(py_val.model_dump_json())
 
-    jsonread(py_val_str, typeof(val)) == val
+    JSON3.read(py_val_str, typeof(val)) == val
   end
 
   @test python_roundtrip(pymodel.Model, m)
@@ -162,10 +162,10 @@ optionals_schema = JSONSchema.Schema(read("optionals_schema.json", String))
   @test python_roundtrip(pyoptionals.NullableInt, x)
   @test python_roundtrip(pyoptionals.NullableInt, y)
 
-  py_g = pywgraph.EDWeightedGraph.read_json(Py(jsonwrite(g)))
+  py_g = pywgraph.EDWeightedGraph.read_json(Py(JSON3.write(g)))
   py_g_str = string(py_g.to_json_str())
 
-  @test jsonread(py_g_str, EDWeightedGraph) == g
+  @test JSON3.read(py_g_str, EDWeightedGraph) == g
 end
 
 end

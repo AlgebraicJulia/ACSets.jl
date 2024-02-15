@@ -1,4 +1,5 @@
 using ...ACSets
+using StructTypes
 
 function parse_fields(fieldexprs; mod)
   map(enumerate(fieldexprs)) do (i, fieldexpr)
@@ -340,8 +341,8 @@ function as_intertypes(mod::InterTypeModule)
       _ => nothing
     end
     push!(out.args, eqmethods(name, decl))
-    push!(out.args, reader(name, decl))
-    push!(out.args, :(eval($(Expr(:quote, writer(name, decl))))))
+    push!(out.args, structtypesfor(name, decl))
+    push!(out.args, constructorsfor(name, decl))
     out
   end
 end
@@ -395,132 +396,85 @@ function eqmethod(name::Symbol, fields::Vector{Field{InterType}})
   end
 end
 
-function eqmethods(name, decl::InterTypeDecl)
-  @match decl begin
-    Struct(fields) => eqmethod(name, fields)
-    SumType(variants) =>
-      Expr(:block, map(variants) do variant
-        eqmethod(variant.tag, variant.fields)
-    end...)
-    _ => nothing
-  end
+eqmethods(name, decl::InterTypeDecl) = nothing
+
+eqmethods(name, decl::Struct) = eqmethod(name, decl.fields)
+eqmethods(name, decl::SumType) =
+  Expr(:block, map(decl.variants) do variant
+    eqmethod(variant.tag, variant.fields)
+  end...)
+
+structtypesfor(name, decl::InterTypeDecl) = nothing
+
+function structtypesfor(name, decl::Struct)
+  :($(GlobalRef(StructTypes, :StructType))(::Type{$name}) =
+      $(GlobalRef(StructTypes, :Struct))())
 end
 
-function variantreader(name::Symbol, fields::Vector{Field{InterType}})
-  fieldreads = map(fields) do field
-    :($(read)(format, $(toexpr(field.type)), s[$(Expr(:quote, field.name))]))
-  end
-  :($name($(fieldreads...)))
-end
-
-function makeifs(branches)
-  makeifs(branches[1:end-1], branches[end][2])
-end
-
-function makeifs(branches, elsebody)
-  expr = elsebody
-  if length(branches) == 0
-    return expr
-  end
-  for (cond, body) in Iterators.reverse(branches[2:end])
-    expr = Expr(:elseif, cond, body, expr)
-  end
-  (cond, body) = branches[1]
-  Expr(:if, cond, body, expr)
-end
-
-reader(name, decl::InterTypeDecl) = nothing
-
-function reader(name, decl::Union{Struct, Variant})
-  body = variantreader(name, decl.fields)
+function structtypesfor(variant::Variant)
+  lowertype = :(NamedTuple{
+    $(Expr(
+      :tuple,
+      Expr(:quote, :_type),
+      [Expr(:quote, f.name) for f in variant.fields]...
+    )),
+    $(Expr(
+      :curly,
+      :Tuple,
+      Symbol,
+      [toexpr(f.type) for f in variant.fields]...
+    ))
+  })
   quote
-    function $(GlobalRef(InterTypes, :read))(
-      format::$(JSONFormat), ::Type{$(name)}, s::$(JSON3.Object)
+    $(GlobalRef(StructTypes, :StructType))(::Type{$(variant.tag)}) =
+      $(GlobalRef(StructTypes, :CustomStruct))()
+    $(GlobalRef(StructTypes, :lower))(x::$(variant.tag)) =
+      $(Expr(:tuple,
+             Expr(:(=), :_type, Expr(:quote, variant.tag)),
+             [Expr(:(=), f.name, Expr(:(.), :x, Expr(:quote, f.name))) for f in variant.fields]...))
+    $(GlobalRef(StructTypes, :lowertype))(::Type{$(variant.tag)}) = $lowertype
+    $(GlobalRef(StructTypes, :construct))(::Type{$(variant.tag)}, x) =
+      $(Expr(
+        :call,
+        variant.tag,
+        [Expr(:(.), :x, Expr(:quote, f.name)) for f in variant.fields]...
+      ))
+  end
+end
+
+function structtypesfor(name, decl::SumType)
+  quote
+    $(Expr(:block, [constructorsfor(v.tag, v) for v in decl.variants]...))
+    $(Expr(:block, [structtypesfor(v) for v in decl.variants]...))
+    $(GlobalRef(StructTypes, :StructType))(::Type{$name}) =
+      $(GlobalRef(StructTypes, :AbstractType))()
+    $(GlobalRef(StructTypes, :subtypekey))(::Type{$name}) = :_type
+    $(GlobalRef(StructTypes, :subtypes))(::Type{$name}) =
+      $(Expr(:tuple, [Expr(:(=), v.tag, v.tag) for v in decl.variants]...))
+  end
+end
+
+constructorsfor(name, decl::InterTypeDecl) = nothing
+
+function constructorsfor(name, decl::Union{Struct, Variant})
+  quote
+    $(GlobalRef(StructTypes, :construct))(::Type{$name}, x::Union{NamedTuple, Dict{Symbol}}) =
+    $name(
+      $([Expr(
+        :call,
+        GlobalRef(StructTypes, :construct),
+        toexpr(f.type),
+        :(x[$(Expr(:quote, f.name))])
+      ) for f in decl.fields]...)
     )
-      $body
-    end
-  end
-end
-
-function reader(name, decl::SumType)
-  tag = gensym(:tag)
-  variants = decl.variants
-  variantreaders = map(variants) do variant
-    reader(variant.tag, variant)
-  end
-  ifs = makeifs(map(variants) do variant
-    (
-      :($tag == $(string(variant.tag))),
-      :($(GlobalRef(InterTypes, :read))($(JSONFormat()), $(variant.tag), s))
+    $(GlobalRef(StructTypes, :construct))(::Type{$name}, x::Dict{String}) =
+    $name(
+      $([Expr(
+        :call,
+        GlobalRef(StructTypes, :construct),
+        toexpr(f.type),
+        :(x[$(string(f.name))])
+      ) for f in decl.fields]...)
     )
-  end)
-  quote
-    $(variantreaders...)
-    function $(GlobalRef(InterTypes, :read))(format::$(JSONFormat), ::Type{$(name)}, s::$(JSON3.Object))
-      $tag = s[:_type]
-      $ifs
-    end
-  end
-end
-
-function writejsonfield(io, name, value, comma=true)
-  print(io, "\"", string(name), "\":")
-  write(io, JSONFormat(), value)
-  if comma
-    print(io, ",")
-  end
-end
-
-function fieldwriters(fields)
-  map(enumerate(fields)) do (i, field)
-    (name, expr) = field
-    comma = i != length(fields)
-    :($(writejsonfield)(io, $(string(name)), $expr, $comma))
-  end
-end
-
-function objectwriter(fields)
-  quote
-    print(io, "{")
-    $(fieldwriters(fields)...)
-    print(io, "}")
-  end
-end
-
-function writer(name, decl::InterTypeDecl)
-  body = @match decl begin
-    Struct(fields) => begin
-      objectwriter([(field.name, :(d.$(field.name))) for field in fields])
-    end
-    SumType(variants) => begin
-      variantlines = map(variants) do variant
-        fieldnames = nameof.(variant.fields)
-        fieldvars = gensym.(fieldnames)
-        Expr(
-          :call, :(=>),
-          :($(variant.tag)($(fieldvars...))),
-          Expr(
-            :block,
-            fieldwriters([(:_type, string(variant.tag)), zip(fieldnames, fieldvars)...])...
-          )
-        )
-      end
-      quote
-        print(io, "{")
-        $(Expr(
-          :macrocall, GlobalRef(MLStyle, :(var"@match")), nothing, :d,
-          Expr(:block, variantlines...)
-        ))
-        print(io, "}")
-      end
-    end
-    _ => nothing
-  end
-  if !isnothing(body)
-    :(function $(GlobalRef(InterTypes, :write))(io::IO, format::$(JSONFormat), d::$(name))
-      $body
-    end)
-  else
-    nothing
   end
 end
