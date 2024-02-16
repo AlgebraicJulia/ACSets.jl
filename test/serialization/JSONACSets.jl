@@ -52,6 +52,8 @@ add_parts!(ldds, :X, 4, Φ=[2,3,4,1], label=[AttrVar(1), :a, :b, AttrVar(2)])
 json = generate_json_acset(ldds)
 @test all(row -> haskey(row, :_id), json[:Label])
 
+@test_throws Exception read_json_acset(Graph, "badfile.json")
+
 # Schema serialization
 ######################
 
@@ -70,5 +72,7 @@ for schema in [SchGraph, SchWeightedGraph, SchLabeledDDS]
   @test isnothing(JSONSchema.validate(json_schema, schema_dict))
   @test roundtrip_json_acset_schema(schema) == schema
 end
+
+@test_throws Exception read_json_acset_schema(BasicSchema, "badfile.json")
 
 end
