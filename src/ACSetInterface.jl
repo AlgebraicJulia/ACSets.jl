@@ -147,6 +147,10 @@ shorthand, subparts can also be accessed by indexing:
 g[e, :src] == subpart(g, e, :src)
 ```
 
+If the chaining of subparts is given as a tuple (e.g.; (:src, :vattr)), then
+code generation is used to check that the subparts and their order is a valid
+composition and to improve performance.
+
 Be warned that indexing with lists of subparts works just like `subpart`:
 `g[e,[:src,:vattr]]` is equivalent to `subpart(g, e, [:src,:vattr])`. This
 convention differs from DataFrames but note that the alternative interpretation
@@ -187,6 +191,10 @@ incident(g, x, [:src, :vattr])
 ```
 
 returns the list of all edges whose source vertex has vertex attribute `x`.
+
+If the chaining of subparts is given as a tuple (e.g.; (:src, :vattr)), then
+code generation is used to check that the subparts and their order is a valid
+composition and to improve performance.
 
 Note that when the subpart is indexed, this function returns a view of the
 underlying index, which should not be mutated. To ensure that a fresh copy is

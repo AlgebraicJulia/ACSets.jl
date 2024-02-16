@@ -721,4 +721,91 @@ cascading_rem_parts!(dataattr, :Node, 1)
 @test only(subpart(dataattr,:attr2)) == :c
 @test all(map(x -> x ∈ subpart(dataattr,:attr3), [12.0,11.0]))
 
+# Composites of subparts for subpart
+#-----------------------------------
+
+# StructACSet
+CompositesSch = BasicSchema([:X,:Y,:Z,:W], [(:f,:X,:Y), (:g,:Y,:Z), (:h,:X,:W)], [:Zattr], [(:zattr,:Z,:Zattr)])
+@acset_type CompositesData(CompositesSch, index=[:f,:g,:h])
+datcomp = @acset CompositesData{Symbol} begin
+  X=5
+  Y=4
+  Z=3
+  W=3
+  f=[1,2,3,1,2]
+  g=[3,2,1,3]
+  h=[1,2,3,1,2]
+  zattr=[:a,:b,:c]
+end
+
+@test subpart(datcomp, :, (:f,:g)) == [3,2,1,3,2]
+@test subpart(datcomp, :, (:f,:g,:zattr)) == [:c,:b,:a,:c,:b]
+@test subpart(datcomp, (:f,:g)) == [3,2,1,3,2]
+@test subpart(datcomp, 1:5, (:f,:g)) == [3,2,1,3,2]
+@test subpart(datcomp, 1, (:f,:g)) == 3
+
+@test_throws Exception subpart(datcomp, :, (:f,:h))
+@test_throws Exception subpart(datcomp, (:f,:h))
+@test_throws Exception subpart(datcomp, 1, (:f,:h)) 
+
+@test datcomp[:, (:f,:g)] == [3,2,1,3,2]
+@test datcomp[1:5, (:f,:g)] == [3,2,1,3,2]
+@test datcomp[1, (:f,:g)] == 3
+
+@test_throws Exception datcomp[:, (:f,:h)]
+@test_throws Exception datcomp[1, (:f,:h)]
+
+@test subpart(datcomp, 1, (:f,)) == 1
+@test subpart(datcomp, :, (:f,)) == [1,2,3,1,2]
+@test subpart(datcomp, (:f,)) == [1,2,3,1,2]
+
+# DynamicACSet
+datcompdyn = DynamicACSet(datcomp)
+
+@test subpart(datcompdyn, :, (:f,:g)) == [3,2,1,3,2]
+@test subpart(datcompdyn, :, (:f,:g, :zattr)) == [:c,:b,:a,:c,:b]
+@test subpart(datcompdyn, (:f,:g)) == [3,2,1,3,2]
+@test subpart(datcompdyn, 1:5, (:f,:g)) == [3,2,1,3,2]
+@test subpart(datcompdyn, 1, (:f,:g)) == 3
+
+@test_throws Exception subpart(datcompdyn, :, (:f,:h))
+@test_throws Exception subpart(datcompdyn, (:f,:h))
+@test_throws Exception subpart(datcompdyn, 1, (:f,:h)) 
+
+@test datcompdyn[:, (:f,:g)] == [3,2,1,3,2]
+@test datcompdyn[1:5, (:f,:g)] == [3,2,1,3,2]
+@test datcompdyn[1, (:f,:g)] == 3
+
+@test_throws Exception datcompdyn[:, (:f,:h)]
+@test_throws Exception datcompdyn[1, (:f,:h)]
+
+@test subpart(datcompdyn, 1, (:f,)) == 1
+@test subpart(datcompdyn, :, (:f,)) == [1,2,3,1,2]
+@test subpart(datcompdyn, (:f,)) == [1,2,3,1,2]
+
+# Composites of subparts for incident
+#------------------------------------
+
+# StructACSet
+@test incident(datcomp, 1, (:g,)) == [3]
+@test incident(datcomp, 3, (:g,)) == [1,4]
+@test incident(datcomp, 1:3, (:g,)) == [3,2,1,4]
+@test incident(datcomp, 1:3, (:f,:g)) == [3,2,5,1,4]
+@test incident(datcomp, 1:3, (:f,:g))  == incident(datcomp, 1:3, [:f,:g]) 
+
+@test incident(datcomp, [:a,:b,:c], (:f,:g,:zattr)) == incident(datcomp, [:a,:b,:c], [:f,:g,:zattr])
+
+@test_throws Exception incident(datcomp, 1, (:h,:g))
+
+# DynamicACSet
+@test incident(datcompdyn, 1, (:g,)) == [3]
+@test incident(datcompdyn, 3, (:g,)) == [1,4]
+@test incident(datcompdyn, 1:3, (:g,)) == [3,2,1,4]
+@test incident(datcompdyn, 1:3, (:f,:g)) == [3,2,5,1,4]
+@test incident(datcompdyn, [:a,:b,:c], (:f,:g,:zattr)) == [3,2,5,1,4]
+
+@test incident(datcompdyn, [:a,:b,:c], (:f,:g,:zattr)) == incident(datcompdyn, [:a,:b,:c], [:f,:g,:zattr])
+
+@test_throws Exception incident(datcompdyn, 1, (:h,:g))
+
 end
