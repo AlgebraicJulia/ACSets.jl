@@ -15,8 +15,8 @@ function topy(intertype::InterType; forward_ref=true)
   @match intertype begin
     I32 => "int"
     U32 => "int"
-    I64 => "SafeInt"
-    U64 => "SafeInt"
+    I64 => "int"
+    U64 => "int"
     F64 => "float"
     Boolean => "bool"
     Str => "str"
@@ -149,7 +149,7 @@ from typing import Literal, Annotated, Any
 
 from pydantic import Field, TypeAdapter
 
-from intertypes import SafeInt, InterTypeBase
+from intertypes import InterTypeBase
 
 from acsets import Ob, Hom, Attr, AttrType, Schema, ACSet
 """
@@ -159,11 +159,6 @@ INTERTYPE_PYTHON_MODULE = """
 from typing import Annotated
 
 from pydantic import BaseModel, PlainSerializer
-
-SafeInt = Annotated[
-    int, PlainSerializer(lambda x: str(x), return_type=str, when_used="json")
-]
-
 
 class InterTypeBase(BaseModel):
     def model_dump_json(self, *args, **kwargs):

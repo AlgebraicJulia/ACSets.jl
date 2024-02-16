@@ -257,7 +257,7 @@ end
 
 using .InterTypeSupport
 
-include("json.jl")
+include("jsonschema.jl")
 include("sexp.jl")
 include("julia.jl")
 include("python.jl")

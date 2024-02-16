@@ -104,4 +104,9 @@ result = read_xlsx_acset(LabeledGraph{String}, labeled_graph_path, tables=(
 ))
 @test result == g
 
+# General functionality
+# ---------------------
+
+@test_throws Exception read_xlsx_acset(LabeledGraph{String}, "badpath.json")
+
 end
