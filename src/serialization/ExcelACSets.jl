@@ -45,6 +45,9 @@ installed and imported.
   to Excel table specifications
 """
 function read_xlsx_acset(cons, source::Union{AbstractString,IO}; kw...)
+  if typeof(source) <: AbstractString
+    ispath(source) || error("$(source) is not a valid path to a file")
+  end
   read_acset(cons, read_xlsx(source); kw...)
 end
 

@@ -84,6 +84,7 @@ end
 Inverse to [`write_json_acset`](@ref).
 """
 function read_json_acset(ty, fname::AbstractString)
+  ispath(fname) || error("$(fname) is not a valid path to a file")
   parse_json_acset(ty, JSON3.read(fname))
 end
 
@@ -164,6 +165,7 @@ Similar to [`parse_json_acset_schema`](@ref) except reads from a file.
 Inverse to [`write_json_acset_schema`](@ref).
 """
 function read_json_acset_schema(T, fname::AbstractString)
+  ispath(fname) || error("$(fname) is not a valid path to a file")
   parse_json_acset_schema(T, JSON3.read(fname))
 end
 
