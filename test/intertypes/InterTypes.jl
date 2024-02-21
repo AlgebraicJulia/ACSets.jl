@@ -126,6 +126,8 @@ optionals_schema = JSONSchema.Schema(read("optionals_schema.json", String))
 @test JSONSchema._validate(optionals_schema, JSON.parse(JSON3.write(x)), "NullableInt") === nothing
 @test JSONSchema._validate(optionals_schema, JSON.parse(JSON3.write(y)), "NullableInt") === nothing
 
+# Python Integration Tests
+
 @static if !Sys.iswindows()
   using CondaPkg
   using PythonCall
@@ -167,5 +169,10 @@ optionals_schema = JSONSchema.Schema(read("optionals_schema.json", String))
 
   @test JSON3.read(py_g_str, EDWeightedGraph) == g
 end
+
+# Java Integration Tests
+
+java_dir = joinpath(@__DIR__, "java")
+generate_module(simpleast, JacksonTarget, java_dir)
 
 end

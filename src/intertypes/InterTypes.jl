@@ -261,5 +261,6 @@ include("jsonschema.jl")
 include("sexp.jl")
 include("julia.jl")
 include("python.jl")
+include("java.jl")
 
 end
