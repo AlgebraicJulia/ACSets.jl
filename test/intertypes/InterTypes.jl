@@ -178,7 +178,7 @@ generate_module(simpleast, JacksonTarget, java_dir)
 generate_module(model, JacksonTarget, java_dir)
 
 cd("java")
-run(`sh gradlew build`)
+run(`gradle build`)
 cd("..")
 
 push!(JavaCall.cp, joinpath(@__DIR__, "java/lib/build/libs/lib.jar"))

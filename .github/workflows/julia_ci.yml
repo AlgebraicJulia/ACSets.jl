@@ -43,17 +43,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix: # use matrix notation for linux for easily testing more versions/architectures
-        version: ${{ fromJSON(inputs.test_versions) }}
+        version: [ "1.10.0" ]
         os: [ubuntu-latest]
         arch: ["x64"]
         include:
           # test macOS and Windows with latest Julia only
           - os: macOS-latest
             arch: x64
-            version: ${{ inputs.version }}
+            version: [ "1.10.0" ]
           - os: windows-latest
             arch: x64
-            version: ${{ inputs.version }}
+            version: [ "1.10.0" ]
 
     steps:
       - uses: actions/checkout@v4
@@ -79,9 +79,7 @@ jobs:
         env:
           JULIA_COPY_STACKS: 1
       - uses: julia-actions/julia-processcoverage@v1
-        if: ${{ inputs.codecov }}
       - uses: codecov/codecov-action@v3
-        if: ${{ inputs.codecov }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
   docs:
@@ -96,7 +94,7 @@ jobs:
       - name: "Set up Julia"
         uses: julia-actions/setup-julia@v1
         with:
-          version: ${{ inputs.version }}
+          version: "1.10.0"
       - name: "Install Graphviz"
         uses: ts-graphviz/setup-graphviz@v1
         with:
