@@ -75,7 +75,7 @@ function java_sumtype_parent!(io, name, variants)
   println(io, "@JsonTypeInfo(use=Id.NAME, include=As.PROPERTY, property=\"_type\")")
   println(io, "@JsonSubTypes({")
   separate(io, variants; separator=",\n") do io, v
-    print(io, "    JsonSubTypes.Type(value = $(v.tag).class, name = \"$(v.tag)\")")
+    print(io, "    @JsonSubTypes.Type(value = $(v.tag).class, name = \"$(v.tag)\")")
   end
   println(io, "\n})")
   print(io, "public sealed interface ", name, " permits ")

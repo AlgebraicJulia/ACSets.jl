@@ -8,6 +8,7 @@ using OrderedCollections
 import JSON
 import JSON3
 import JSONSchema
+using JavaCall
 
 function testjson(x::T) where {T}
   (x == JSON3.read(JSON3.write(x), T))
@@ -172,7 +173,28 @@ end
 
 # Java Integration Tests
 
-java_dir = joinpath(@__DIR__, "java")
+java_dir = joinpath(@__DIR__, "java/lib/src/main/java")
 generate_module(simpleast, JacksonTarget, java_dir)
+generate_module(model, JacksonTarget, java_dir)
+
+cd("java")
+run(`sh gradlew build`)
+cd("..")
+
+push!(JavaCall.cp, joinpath(@__DIR__, "java/lib/build/libs/lib.jar"))
+
+JavaCall.init()
+
+ObjectMapper = @jimport com.fasterxml.jackson.databind.ObjectMapper
+om = ObjectMapper(())
+
+function java_roundtrip(javatype, val)
+  java_val = jcall(om, "readValue", JObject, (JString, JClass), JSON3.write(val), classforname(javatype))
+  java_val_str = jcall(om, "writeValueAsString", JString, (JObject,), java_val)
+
+  JSON3.read(java_val_str, typeof(val)) == val
+end
+
+@test java_roundtrip("simpleast.Term", t)
 
 end

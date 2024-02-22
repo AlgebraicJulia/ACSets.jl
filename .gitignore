@@ -30,4 +30,3 @@ Manifest.toml
 test/.CondaPkg
 test/intertypes/__pycache__
 test/intertypes/*.py
-test/intertypes/java
