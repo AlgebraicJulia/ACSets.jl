@@ -350,6 +350,10 @@ See also: [`rem_part!`](@ref).
   end
 end
 
+@inline function rem_parts!(acs::ACSet, type, ::Colon)
+  rem_parts!(acs, type, parts(acs, type))
+end
+
 """ Remove parts and all parts incident to them, recursively.
 
 The parts may be supplied in any order and may include duplicates.

@@ -137,6 +137,12 @@ for dds_maker in dds_makers
     @test incident(dds, 2, :Φ) == []
   end
 
+  # delete all parts of an Ob
+  dds = dds_maker()
+  add_parts!(dds, :X, 4, Φ=[2,3,3,4])
+  rem_parts!(dds, :X, :)
+  @test nparts(dds, :X) == 0
+
   # Recursive deletion.
   dds = dds_maker()
   add_parts!(dds, :X, 3, Φ=[2,3,3])
@@ -147,6 +153,11 @@ for dds_maker in dds_makers
   add_parts!(dds, :X, 3, Φ=[2,3,3])
   cascading_rem_parts!(dds, :X, [1,2])
   @test nparts(dds, :X) == 1
+
+  dds = dds_maker()
+  add_parts!(dds, :X, 3, Φ=[2,3,3])
+  cascading_rem_parts!(dds, :X, :)
+  @test nparts(dds, :X) == 0
 
   # Pretty printing.
   dds = dds_maker()
