@@ -76,10 +76,10 @@ jobs:
       - uses: julia-actions/julia-buildpkg@v1
       - name: "Run tests (windows)"
         uses: julia-actions/julia-runtest@v1
-        if: ${{ matrix.os == "windows-latest" }}
+        if: matrix.os == "windows-latest"
       - name: "Run tests"
         uses: julia-actions/julia-runtest@v1
-        if: ${{ matrix.os != "windows-latest" }}
+        if: matrix.os != "windows-latest"
         env:
           JULIA_COPY_STACKS: 1
       - uses: julia-actions/julia-processcoverage@v1
