@@ -184,7 +184,13 @@ cd("..")
 
 mkpath("java/libs")
 
-cp(joinpath("acsets4j", "lib", "build", "libs", "acsets4j-0.1.jar"), joinpath("java", "libs", "acsets4j-0.1.jar"))
+jar_source = "acsets4j/lib/build/libs/acsets4j-0.1.jar"
+jar_dest = "java/lib/deps/acsets4j-0.1.jar"
+if isfile(jar_dest)
+  rm(jar_dest)
+end
+mkpath("java/lib/deps")
+cp(jar_source, jar_dest)
 
 cd(joinpath(@__DIR__, "java"))
 run(`gradle build`)
