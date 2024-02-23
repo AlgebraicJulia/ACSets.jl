@@ -176,6 +176,15 @@ end
 java_dir = joinpath(@__DIR__, "java/lib/src/main/java")
 generate_module(simpleast, JacksonTarget, java_dir)
 generate_module(model, JacksonTarget, java_dir)
+generate_module(wgraph, JacksonTarget, java_dir)
+
+cd(joinpath(@__DIR__, "acsets4j"))
+run(`gradle build`)
+cd("..")
+
+mkpath("java/libs")
+
+cp(joinpath("acsets4j", "lib", "build", "libs", "acsets4j-0.1.jar"), joinpath("java", "libs", "acsets4j-0.1.jar"))
 
 cd(joinpath(@__DIR__, "java"))
 run(`gradle build`)
@@ -191,10 +200,10 @@ om = ObjectMapper(())
 function java_roundtrip(javatype, val)
   java_val = jcall(om, "readValue", JObject, (JString, JClass), JSON3.write(val), classforname(javatype))
   java_val_str = jcall(om, "writeValueAsString", JString, (JObject,), java_val)
-
   JSON3.read(java_val_str, typeof(val)) == val
 end
 
 @test java_roundtrip("simpleast.Term", t)
+@test java_roundtrip("wgraph.EDWeightedGraph", g)
 
 end

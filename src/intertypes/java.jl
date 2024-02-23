@@ -7,12 +7,12 @@ end
 
 function tojava(intertype::InterType)
   @match intertype begin
-    I32 => "int"
-    U32 => "int"
-    I64 => "long"
-    U64 => "long"
-    F64 => "double"
-    Boolean => "boolean"
+    I32 => "Integer"
+    U32 => "Integer"
+    I64 => "Long"
+    U64 => "Long"
+    F64 => "Double"
+    Boolean => "Boolean"
     Str => "String"
     Sym => "String"
     Binary => "String"
@@ -95,12 +95,119 @@ function java_sumtype(name, variants)
   [parentfile; variantfiles]
 end
 
+function java_list_literal(f, io, xs)
+  print(io, "new ArrayList<>(Arrays.asList(")
+  separate(f, io, xs)
+  print(io, "))")
+end
+
+function java_schema(name, schema::TypedSchema{Symbol, InterType})
+  io = IOBuffer()
+  println(io, """
+    import acsets4j.*;
+
+    import java.util.ArrayList;
+    import java.util.Arrays;
+
+    public class $name {
+      public static Schema schema = new Schema(
+    """)
+  java_list_literal(io, objects(schema)) do io, ob
+    print(io, "new Ob(\"$ob\")")
+  end
+  println(io, ",")
+  java_list_literal(io, homs(schema)) do io, (f, d, c)
+    print(io, "new Hom(\"$f\", \"$d\", \"$c\")")
+  end
+  println(io, ",")
+  java_list_literal(io, attrtypes(schema)) do io, T
+    print(io, "new AttrType(\"$T\", $(tojava(schema.typing[T])).class)")
+  end
+  println(io, ",")
+  java_list_literal(io, attrs(schema)) do io, (f, d, c)
+    print(io, "new Attr(\"$f\", \"$d\", \"$c\")")
+  end
+  println(io, ");\n}")
+  [JavaFile(string(name), String(take!(io)))]
+end
+
+function java_abstract_acset(name, parent)
+  parent = if !isnothing(parent)
+    parent
+  else
+    :ACSet
+  end
+  content = """
+    import acsets4j.*;
+
+    public abstract class $(name) extends $parent {}
+  """
+  [JavaFile(string(name), content)]
+end
+
+function java_named_acset_type(name, spec)
+  abstract_type = if !isnothing(spec.abstract_type)
+    spec.abstract_type
+  else
+    :ACSet
+  end
+  serializername = string(name, "Serializer")
+  serializer_content = """
+    import acsets4j.*;
+
+    public class $serializername extends ACSetSerializer<$(name)> { }
+  """
+  serializer = JavaFile(serializername, serializer_content)
+  deserializername = string(name, "Deserializer")
+  deserializer_content = """
+    import java.io.IOException;
+
+    import acsets4j.*;
+
+    import com.fasterxml.jackson.core.JsonParser;
+    import com.fasterxml.jackson.core.JsonProcessingException;
+    import com.fasterxml.jackson.databind.DeserializationContext;
+
+    public class $deserializername extends ACSetDeserializer<$(name)> {
+      public $name deserialize(JsonParser jp, DeserializationContext ctxt) 
+          throws IOException, JsonProcessingException {
+            $(name) acs = new $(name)();
+            deserializeInto(acs, jp, ctxt);
+            return acs;
+        }
+    }
+  """
+  deserializer = JavaFile(deserializername, deserializer_content)
+  content = """
+    import acsets4j.*;
+
+    import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+    import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
+    @JsonSerialize(using = $(serializername).class)
+    @JsonDeserialize(using = $(deserializername).class)
+    public class $name extends $abstract_type {
+        public static Schema schema = $(spec.schemaname).schema;
+
+        @Override
+        public Schema schema() {
+            return schema;
+        }
+    }
+  """
+  class = JavaFile(string(name), content)
+  [class, serializer, deserializer]
+end
+
 function tojava(name, decl::InterTypeDecl)
   @match decl begin
     Struct(fields) => [java_record(name, fields)]
     SumType(variants) => java_sumtype(name, variants)
     VariantOf(_) => []
-    _ => error("unsupported declaration for java")
+    SchemaDecl(schema) => java_schema(name, schema)
+    AbstractACSetType(parent) => java_abstract_acset(name, parent)
+    NamedACSetType(spec) => java_named_acset_type(name, spec)
+    _ => error("unsupported declaration for java: $decl")
   end
 end
 
@@ -123,6 +230,11 @@ function generate_module(mod::InterTypeModule, ::Type{JacksonTarget}, path)
     open(joinpath(outdir, file.name * ".java"), "w") do io
       println(io, "package $(mod.name);")
       println(io)
+      for (name, importedmod) in mod.imports
+        if name != importedmod.name
+          error("java does not support import aliasing")
+        end
+      end
       print(io, file.content)
     end
   end

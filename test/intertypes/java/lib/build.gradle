@@ -34,6 +34,8 @@ dependencies {
     // This dependency is used internally, and not exposed to consumers on their own compile classpath.
     implementation libs.guava
 
+    implementation fileTree(dir: 'deps', include: ['*.jar'])
+
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.16.1'
 }
 
