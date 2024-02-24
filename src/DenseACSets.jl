@@ -708,6 +708,9 @@ function delete_subobj!(X::ACSet, delparts)
   end)
 end
 
+ACSetInterface.cascading_rem_parts!(acs::ACSet, type, ::Colon) =
+  cascading_rem_parts!(acs, type, parts(acs, type))
+
 ACSetInterface.cascading_rem_parts!(acs::ACSet, type, parts) =
   delete_subobj!(acs, Dict(type=>parts))
 
