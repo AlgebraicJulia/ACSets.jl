@@ -203,8 +203,8 @@ macro acset_type(head)
     Expr(:call, name, schema, idx_args...) => (name, schema, idx_args)
     _ => error("Unsupported head for @acset_type")
   end
+  name′ = name
   assgn = if !isempty(type_params)
-    name′ = name
     name = gensym(name)
     :(const $(esc(name′))=$(esc(name)){$(type_params...)})
   end
@@ -212,8 +212,8 @@ macro acset_type(head)
     $(esc(:eval))($(GlobalRef(DenseACSets, :struct_acset))(
       $(Expr(:quote, name)), $(Expr(:quote, parent)), $(esc(schema));
       $((esc(arg) for arg in idx_args)...)))
-    Core.@__doc__ $(esc(name))
-    $assgn
+      $assgn
+      Core.@__doc__ $(esc(name′))
   end
 end
 
