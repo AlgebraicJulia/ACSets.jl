@@ -819,4 +819,19 @@ datcompdyn = DynamicACSet(datcomp)
 
 @test_throws Exception incident(datcompdyn, 1, (:h,:g))
 
-end
+# Test @acset_type with type parameters
+#--------------------------------------
+# Single 
+@acset_type IntLabeledSet(SchLabeledSet, index=[:label]){Int}
+@test isempty(IntLabeledSet())
+
+# Multiple
+SchLabeledDecGraph′ = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)],
+                                 [:X, :Y], [(:dec,:E,:X),(:label,:V,:Y)])
+"""Example Docstring"""
+@acset_type SymSymDecGraph(SchLabeledDecGraph′){Symbol,Symbol}
+@test strip(string(@doc SymSymDecGraph)) == """Example Docstring"""
+
+@acset SymSymDecGraph begin V=1; E=1; src=1; tgt=1; dec=[:a]; label=[:b] end
+
+end # module
