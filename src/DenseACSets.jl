@@ -297,7 +297,7 @@ function DynamicACSet(X::StructACSet{S, Ts, PT}) where {S, Ts, PT}
   Y = DynamicACSet(string(typeof(X).name.name), Schema(S);
         type_assignment=datatypes(X), index = indices(X), 
         unique_index = unique_indices(X), part_type=PT)
-  copy_parts!(Y,X, NamedTuple(Dict(k=>parts(X,k) for k in types(S))))
+  copy_parts!(Y, X)
   Y
 end
 
@@ -306,7 +306,7 @@ function StructACSet(X::DynamicACSet{PT}) where PT
   S = acset_schema(X)
   Y = AnonACSet(Schema(S); type_assignment=datatypes(X), index = indices(X), 
                 unique_index = unique_indices(X), part_type=PT)
-  copy_parts!(Y, X, NamedTuple(Dict(k=>parts(X,k) for k in types(S))))
+  copy_parts!(Y, X)
   Y
 end
 
@@ -753,11 +753,13 @@ end
 ACSetInterface.copy_parts!(to::StructACSet{S}, from::StructACSet{S′}) where {S,S′} =
   copy_parts!(to, from, common_objects(Val{S}, Val{S′}))
 
-ACSetInterface.copy_parts!(to::DynamicACSet, from::DynamicACSet) =
-  copy_parts!(to, from, runtime(common_objects, to.schema, from.schema))
-
-ACSetInterface.copy_parts!(to::SimpleACSet, from::SimpleACSet; kw...) =
-  copy_parts!(to, from, (;kw...))
+function ACSetInterface.copy_parts!(to::SimpleACSet, from::SimpleACSet; kw...)
+  if isempty(kw)
+    copy_parts!(to, from, runtime(common_objects, acset_schema(to), acset_schema(from)))
+  else 
+    copy_parts!(to, from, (;kw...))
+  end
+end
 
 ACSetInterface.copy_parts!(to::SimpleACSet, from::SimpleACSet, obs::Tuple) =
   copy_parts!(to, from, NamedTuple{obs}((:) for ob in obs))

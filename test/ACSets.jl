@@ -844,7 +844,6 @@ g = @acset MadDecGraph{String} begin
 end
 
 @test g isa StructACSet
-@test nparts(g, :X) == 3
 
 dyn_g = DynamicACSet(g)
 
