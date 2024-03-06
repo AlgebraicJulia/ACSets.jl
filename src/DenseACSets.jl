@@ -293,13 +293,22 @@ function ACSetInterface.subpart_type(x::DynamicACSet,s::Symbol)
 end
 
 """Cast StructACSet into a DynamicACSet"""
-function DynamicACSet(X::StructACSet{S}) where S 
-  Y = DynamicACSet(string(typeof(X).name.name), Schema(S); type_assignment=datatypes(X))
+function DynamicACSet(X::StructACSet{S, Ts, PT}) where {S, Ts, PT} 
+  Y = DynamicACSet(string(typeof(X).name.name), Schema(S);
+        type_assignment=datatypes(X), index = indices(X), 
+        unique_index = unique_indices(X), part_type=PT)
   copy_parts!(Y,X, NamedTuple(Dict(k=>parts(X,k) for k in types(S))))
-  return Y
+  Y
 end
 
-
+"""Cast DynamicACSet into a StructACSet"""
+function StructACSet(X::DynamicACSet{PT}) where PT
+  S = acset_schema(X)
+  Y = AnonACSet(Schema(S); type_assignment=datatypes(X), index = indices(X), 
+                unique_index = unique_indices(X), part_type=PT)
+  copy_parts!(Y, X, NamedTuple(Dict(k=>parts(X,k) for k in types(S))))
+  Y
+end
 
 """ This works the same as something made with `@acset_type`, only the types of the
 parts and subparts are stored as type parameters. Thus, this can be used with any schema.
@@ -332,7 +341,7 @@ end
 """
 function AnonACSetType(
   s::Schema;
-  type_assignment::Dict{Symbol, Type}=Dict{Symbol,Type}(),
+  type_assignment::Dict{Symbol, <:Type}=Dict{Symbol, Type}(),
   index::Vector=[],
   unique_index::Vector=[],
   union_all::Bool=false,
