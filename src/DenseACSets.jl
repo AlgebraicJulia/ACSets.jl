@@ -293,13 +293,22 @@ function ACSetInterface.subpart_type(x::DynamicACSet,s::Symbol)
 end
 
 """Cast StructACSet into a DynamicACSet"""
-function DynamicACSet(X::StructACSet{S}) where S 
-  Y = DynamicACSet(string(typeof(X).name.name), Schema(S); type_assignment=datatypes(X))
-  copy_parts!(Y,X, NamedTuple(Dict(k=>parts(X,k) for k in types(S))))
-  return Y
+function DynamicACSet(X::StructACSet{S, Ts, PT}) where {S, Ts, PT} 
+  Y = DynamicACSet(string(typeof(X).name.name), Schema(S);
+        type_assignment=datatypes(X), index = indices(X), 
+        unique_index = unique_indices(X), part_type=PT)
+  copy_parts!(Y, X)
+  Y
 end
 
-
+"""Cast DynamicACSet into a StructACSet"""
+function StructACSet(X::DynamicACSet{PT}) where PT
+  S = acset_schema(X)
+  Y = AnonACSet(Schema(S); type_assignment=datatypes(X), index = indices(X), 
+                unique_index = unique_indices(X), part_type=PT)
+  copy_parts!(Y, X)
+  Y
+end
 
 """ This works the same as something made with `@acset_type`, only the types of the
 parts and subparts are stored as type parameters. Thus, this can be used with any schema.
@@ -332,7 +341,7 @@ end
 """
 function AnonACSetType(
   s::Schema;
-  type_assignment::Dict{Symbol, Type}=Dict{Symbol,Type}(),
+  type_assignment::Dict{Symbol, <:Type}=Dict{Symbol, Type}(),
   index::Vector=[],
   unique_index::Vector=[],
   union_all::Bool=false,
@@ -744,11 +753,13 @@ end
 ACSetInterface.copy_parts!(to::StructACSet{S}, from::StructACSet{S′}) where {S,S′} =
   copy_parts!(to, from, common_objects(Val{S}, Val{S′}))
 
-ACSetInterface.copy_parts!(to::DynamicACSet, from::DynamicACSet) =
-  copy_parts!(to, from, runtime(common_objects, to.schema, from.schema))
-
-ACSetInterface.copy_parts!(to::SimpleACSet, from::SimpleACSet; kw...) =
-  copy_parts!(to, from, (;kw...))
+function ACSetInterface.copy_parts!(to::SimpleACSet, from::SimpleACSet; kw...)
+  if isempty(kw)
+    copy_parts!(to, from, runtime(common_objects, acset_schema(to), acset_schema(from)))
+  else 
+    copy_parts!(to, from, (;kw...))
+  end
+end
 
 ACSetInterface.copy_parts!(to::SimpleACSet, from::SimpleACSet, obs::Tuple) =
   copy_parts!(to, from, NamedTuple{obs}((:) for ob in obs))

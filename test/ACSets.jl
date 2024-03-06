@@ -834,4 +834,25 @@ SchLabeledDecGraph′ = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)],
 
 @acset SymSymDecGraph begin V=1; E=1; src=1; tgt=1; dec=[:a]; label=[:b] end
 
+# Cast Dynamic <-> StructACSet
+#------------------------------
+g = @acset MadDecGraph{String} begin
+  V = 4; E = 4; X=3
+  src = [1,2,3,4]
+  tgt = [2,3,4,1]
+  dec = ["a","b",AttrVar(3),AttrVar(1)]
+end
+
+@test g isa StructACSet
+
+dyn_g = DynamicACSet(g)
+
+@test dyn_g isa DynamicACSet
+@test nparts(dyn_g, :X) == 3
+
+g′ = StructACSet(dyn_g)
+
+@test g′ isa AnonACSet
+@test nparts(g′, :X) == 3
+
 end # module
