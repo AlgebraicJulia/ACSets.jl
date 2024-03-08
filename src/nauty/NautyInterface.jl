@@ -396,11 +396,11 @@ function _all_autos(X::ACSet, gens)
       qgen = prod(q)
       if first(old_gens)*qgen ∉ all_gens
         for og in old_gens push!(all_gens, og * qgen) end
-        append!(queue, [[q...,prev_g] for prev_g in gens[1:i]])
+        append!(queue, [[q..., prev_g] for prev_g in gens[1:i]])
       end
     end
   end
-  [to_perm(p,oinds) for p in all_gens]
+  [to_perm(p, oinds) for p in all_gens]
 end
 
 end # module

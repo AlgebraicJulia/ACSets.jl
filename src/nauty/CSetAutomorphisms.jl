@@ -82,7 +82,7 @@ function pseudo_cset_inv(g::ACSet, orig::ACSet, attrvals::AbstractDict)
   for arr in hom(S)
     orig[arr] = g[arr]
   end
-  for (darr,_,tgt) in attrs(S)
+  for (darr, _, tgt) in attrs(S)
     orig[darr] = attrvals[tgt][g[darr]]
   end
   orig
@@ -97,9 +97,6 @@ function apply_automorphism(c::ACSet, d::CDict)
   new = deepcopy(c)
   for (arr, src, tgt) in homs(acset_schema(c))
     new[d[src], arr] = d[tgt][c[arr]]
-  end
-  for (arr, src, _) in attrs(acset_schema(c))
-    new[d[src], arr] = c[arr]
   end
   new
 end
