@@ -117,14 +117,6 @@ end
 # Trees
 #######
 
-"""Find index at which two vectors diverge (used in `search_tree`)"""
-function common(v1::Vector{T}, v2::Vector{T})::Int where {T}
-  for (i, (x, y)) in enumerate(zip(v1, v2))
-    x == y || return i - 1
-  end
-  min(length(v1), length(v2))
-end
-
 """
 Search tree explored by Nauty. Each node has an input coloring, a refined 
 coloring, and a set of children indexed by which element (in the smallest 
@@ -144,26 +136,6 @@ function Base.getindex(t::Tree, pth::VPSI)::Tree
     ptr = ptr.children[p]
   end
   ptr
-end
-
-"""Automorphism based pruning when we've found a new leaf node (τ @ t)"""
-function compute_auto_prune(tree::Tree, t::VPSI, τ::CDict, leafnodes::Set{VPSI})::Set{VPSI}
-  skip = Set{VPSI}()
-  for p in filter(!=(t), leafnodes)
-    π = tree[p].saturated
-    i = common(p, t)
-    _, _, c = abc = p[1:i], p[1:i+1], t[1:i+1] # == t[1:i]
-    a_, b_, c_ = [tree[x].saturated for x in abc]
-    γ = compose_perms(π, invert_perms(τ))
-    if (compose_perms(γ, a_) == a_ && compose_perms(γ, b_) == c_)
-      # skip everything from c to a
-      for i in length(c):length(t)
-        push!(skip, t[1:i])
-      end
-      break
-    end
-  end
-  filter(!=(t), skip) # has something gone wrong if we need to do this?
 end
 
 """
@@ -212,10 +184,9 @@ Inputs:
  - split_seq: sequence of edges (our current location in the tree)
  - tree: all information known so far - this gets modified
  - leafnodes: coordinates of all automorphisms found so far
- - skip: flagged coordinates which have been pruned
 """
 function search_tree!(g::ACSet, init_coloring::CDict, split_seq::VPSI,
-                      tree::Tree, leafnodes::Set{VPSI}, skip::Set{VPSI})
+                      tree::Tree, leafnodes::Set{VPSI})
   curr_tree = tree[split_seq]
   # Perform color saturation
   coloring = color_saturate(g; init_color=init_coloring)
@@ -231,10 +202,6 @@ function search_tree!(g::ACSet, init_coloring::CDict, split_seq::VPSI,
     # Add result to list of results
     push!(leafnodes, split_seq)
     check_auto(coloring) # fail if not a perm
-
-    # Prune with automorphisms
-    pruned = compute_auto_prune(tree, split_seq, coloring, leafnodes)
-    isempty(pruned) || union!(skip, pruned)
   else 
     # Branch on this leaf
     for split_ind in split_inds
@@ -244,31 +211,16 @@ function search_tree!(g::ACSet, init_coloring::CDict, split_seq::VPSI,
         new_seq = vcat(split_seq, [split_tab => split_ind])
         new_coloring[split_tab][split_ind] = maximum(coloring[split_tab]) + 1
         curr_tree.children[split_tab => split_ind] = Tree()
-        search_tree!(g, new_coloring, new_seq, tree, leafnodes, skip)
+        search_tree!(g, new_coloring, new_seq, tree, leafnodes)
       end
     end
-  end
-end
-
-"""Get coordinates of all nodes in a tree that have no children"""
-function get_leaves(t::Tree)::Vector{VPSI}
-  if isempty(t.children)
-    [Pair{Symbol,Int}[]]
-  else
-    res = []
-    for (kv, c) in t.children
-      for pth in get_leaves(c)
-        push!(res, vcat([kv],pth))
-      end
-    end
-    res
   end
 end
 
 """Compute the automorphisms of a CSet"""
 function autos(g::ACSet)::Tuple{Set{CDict}, Tree}
   tree, leafnodes = Tree(), Set{VPSI}()
-  search_tree!(g, nocolor(g), VPSI(), tree, leafnodes,Set{VPSI}())
+  search_tree!(g, nocolor(g), VPSI(), tree, leafnodes)
   Set([tree[ln].saturated for ln in leafnodes]), tree
 end
 
