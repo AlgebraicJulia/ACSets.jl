@@ -4,8 +4,12 @@ using ACSets
 using nauty_jll
 
 """Compute CSetNautyRes from an ACSet."""
-function ACSets.call_nauty(g::ACSet)::CSetNautyRes
-  ACSets.NautyInterface.parse_res(nauty_res(g), g)
+function ACSets.call_nauty(g::ACSet; use_nauty=true)::CSetNautyRes
+  if Sys.iswindows() || !use_nauty
+    CSetAutomorphisms.to_nauty_res(g)
+  else 
+    ACSets.NautyInterface.parse_res(nauty_res(g), g)
+  end
 end
 
 """Make shell command to dreadnaut (nauty) and collect stdout text."""

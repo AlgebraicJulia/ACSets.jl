@@ -32,8 +32,11 @@ end
   include("ADTs.jl")
 end
 
-if !Sys.iswindows()
-  @testset "Nauty" begin
-    include("NautyInterface.jl")
-  end
+@testset "Nauty" begin
+  include("nauty/NautyInterface.jl")
 end
+
+@testset "Nauty" begin
+  include("nauty/CSetAutomorphisms.jl")
+end
+

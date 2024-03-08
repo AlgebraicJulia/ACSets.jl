@@ -15,7 +15,7 @@ function iso(X::T, Y::T, comps::Dict{Symbol, Vector{Int}}) where {T <: ACSet}
   all(isperm, values(comps)) || return false
   all(((h, c, cd),) -> comps[cd][X[h]] == Y[h][comps[c]], homs(acset_schema(X)))
 end
-iso(X,R::CSetNautyRes) = iso(X, canon(R), canonmap(R))
+iso(X, R::CSetNautyRes) = iso(X, canon(R), canonmap(R))
 
 # Graphs
 ########
