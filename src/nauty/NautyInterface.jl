@@ -3,8 +3,9 @@ module NautyInterface
 export NautyRes, CSetNautyRes, call_nauty, all_autos, canon, orbits, canonmap, 
        strhsh, ngroup
 
-using ..Schemas
-using ..DenseACSets, ..ACSetInterface
+using ...Schemas
+using ...DenseACSets
+using ...ACSetInterface
 import AlgebraicInterfaces: generators
 using DataStructures: OrderedSet, DefaultDict
 using Permutations 
@@ -105,8 +106,7 @@ function parse_res(res::String, g::ACSet)::CSetNautyRes
   end
   # parse permutation for the canonical graph
   rng = match(reg_perm, res[sec : end])
-  # cp = CPerm(oinds, [parse(Int, x) for x in split(strip(rng.match), r"\s+")], S)
-  # canonoffset = Dict([k=>canon[v].-(v.start-2) for (k,v) in oinds if k ∈ ob(S)])
+
   cp = Dict(map(ob(S)) do o 
     canon = [parse(Int, x) for x in split(strip(rng.match), r"\s+")]
     o=>Permutation(canon[oinds[o]].-(oinds[o].start-2))
@@ -396,11 +396,11 @@ function _all_autos(X::ACSet, gens)
       qgen = prod(q)
       if first(old_gens)*qgen ∉ all_gens
         for og in old_gens push!(all_gens, og * qgen) end
-        append!(queue, [[q...,prev_g] for prev_g in gens[1:i]])
+        append!(queue, [[q..., prev_g] for prev_g in gens[1:i]])
       end
     end
   end
-  [to_perm(p,oinds) for p in all_gens]
+  [to_perm(p, oinds) for p in all_gens]
 end
 
 end # module

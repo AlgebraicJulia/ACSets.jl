@@ -14,7 +14,7 @@ include("DenseACSets.jl")
 include("intertypes/InterTypes.jl")
 include("serialization/Serialization.jl")
 include("ADTs.jl")
-include("NautyInterface.jl")
+include("nauty/Nauty.jl")
 
 @reexport using .ColumnImplementations: AttrVar
 @reexport using .Schemas
@@ -23,6 +23,6 @@ include("NautyInterface.jl")
 @reexport using .InterTypes
 @reexport using .ACSetSerialization
 using .ADTs
-@reexport using .NautyInterface
+@reexport using .Nauty
 
 end
