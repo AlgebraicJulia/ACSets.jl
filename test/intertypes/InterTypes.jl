@@ -173,43 +173,52 @@ end
 
 # Java Integration Tests
 
-java_dir = joinpath(@__DIR__, "java/lib/src/main/java")
-generate_module(simpleast, JacksonTarget, java_dir)
-generate_module(model, JacksonTarget, java_dir)
-generate_module(wgraph, JacksonTarget, java_dir)
-
-cd(joinpath(@__DIR__, "acsets4j"))
-run(`gradle build`)
-cd("..")
-
-mkpath("java/libs")
-
-jar_source = "acsets4j/lib/build/libs/acsets4j-0.1.jar"
-jar_dest = "java/lib/deps/acsets4j-0.1.jar"
-if isfile(jar_dest)
-  rm(jar_dest)
-end
-mkpath("java/lib/deps")
-cp(jar_source, jar_dest)
-
-cd(joinpath(@__DIR__, "java"))
-run(`gradle build`)
-cd("..")
-
-push!(JavaCall.cp, joinpath(@__DIR__, "java/lib/build/libs/lib.jar"))
-
-JavaCall.init()
-
-ObjectMapper = @jimport com.fasterxml.jackson.databind.ObjectMapper
-om = ObjectMapper(())
-
-function java_roundtrip(javatype, val)
-  java_val = jcall(om, "readValue", JObject, (JString, JClass), JSON3.write(val), classforname(javatype))
-  java_val_str = jcall(om, "writeValueAsString", JString, (JObject,), java_val)
-  JSON3.read(java_val_str, typeof(val)) == val
+hasgradle = try
+  run(`which gradle`)
+  true
+catch error
+  false
 end
 
-@test java_roundtrip("simpleast.Term", t)
-@test java_roundtrip("wgraph.EDWeightedGraph", g)
+if hasgradle
+  java_dir = joinpath(@__DIR__, "java/lib/src/main/java")
+  generate_module(simpleast, JacksonTarget, java_dir)
+  generate_module(model, JacksonTarget, java_dir)
+  generate_module(wgraph, JacksonTarget, java_dir)
+
+  cd(joinpath(@__DIR__, "acsets4j"))
+  run(`gradle build`)
+  cd("..")
+
+  mkpath("java/libs")
+
+  jar_source = "acsets4j/lib/build/libs/acsets4j-0.1.jar"
+  jar_dest = "java/lib/deps/acsets4j-0.1.jar"
+  if isfile(jar_dest)
+    rm(jar_dest)
+  end
+  mkpath("java/lib/deps")
+  cp(jar_source, jar_dest)
+
+  cd(joinpath(@__DIR__, "java"))
+  run(`gradle build`)
+  cd("..")
+
+  push!(JavaCall.cp, joinpath(@__DIR__, "java/lib/build/libs/lib.jar"))
+
+  JavaCall.init()
+
+  ObjectMapper = @jimport com.fasterxml.jackson.databind.ObjectMapper
+  om = ObjectMapper(())
+
+  function java_roundtrip(javatype, val)
+    java_val = jcall(om, "readValue", JObject, (JString, JClass), JSON3.write(val), classforname(javatype))
+    java_val_str = jcall(om, "writeValueAsString", JString, (JObject,), java_val)
+    JSON3.read(java_val_str, typeof(val)) == val
+  end
+
+  @test java_roundtrip("simpleast.Term", t)
+  @test java_roundtrip("wgraph.EDWeightedGraph", g)
+end
 
 end
