@@ -36,10 +36,86 @@ permissions:
   statuses: read
 
 jobs:
-  CI:
+  test:
     if: github.event_name == 'pull_request' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.action == 'test')
-    uses: AlgebraicJulia/.github/.github/workflows/julia_ci.yml@main
-    secrets: inherit
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix: # use matrix notation for linux for easily testing more versions/architectures
+        version: [ "1.10.0" ]
+        os: [ubuntu-latest]
+        arch: ["x64"]
+        include:
+          # test macOS and Windows with latest Julia only
+          - os: macOS-latest
+            arch: x64
+            version:  "1.10.0" 
+          - os: windows-latest
+            arch: x64
+            version:  "1.10.0" 
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: "Install Graphviz"
+        uses: ts-graphviz/setup-graphviz@v1
+        with:
+          ubuntu-skip-apt-update: "true"
+          macos-skip-brew-update: "true"
+      - name: "Set up Julia"
+        uses: julia-actions/setup-julia@v1
+        with:
+          version: ${{ matrix.version }}
+          arch: ${{ matrix.arch }}
+      - uses: julia-actions/cache@v1
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+      - uses: julia-actions/julia-buildpkg@v1
+      - name: "Run tests (windows)"
+        uses: julia-actions/julia-runtest@v1
+        if: matrix.os == 'windows-latest'
+      - name: "Run tests"
+        uses: julia-actions/julia-runtest@v1
+        if: matrix.os != 'windows-latest'
+        env:
+          JULIA_COPY_STACKS: 1
+      - uses: julia-actions/julia-processcoverage@v1
+      - uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+  docs:
+    name: Documentation
+    if: ${{ inputs.docs }}
+    runs-on: ubuntu-latest
+    env:
+      # GR backend fix for Plots, discussed in https://github.com/jheinen/GR.jl/issues/422
+      GKSwstype: nul
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Set up Julia"
+        uses: julia-actions/setup-julia@v1
+        with:
+          version: "1.10.0"
+      - name: "Install Graphviz"
+        uses: ts-graphviz/setup-graphviz@v1
+        with:
+          ubuntu-skip-apt-update: "true"
+          macos-skip-brew-update: "true"
+      - name: "Install LaTeX"
+        run: |
+          sudo apt-get update
+          sudo apt-get install pdf2svg texlive-latex-base texlive-latex-extra texlive-binaries texlive-pictures texlive-luatex
+      - name: "Install Julia dependencies"
+        run: julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate();'
+      - name: "Build and deploy docs"
+        run: julia --project=docs docs/make.jl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   CompatHelper:
     if: github.event_name == 'schedule'
     uses: AlgebraicJulia/.github/.github/workflows/julia_compat.yml@main
