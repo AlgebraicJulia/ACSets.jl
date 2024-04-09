@@ -1,3 +1,0 @@
-[submodule "test/intertypes/acsets4j"]
-	path = test/intertypes/acsets4j
-	url = git@github.com:AlgebraicJulia/acsets4j

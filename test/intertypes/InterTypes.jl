@@ -52,6 +52,8 @@ simpleast_schema = JSONSchema.Schema(read("simpleast_schema.json", String))
 
 @test JSONSchema._validate(simpleast_schema, JSON.parse(s), "Term") === nothing
 
+rm("simpleast_schema.json")
+
 @intertypes "model.it" module model
   import ..simpleast
 end
@@ -87,6 +89,8 @@ wgraph_schema = JSONSchema.Schema(read("wgraph_schema.json", String))
 
 @test JSONSchema._validate(wgraph_schema, JSON.parse(JSON3.write(g)), "EDWeightedGraph") === nothing
 
+rm("wgraph_schema.json")
+
 @intertypes "objects.it" module objects end
 
 using .objects
@@ -103,6 +107,8 @@ generate_module(objects, JSONTarget)
 objects_schema = JSONSchema.Schema(read("objects_schema.json", String))
 
 @test JSONSchema._validate(objects_schema, JSON.parse(JSON3.write(md)), "Metadata") === nothing
+
+rm("objects_schema.json")
 
 @intertypes "optionals.it" module optionals end
 
@@ -126,6 +132,8 @@ optionals_schema = JSONSchema.Schema(read("optionals_schema.json", String))
 
 @test JSONSchema._validate(optionals_schema, JSON.parse(JSON3.write(x)), "NullableInt") === nothing
 @test JSONSchema._validate(optionals_schema, JSON.parse(JSON3.write(y)), "NullableInt") === nothing
+
+rm("optionals_schema.json")
 
 # Python Integration Tests
 
@@ -181,26 +189,27 @@ catch error
 end
 
 if hasgradle
-  java_dir = joinpath(@__DIR__, "java/lib/src/main/java")
+  cd(@__DIR__)
+
+  java_dir = "java/lib/src/main/java"
   generate_module(simpleast, JacksonTarget, java_dir)
   generate_module(model, JacksonTarget, java_dir)
   generate_module(wgraph, JacksonTarget, java_dir)
 
-  cd(joinpath(@__DIR__, "acsets4j"))
-  run(`gradle build`)
-  cd("..")
-
   mkpath("java/libs")
 
-  jar_source = "acsets4j/lib/build/libs/acsets4j-0.1.jar"
   jar_dest = "java/lib/deps/acsets4j-0.1.jar"
+  jar_source = "https://github.com/AlgebraicJulia/acsets4j/files/14922802/acsets4j-0.1.zip"
   if isfile(jar_dest)
     rm(jar_dest)
   end
   mkpath("java/lib/deps")
-  cp(jar_source, jar_dest)
 
-  cd(joinpath(@__DIR__, "java"))
+  run(`curl -L $jar_source --output acsets4j-0.1.zip`)
+  run(`unzip acsets4j-0.1.zip -d java/lib/deps/`)
+  run(`rm acsets4j-0.1.zip`)
+
+  cd("java")
   run(`gradle build`)
   cd("..")
 
