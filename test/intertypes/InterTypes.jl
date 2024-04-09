@@ -189,7 +189,9 @@ catch error
 end
 
 if hasgradle
-  java_dir = joinpath(@__DIR__, "java/lib/src/main/java")
+  cd(@__DIR__)
+
+  java_dir = "java/lib/src/main/java"
   generate_module(simpleast, JacksonTarget, java_dir)
   generate_module(model, JacksonTarget, java_dir)
   generate_module(wgraph, JacksonTarget, java_dir)
@@ -207,7 +209,7 @@ if hasgradle
   run(`unzip acsets4j-0.1.zip -d java/lib/deps/`)
   run(`rm acsets4j-0.1.zip`)
 
-  cd(joinpath(@__DIR__, "java"))
+  cd("java")
   run(`gradle build`)
   cd("..")
 
