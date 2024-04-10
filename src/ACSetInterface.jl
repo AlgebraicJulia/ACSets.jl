@@ -166,12 +166,9 @@ function view_or_slice end
 @inline view_or_slice(x::AbstractVector, ::Colon) = x
 @inline Base.@propagate_inbounds view_or_slice(x::AbstractVector, i) = @view x[i]
 
-collect_or_id(i) = i
-collect_or_id(xs::AbstractVector{T}) where {T} = T[xs...]
-
 function subpart(acs, part, names::AbstractVector{Symbol})
   foldl(names, init=part) do part, name
-    collect_or_id(subpart(acs, part, name))
+    subpart(acs, part, name)
   end
 end
 
