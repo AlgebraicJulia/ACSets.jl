@@ -159,8 +159,6 @@ they have different domains (belong to different tables).
 """
 function subpart end
 
-@inline Base.@propagate_inbounds subpart(acs, part, name) = view_or_slice(subpart(acs, name), part)
-
 function view_or_slice end
 @inline view_or_slice(x::AbstractVector, i::Union{Integer,StaticArray}) = x[i]
 @inline view_or_slice(x::AbstractVector, ::Colon) = x
