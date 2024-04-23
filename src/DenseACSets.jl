@@ -529,14 +529,14 @@ ACSetInterface.subpart(acs::DynamicACSet, part, names::Tuple{Vararg{Symbol}}) = 
 
 @ct_enable function _subpart(acs::SimpleACSet, part, @ct(S), @ct(names))
   @ct s = Schema(S)
-  out = ACSetInterface.collect_or_id(subpart(acs, part, @ct first(names)))
+  out = subpart(acs, part, @ct first(names))
   # necessary because Tuple{Symbol} is still ambigious with presence of Tuple{Vararg{Symbol}}
   @ct_ctrl if length(names) > 1
     @ct_ctrl for i in 2:length(names)
       @ct begin
         codom(s, names[i-1]) == dom(s, names[i]) || error("morphisms $(names[i-1]) and $(names[i]) are not composable")
       end
-      out = ACSetInterface.collect_or_id(subpart(acs, out, @ct names[i]))
+      out = subpart(acs, out, @ct names[i])
     end
   end
   return out
