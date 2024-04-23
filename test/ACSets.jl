@@ -1,7 +1,7 @@
 module TestACSetDataStructures
 using Test
 
-using StaticArrays: StaticVector
+using StaticArrays: StaticVector, SA
 using Tables
 using Random
 
@@ -92,12 +92,15 @@ for dds_maker in dds_makers
   # Types of subset-ed columns.
   dds = dds_maker()
   add_parts!(dds, :X, 3, Φ=[2,3,3])
-  dds[1:2,:Φ] isa Vector{Int}
-  dds[:Φ] isa Vector{Int}
-  dds[[:Φ,:Φ]] isa Vector{Int}
-  dds[1:2, [:Φ,:Φ]] isa Vector{Int}
-  view(dds,1:2,:Φ) isa ColumnView
-  view(dds,:Φ) isa ColumnView
+  @test dds[1:2,:Φ] isa Vector{Int}
+  @test dds[:Φ] isa Vector{Int}
+  @test dds[[:Φ,:Φ]] isa Vector{Int}
+  v = dds[:Φ] 
+  v[1] = 1
+  @test v != dds[:Φ]
+  @test dds[1:2, [:Φ,:Φ]] isa Vector{Int}
+  @test view(dds,1:2,:Φ) isa ColumnView
+  @test view(dds,:Φ) isa ColumnView
 
   # Deletion.
   @test_throws ArgumentError undefined_subparts(dds, :X)
@@ -854,5 +857,17 @@ g′ = StructACSet(dyn_g)
 
 @test g′ isa AnonACSet
 @test nparts(g′, :X) == 3
+
+# Test edge cases where attrtype is a vector
+SchLDDS = BasicSchema([:X], [(:Φ,:X,:X)],[:Y],[(:l,:X,:Y)])
+@acset_type AbsLDDS(SchLDDS)
+const LDDS = AbsLDDS{StaticVector}  # DDS w/ labeled states
+
+X = @acset LDDS begin 
+  X = 2; Φ = [2,2]; l = [SA[:a,:b], SA[:a]]
+end
+
+@test X[(:Φ,:l)] isa Vector{<:StaticVector}
+@test X[1,(:Φ,:l)] isa StaticVector
 
 end # module
