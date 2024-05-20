@@ -4,7 +4,7 @@ export ACSet, acset_schema, acset_name, dom_parts, codom_parts, subpart_type,
   add_part!, add_parts!, set_subpart!, set_subparts!, clear_subpart!,
   rem_part!, rem_parts!, cascading_rem_part!, cascading_rem_parts!, gc!,
   copy_parts!, copy_parts_only!, disjoint_union, tables, pretty_tables,
-  @acset, constructor, undefined_subparts, PartsType, DenseParts, MarkAsDeleted, 
+  @acset, constructor, undefined_subparts, PartsType, DenseParts, MarkAsDeleted,
   rem_free_vars!, parts_type
 
 using MLStyle: @match
@@ -170,9 +170,8 @@ function subpart(acs, part, names::AbstractVector{Symbol})
   end
 end
 
-Base.getindex(acs::ACSet, part, name) = subpart(acs, part, name)
-Base.getindex(acs::ACSet, name) = subpart(acs, name)
-
+@inline Base.getindex(acs::ACSet, part, name) = subpart(acs, part, name)
+@inline Base.getindex(acs::ACSet, name) = subpart(acs, name)
 
 """ Get superparts incident to part in acset.
 
@@ -280,8 +279,8 @@ end
 
 @inline set_subparts!(acs, part; kw...) = set_subparts!(acs, part, (;kw...))
 
-Base.setindex!(acs::ACSet, val, part, name) = set_subpart!(acs, part, name, val)
-Base.setindex!(acs::ACSet, vals, name) = set_subpart!(acs, name, vals)
+@inline Base.setindex!(acs::ACSet, val, part, name) = set_subpart!(acs, part, name, val)
+@inline Base.setindex!(acs::ACSet, vals, name) = set_subpart!(acs, name, vals)
 
 """Clear a subpart in a C-set
 
@@ -401,7 +400,7 @@ Garbage collect in an acset.
 
 For some choices of [`IDAllocator`](@ref), this function is a no-op.
 """
-function gc! end 
+function gc! end
 
 """
 Get a nullary callable which constructs an (empty) ACSet of the same type
@@ -514,13 +513,13 @@ function make_acset end
 Remove all AttrType parts that are not in the image of any of the attributes.
 """
 function rem_free_vars!(acs::ACSet)
-  for k in attrtypes(acset_schema(acs)) 
+  for k in attrtypes(acset_schema(acs))
     rem_free_vars!(acs, k)
   end
 end
 
-rem_free_vars!(X::ACSet, a::Symbol) = rem_parts!(X, a, filter(parts(X,a)) do p 
-  all(f->isempty(incident(X, AttrVar(p), f)), 
+rem_free_vars!(X::ACSet, a::Symbol) = rem_parts!(X, a, filter(parts(X,a)) do p
+  all(f->isempty(incident(X, AttrVar(p), f)),
       attrs(acset_schema(X); to=a, just_names=true))
 end)
 

@@ -37,7 +37,7 @@ function cascading_delete_is_natural(i::Int)
   X = DDS(i)
   X′ = copy(X)
   d = cascading_rem_part!(X, :X, 1)[:X]
-  all(enumerate(X[:Φ])) do (i, ϕᵢ) 
+  all(enumerate(X[:Φ])) do (i, ϕᵢ)
     X′[d[i], :Φ] == d[ϕᵢ]
   end
 end
@@ -95,7 +95,7 @@ for dds_maker in dds_makers
   @test dds[1:2,:Φ] isa Vector{Int}
   @test dds[:Φ] isa Vector{Int}
   @test dds[[:Φ,:Φ]] isa Vector{Int}
-  v = dds[:Φ] 
+  v = dds[:Φ]
   v[1] = 1
   @test v != dds[:Φ]
   @test dds[1:2, [:Φ,:Φ]] isa Vector{Int}
@@ -115,18 +115,18 @@ for dds_maker in dds_makers
   else
     @test subpart(dds, :Φ) == [2,3]
     @test incident(dds, 2, :Φ) == [1]
-  end 
+  end
   rem_part!(dds, :X, 2)
   if dds.parts[:X] isa IntParts
     @test nparts(dds, :X) == 1
     @test subpart(dds, :Φ) == [0]
-  else 
+  else
     @test nparts(dds, :X) == 2
-  end 
+  end
   rem_part!(dds, :X, 1)
   if dds.parts[:X] isa IntParts
     @test nparts(dds, :X) == 0
-  else 
+  else
     @test nparts(dds, :X) == 1
   end
 
@@ -264,7 +264,7 @@ for (dgram_maker, ldgram_maker) in dgram_makers
   rem_free_vars!(d) # now the added X is AttrVar(1), if IntParts
   @test nparts(d, :R) == 1
   A = AttrVar(only(parts(d, :R)))
-  
+
   @test nparts(d, :X) == 5
   @test subpart(d, 1:3, :parent) == [4,4,4]
   @test subpart(d, 4, :parent) == 5
@@ -414,7 +414,7 @@ for lset_maker in lset_makers
   @test subpart_type(lset, :label) == Symbol
   @test subpart_type(lset, :Label) == Symbol
   @test_throws Exception subpart_type(lset, :abel)
-  
+
   # Labeled set with compound label (tuple).
   lset = lset_maker(Tuple{Int,Int})
   add_parts!(lset, :X, 2, label=[(1,1), (1,2)])
@@ -613,7 +613,7 @@ rem_part!(g, :X, 1)
 @test g[:tgt] == [2,3]
 @test g[:dec] == ["b",AttrVar(2)]
 
-# Densify and sparsify 
+# Densify and sparsify
 g = @acset MadDecGraph{String} begin
   V = 4
   E = 4
@@ -760,7 +760,7 @@ end
 
 @test_throws Exception subpart(datcomp, :, (:f,:h))
 @test_throws Exception subpart(datcomp, (:f,:h))
-@test_throws Exception subpart(datcomp, 1, (:f,:h)) 
+@test_throws Exception subpart(datcomp, 1, (:f,:h))
 
 @test datcomp[:, (:f,:g)] == [3,2,1,3,2]
 @test datcomp[1:5, (:f,:g)] == [3,2,1,3,2]
@@ -784,7 +784,7 @@ datcompdyn = DynamicACSet(datcomp)
 
 @test_throws Exception subpart(datcompdyn, :, (:f,:h))
 @test_throws Exception subpart(datcompdyn, (:f,:h))
-@test_throws Exception subpart(datcompdyn, 1, (:f,:h)) 
+@test_throws Exception subpart(datcompdyn, 1, (:f,:h))
 
 @test datcompdyn[:, (:f,:g)] == [3,2,1,3,2]
 @test datcompdyn[1:5, (:f,:g)] == [3,2,1,3,2]
@@ -805,7 +805,7 @@ datcompdyn = DynamicACSet(datcomp)
 @test incident(datcomp, 3, (:g,)) == [1,4]
 @test incident(datcomp, 1:3, (:g,)) == [3,2,1,4]
 @test incident(datcomp, 1:3, (:f,:g)) == [3,2,5,1,4]
-@test incident(datcomp, 1:3, (:f,:g))  == incident(datcomp, 1:3, [:f,:g]) 
+@test incident(datcomp, 1:3, (:f,:g))  == incident(datcomp, 1:3, [:f,:g])
 
 @test incident(datcomp, [:a,:b,:c], (:f,:g,:zattr)) == incident(datcomp, [:a,:b,:c], [:f,:g,:zattr])
 
@@ -824,7 +824,7 @@ datcompdyn = DynamicACSet(datcomp)
 
 # Test @acset_type with type parameters
 #--------------------------------------
-# Single 
+# Single
 @acset_type IntLabeledSet(SchLabeledSet, index=[:label]){Int}
 @test isempty(IntLabeledSet())
 
@@ -863,11 +863,27 @@ SchLDDS = BasicSchema([:X], [(:Φ,:X,:X)],[:Y],[(:l,:X,:Y)])
 @acset_type AbsLDDS(SchLDDS)
 const LDDS = AbsLDDS{StaticVector}  # DDS w/ labeled states
 
-X = @acset LDDS begin 
+X = @acset LDDS begin
   X = 2; Φ = [2,2]; l = [SA[:a,:b], SA[:a]]
 end
 
 @test X[(:Φ,:l)] isa Vector{<:StaticVector}
 @test X[1,(:Φ,:l)] isa StaticVector
+
+SchInference = BasicSchema([:V,:E], [(:v0,:E,:V)])
+@acset_type InferenceTest(SchInference, index=[:v0])
+let s = InferenceTest()
+  @test Base.return_types((typeof(s),)) do s
+    s[1, :v0]
+  end |> only === Int
+  add_part!(s, :V)
+  add_part!(s, :E)
+  call_setindex!(s) = s[1, :v0] = 1
+  @test call_setindex!(s) == 1
+  @test iszero(@allocated call_setindex!(s))
+  call_getindex(s) = s[1, :v0]
+  @test call_getindex(s) == 1
+  @test iszero(@allocated call_getindex(s))
+end
 
 end # module
