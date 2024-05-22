@@ -886,4 +886,21 @@ let s = InferenceTest()
   @test iszero(@allocated call_getindex(s))
 end
 
+let s = InferenceTest()
+  N = 5
+  entry = [i for i in 1:N]
+  add_parts!(s, :V, N)
+  @allocated add_parts!(s, :E, N, v0 = entry)
+  call_setrange_single(s) = s[1:N, :v0] = 1
+  call_setrange_entry(s) = s[1:N, :v0] = entry
+
+  call_setrange_single(s)
+  @test s[:v0] == ones(N)
+  @test (@allocated call_setrange_single(s)) < 900
+
+  call_setrange_entry(s)
+  @test s[:v0] == entry
+  @test (@allocated call_setrange_entry(s)) < 900
+end
+
 end # module
