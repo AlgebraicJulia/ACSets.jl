@@ -269,13 +269,6 @@ function set_subpart! end
   end
 end
 
-# @inline function set_subpart!(acs::ACSet , parts::Union{AbstractVector{Int}, AbstractSet{Int}}, ::Type{Val{name}}, vals) where name
-#   broadcast(parts, vals) do part, val
-#     set_subpart!(acs, part, name, val)
-#   end
-# end
-
-
 """ Mutate subparts of a part in a C-set.
 
 Both single and vectorized assignment are supported.
@@ -287,8 +280,6 @@ See also: [`set_subpart!`](@ref).
 end
 
 @inline set_subparts!(acs, part; kw...) = set_subparts!(acs, part, (;kw...))
-
-# @inline Base.setindex!(acs::ACSet, val, part, name, ::ACSetAllocTest) = set_subpart!(acs, part, Val{name}, val)
 
 @inline Base.setindex!(acs::ACSet, val, part, name) = set_subpart!(acs, part, name, val)
 @inline Base.setindex!(acs::ACSet, vals, name) = set_subpart!(acs, name, vals)
