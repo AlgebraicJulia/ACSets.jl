@@ -260,8 +260,10 @@ function set_subpart! end
   set_subpart!(acs, 1:length(subpart(acs,name)), name, vals)
 
 # Inlined for the same reason as `subpart`.
+@inline set_subpart!(acs::ACSet , parts::Union{AbstractVector{Int}, AbstractSet{Int}}, name, vals) = 
+  set_subpart!(acs , parts, Val{name}, vals)
 
-@inline function set_subpart!(acs::ACSet , parts::Union{AbstractVector{Int}, AbstractSet{Int}}, name, vals)
+@inline function set_subpart!(acs::ACSet , parts::Union{AbstractVector{Int}, AbstractSet{Int}}, ::Type{Val{name}}, vals) where name
   broadcast(parts, vals) do part, val
     set_subpart!(acs, part, name, val)
   end
