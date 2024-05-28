@@ -524,22 +524,31 @@ end
 
 @inline ACSetInterface.subpart(acs::SimpleACSet, names::Tuple{Vararg{Symbol}}) = subpart(acs, dom_parts(acs, first(names)), names)
 
-ACSetInterface.subpart(acs::StructACSet{S}, part, names::Tuple{Vararg{Symbol}}) where {S} = _subpart(acs, part, Val{S}, Val{names})
-ACSetInterface.subpart(acs::DynamicACSet, part, names::Tuple{Vararg{Symbol}}) = runtime(_subpart, acs, part, acs.schema, names)
+function ACSetInterface.subpart(acs::StructACSet{S}, part, names::Tuple{Vararg{Symbol}}) where {S}
+  validate_subparts_chain(Schema(S), names)
+  _subpart(acs, part, Val(names))
+end
+function ACSetInterface.subpart(acs::DynamicACSet, part, names::Tuple{Vararg{Symbol}})
+  validate_subparts_chain(acs.schema, names)
+  _subpart(acs, part, Val(names))
+end
+ACSetInterface.subpart(acs::StructACSet{S}, part, ::Val{N}) where {S,N} =
+  _subpart(acs, part, Val(N))
+ACSetInterface.subpart(acs::DynamicACSet, part, ::Val{N}) where N =
+  _subpart(acs, part, Val(names))
 
-@ct_enable function _subpart(acs::SimpleACSet, part, @ct(S), @ct(names))
-  @ct s = Schema(S)
-  out = subpart(acs, part, @ct first(names))
-  # necessary because Tuple{Symbol} is still ambigious with presence of Tuple{Vararg{Symbol}}
-  @ct_ctrl if length(names) > 1
-    @ct_ctrl for i in 2:length(names)
-      @ct begin
-        codom(s, names[i-1]) == dom(s, names[i]) || error("morphisms $(names[i-1]) and $(names[i]) are not composable")
-      end
-      out = subpart(acs, out, @ct names[i])
-    end
+function validate_subparts_chain(s, names)
+  length(names) ≤ 1 && return
+  for i in eachindex(names)[1:end-1]
+    (codom(s, names[i]) != dom(s, names[i+1])) &&
+      error("morphisms $(names[i]) and $(names[i+1]) are not composable")
   end
-  return out
+end
+
+@generated function _subpart(acs, part, ::Val{N}) where N
+  foldl(N, init=:(part)) do acc,n
+    :(acs[$acc, $(Meta.quot(n))])
+  end
 end
 
 @inline ACSetInterface.has_subpart(::StructACSet{S}, f::Symbol) where {S} =
