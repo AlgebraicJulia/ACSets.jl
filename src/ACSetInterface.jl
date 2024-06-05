@@ -400,7 +400,7 @@ function tables end
 """
 Garbage collect in an acset.
 
-For some choices of [`IDAllocator`](@ref), this function is a no-op.
+For some choices of [`PartsType`](@ref), this function is a no-op.
 """
 function gc! end
 

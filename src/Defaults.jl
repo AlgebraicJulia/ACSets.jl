@@ -3,7 +3,7 @@ export Default, default, isdefault, DefaultVal, DefaultEmpty
 
 """
 This is a hack in order to pass in a default initializer for
-[`DefaultVecMap`](@ref) as a type parameter
+`DefaultVecMap` as a type parameter
 """
 abstract type Default end
 
