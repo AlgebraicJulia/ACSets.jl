@@ -379,6 +379,7 @@ macro intertypes(file, modexpr)
     end
     _ => error("expected a module expression, got $modexpr")
   end
+  push!(modexpr.args[3].args, :(global Meta))
   imports = Expr(:vect, [:($(Expr(:quote, name)) => $name.Meta) for name in imports]...)
   Expr(
     :toplevel,
