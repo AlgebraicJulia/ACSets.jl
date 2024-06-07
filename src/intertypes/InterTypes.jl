@@ -11,7 +11,7 @@ import ..Schemas: toexpr
 #######################
 
 """
-A field of a struct. Used in [`Variant`](@ref) and [`Record`](@ref).
+A field of a struct. Used in [`Variant`](@ref) and `Record`.
 
 The `T` parameter will always be [`InterType`](@ref), but this is mutually-recursive
 with `InterType` so we have to be generic here.
