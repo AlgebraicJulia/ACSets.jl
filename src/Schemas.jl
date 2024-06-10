@@ -3,10 +3,10 @@ module Schemas
 export Schema, TypeLevelSchema, BasicSchema, TypeLevelBasicSchema, typelevel,
   objects, attrtypes, attrtype_instantiation, homs, attrs, arrows, dom, codom,
   ob, hom, attrtype, attr, dom_nums, codom_nums, adom_nums, acodom_nums, types,
-  TypedSchema
+  TypedSchema, equations
 
 using StructEquality
-import AlgebraicInterfaces: dom, codom, ob, hom, attr, attrtype
+import AlgebraicInterfaces: dom, codom, ob, hom, attr, attrtype, equations
 
 # Schemas
 #########
@@ -112,44 +112,49 @@ function codom end
 # Basic Schemas
 ###############
 
-abstract type TypeLevelBasicSchema{Name, obs, homs, attrtypes, attrs} <: TypeLevelSchema{Name} end
+abstract type TypeLevelBasicSchema{Name, obs, homs, attrtypes, attrs, eqs} <: TypeLevelSchema{Name} end
 
-const TypeLevelBasicCSetSchema{Name, obs, homs} = TypeLevelBasicSchema{Name, obs, homs, Tuple{}, Tuple{}}
+const TypeLevelBasicCSetSchema{Name, obs, homs} = TypeLevelBasicSchema{Name, obs, homs, Tuple{}, Tuple{}, Tuple{}}
 
 @struct_hash_equal struct BasicSchema{Name} <: Schema{Name}
   obs::Vector{Name}
   homs::Vector{Tuple{Name,Name,Name}}
   attrtypes::Vector{Name}
   attrs::Vector{Tuple{Name,Name,Name}}
-  function BasicSchema{Name}(obs, homs, attrtypes, attrs) where {Name}
-    new{Name}(obs, homs, attrtypes, attrs)
+  eqs::Vector{Tuple{Name, Name, Tuple{Vararg{Tuple{Vararg{Name}}}}}}
+  function BasicSchema{Name}(obs, homs, attrtypes, attrs, eqs) where {Name}
+    new{Name}(obs, homs, attrtypes, attrs, eqs)
   end
-  function BasicSchema(obs::Vector{Name}, homs, attrtypes, attrs) where {Name}
-    new{Name}(obs, homs, attrtypes, attrs)
+  function BasicSchema(obs::Vector{Name}, homs, attrtypes, attrs, eqs=nothing) where {Name}
+    eqs = isnothing(eqs) ? Tuple{Name, Name, Tuple{Vararg{Tuple{Vararg{Name}}}}}[] : eqs
+    new{Name}(obs, homs, attrtypes, attrs, eqs)
   end
-  function BasicSchema(obs::Vector{Name}, homs) where {Name}
-    new{Name}(obs, homs, Name[], Tuple{Name,Name,Name}[])
+  function BasicSchema(obs::Vector{Name}, homs, eqs=nothing) where {Name}
+    eqs = isnothing(eqs) ? Tuple{Name, Name, Tuple{Vararg{Tuple{Vararg{Name}}}}}[] : eqs
+    new{Name}(obs, homs, Name[], Tuple{Name,Name,Name}[], eqs)
   end
   function BasicSchema{Name}() where {Name}
     new(
       Vector{Name}(),
       Vector{Tuple{Name,Name,Name}}(),
       Vector{Name}(),
-      Vector{Tuple{Name,Name,Name}}()
+      Vector{Tuple{Name,Name,Name}}(),
+      Vector{Tuple{Name, Name, Vector{Vector{Name}}}}()
     )
   end
 end
 
 function Base.copy(s::BasicSchema{Name}) where {Name}
-  BasicSchema{Name}(copy(s.obs), copy(s.homs), copy(s.attrtypes), copy(s.attrs))
+  BasicSchema{Name}(copy(s.obs), copy(s.homs), copy(s.attrtypes), copy(s.attrs), copy(s.eqs))
 end
 
-function Schema(::Type{TypeLevelBasicSchema{Name, obs, homs, attrtypes, attrs}}) where {Name, obs, homs, attrtypes, attrs}
+function Schema(::Type{TypeLevelBasicSchema{Name, obs, homs, attrtypes, attrs, eqs}}) where {Name, obs, homs, attrtypes, attrs, eqs}
   BasicSchema{Name}(
     [obs.parameters...],
     [homs.parameters...],
     [attrtypes.parameters...],
-    [attrs.parameters...]
+    [attrs.parameters...],
+    [eqs.parameters...]
   )
 end
 
@@ -164,6 +169,9 @@ attrtypes(s::BasicSchema) = s.attrtypes
 attrtypes(S::Type{<:TypeLevelBasicSchema}) = Tuple(S.parameters[4].parameters)
 
 types(S::Union{Schema,Type{<:TypeLevelSchema}}) = [objects(S)..., attrtypes(S)...]
+
+equations(S::BasicSchema) = S.eqs
+equations(S::Type{<:TypeLevelBasicSchema}) = Tuple(S.parameters[6].parameters)
 
 attrtype_instantiation(S::Type{<:TypeLevelBasicSchema}, Ts, a::Symbol) =
   Ts.parameters[findfirst(attrtypes(S) .== a)]
@@ -247,7 +255,8 @@ function typelevel(s::BasicSchema{Name}) where {Name}
     Tuple{s.obs...},
     Tuple{s.homs...},
     Tuple{s.attrtypes...},
-    Tuple{s.attrs...}
+    Tuple{s.attrs...},
+    Tuple{s.eqs...}
   }
 end
 
