@@ -121,16 +121,16 @@ const TypeLevelBasicCSetSchema{Name, obs, homs} = TypeLevelBasicSchema{Name, obs
   homs::Vector{Tuple{Name,Name,Name}}
   attrtypes::Vector{Name}
   attrs::Vector{Tuple{Name,Name,Name}}
-  eqs::Vector{Tuple{Name, Name, Tuple{Vararg{Tuple{Vararg{Name}}}}}}
+  eqs::Vector{Tuple{Union{Nothing, Name}, Name, Name, Tuple{Vararg{Tuple{Vararg{Name}}}}}}
   function BasicSchema{Name}(obs, homs, attrtypes, attrs, eqs) where {Name}
     new{Name}(obs, homs, attrtypes, attrs, eqs)
   end
   function BasicSchema(obs::Vector{Name}, homs, attrtypes, attrs, eqs=nothing) where {Name}
-    eqs = isnothing(eqs) ? Tuple{Name, Name, Tuple{Vararg{Tuple{Vararg{Name}}}}}[] : eqs
+    eqs = isnothing(eqs) ? Tuple{Name, Name, Name, Tuple{Vararg{Tuple{Vararg{Name}}}}}[] : eqs
     new{Name}(obs, homs, attrtypes, attrs, eqs)
   end
   function BasicSchema(obs::Vector{Name}, homs, eqs=nothing) where {Name}
-    eqs = isnothing(eqs) ? Tuple{Name, Name, Tuple{Vararg{Tuple{Vararg{Name}}}}}[] : eqs
+    eqs = isnothing(eqs) ? Tuple{Name, Name, Name, Tuple{Vararg{Tuple{Vararg{Name}}}}}[] : eqs
     new{Name}(obs, homs, Name[], Tuple{Name,Name,Name}[], eqs)
   end
   function BasicSchema{Name}() where {Name}
@@ -139,7 +139,7 @@ const TypeLevelBasicCSetSchema{Name, obs, homs} = TypeLevelBasicSchema{Name, obs
       Vector{Tuple{Name,Name,Name}}(),
       Vector{Name}(),
       Vector{Tuple{Name,Name,Name}}(),
-      Vector{Tuple{Name, Name, Vector{Vector{Name}}}}()
+      Vector{Tuple{Union{Nothing, Name}, Name, Name, Vector{Vector{Name}}}}()
     )
   end
 end

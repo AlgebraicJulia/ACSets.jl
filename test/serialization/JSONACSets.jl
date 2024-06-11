@@ -43,7 +43,7 @@ add_parts!(g, :E, 2, src=[1,2], tgt=[2,3], weight=[0.5,1.5])
 @test roundtrip_json_acset(g) == g
 
 SchLabeledDDS = BasicSchema([:X], [(:Φ,:X,:X)], [:Label], [(:label,:X,:Label)], 
-                            [(:X,:X,((),(:Φ,:Φ,:Φ,:Φ)))])
+                            [(:cycle4,:X,:X,((),(:Φ,:Φ,:Φ,:Φ)))])
 @acset_type LabeledDDS(SchLabeledDDS, index=[:Φ])
 
 ldds = LabeledDDS{Symbol}()

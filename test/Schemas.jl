@@ -4,7 +4,7 @@ using Test
 using ACSets.Schemas
 
 bsch = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)],[:Weight],
-                   [(:weight,:E,:Weight)], [(:E,:V,((:src,),(:tgt,)))])
+                   [(:weight,:E,:Weight)], [(nothing, :E,:V,((:src,),(:tgt,)))])
 tsch = typelevel(bsch)
 for sch in [bsch, tsch]
   @test collect(ob(sch)) == collect(objects(sch)) == [:E,:V]
@@ -20,7 +20,7 @@ for sch in [bsch, tsch]
   @test codom_nums(sch) == (2,2)
   @test adom_nums(sch) == (1,)
   @test acodom_nums(sch) == (1,)
-  @test collect(equations(sch)) == [(:E,:V,((:src,),(:tgt,)),)]
+  @test collect(equations(sch)) == [(nothing, :E,:V,((:src,),(:tgt,)),)]
 end
 
 @test attrtype_instantiation(tsch, Tuple{Int}, :Weight) == Int

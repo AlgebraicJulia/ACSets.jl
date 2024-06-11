@@ -133,8 +133,9 @@ function generate_json_acset_schema(schema::Schema)
     "Attr" => map(attrs(schema)) do (f, x, y)
       Dict("name" => string(f), "dom" => string(x), "codom" => string(y))
     end,
-    "equations" => map(equations(schema)) do (x, y, eqs)
+    "equations" => map(equations(schema)) do (n, x, y, eqs)
       Dict("dom" => string(x), "codom" => string(y), 
+           "name" => isnothing(n) ? n : string(n),
            "paths" => [string.(eq) for eq in collect.(eqs)], )
     end,
 
@@ -158,7 +159,8 @@ function parse_json_acset_schema(::Type{BasicSchema}, data::AbstractDict)
     map(Symbol, (d["name"], d["dom"], d["codom"]))
   end
   eqs = map(data[:equations]) do d 
-    (Symbol(d["dom"]), Symbol(d["codom"]), tuple(map(d["paths"]) do p
+    name = isnothing(d["name"]) ? nothing : Symbol(d["name"])
+    (name, Symbol(d["dom"]), Symbol(d["codom"]), tuple(map(d["paths"]) do p
       tuple(Symbol.(p)...)
     end...))
   end

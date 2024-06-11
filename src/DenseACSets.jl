@@ -401,7 +401,7 @@ function ACSetTableSchema(s::Schema{Symbol}, ob::Symbol)
   attrs = filter(Schemas.attrs(s)) do (f,d,c)
     d == ob
   end
-  BasicSchema{Symbol}([ob], [], attrtypes(s), attrs)
+  BasicSchema{Symbol}([ob], [], attrtypes(s), attrs, [])
 end
 
 function ACSetTableDataType(::Type{<:StructACSet{S,Ts}}, ob::Symbol) where {S,Ts}
