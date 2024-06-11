@@ -32,7 +32,7 @@ NautyACSetsExt = "nauty_jll"
 XLSXACSetsExt = "XLSX"
 
 [compat]
-AlgebraicInterfaces = "0.1"
+AlgebraicInterfaces = "0.1.3"
 Base64 = "1.9"
 CompTime = "0.1"
 DataStructures = "0.18"
