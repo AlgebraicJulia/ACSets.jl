@@ -3,6 +3,8 @@ module TestSchemas
 using Test
 using ACSets.Schemas
 
+@test BasicSchema{Symbol}() isa BasicSchema
+
 bsch = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)],[:Weight],
                    [(:weight,:E,:Weight)], [(nothing, :E,:V,((:src,),(:tgt,)))])
 tsch = typelevel(bsch)

@@ -116,21 +116,27 @@ abstract type TypeLevelBasicSchema{Name, obs, homs, attrtypes, attrs, eqs} <: Ty
 
 const TypeLevelBasicCSetSchema{Name, obs, homs} = TypeLevelBasicSchema{Name, obs, homs, Tuple{}, Tuple{}, Tuple{}}
 
+# A path has sequence of hom/attr names
+const Pth{Name}= Tuple{Vararg{Name}}
+
+# An Eq has an optional name, a dom, a codom, and pair of paths
+const Eq{Name} = Tuple{Union{Nothing, Name}, Name, Name, Tuple{Pth{Name},Pth{Name}}}
+
 @struct_hash_equal struct BasicSchema{Name} <: Schema{Name}
   obs::Vector{Name}
   homs::Vector{Tuple{Name,Name,Name}}
   attrtypes::Vector{Name}
   attrs::Vector{Tuple{Name,Name,Name}}
-  eqs::Vector{Tuple{Union{Nothing, Name}, Name, Name, Tuple{Vararg{Tuple{Vararg{Name}}}}}}
+  eqs::Vector{Eq{Name}}
   function BasicSchema{Name}(obs, homs, attrtypes, attrs, eqs) where {Name}
     new{Name}(obs, homs, attrtypes, attrs, eqs)
   end
   function BasicSchema(obs::Vector{Name}, homs, attrtypes, attrs, eqs=nothing) where {Name}
-    eqs = isnothing(eqs) ? Tuple{Name, Name, Name, Tuple{Vararg{Tuple{Vararg{Name}}}}}[] : eqs
+    eqs = isnothing(eqs) ? Eq{Name}[] : eqs
     new{Name}(obs, homs, attrtypes, attrs, eqs)
   end
   function BasicSchema(obs::Vector{Name}, homs, eqs=nothing) where {Name}
-    eqs = isnothing(eqs) ? Tuple{Name, Name, Name, Tuple{Vararg{Tuple{Vararg{Name}}}}}[] : eqs
+    eqs = isnothing(eqs) ? Eq{Name}[] : eqs
     new{Name}(obs, homs, Name[], Tuple{Name,Name,Name}[], eqs)
   end
   function BasicSchema{Name}() where {Name}
@@ -139,7 +145,7 @@ const TypeLevelBasicCSetSchema{Name, obs, homs} = TypeLevelBasicSchema{Name, obs
       Vector{Tuple{Name,Name,Name}}(),
       Vector{Name}(),
       Vector{Tuple{Name,Name,Name}}(),
-      Vector{Tuple{Union{Nothing, Name}, Name, Name, Vector{Vector{Name}}}}()
+      Vector{Eq{Name}}()
     )
   end
 end
