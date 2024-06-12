@@ -164,7 +164,7 @@ function attr_dict(X::ACSet)
   Dict([k=>sort(collect(unique(v))) for (k,v) in collect(d)])
 end
 
-"""Data structure for undirected graph."""
+"""Data structure for simple undirected graph."""
 struct UnDiGraph
   V::Int
   src::Vector{Int}
@@ -358,6 +358,19 @@ end
 """
 Construct input for dreadnaut to compute automorphism group generators,
 canonical permutation/hash, and orbits.
+
+Note the Julia colorsarray must be changed from being 1-indexed to 0-indexed.
+
+Dreadnaut parameters:
+
+n - # of vertices
+g - provide input graph via command line rather than via a file
+f - use an initial partition of the vertices in the undirected graph
+c - find a canonical graph
+b - write out a canonical graph
+x - run nauty
+z - make a canonical hash
+o - write out the orbits
 """
 function dreadnaut(g::ACSet)
   m = to_mat(to_udg(g))
