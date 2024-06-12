@@ -42,10 +42,11 @@ add_parts!(g, :V, 3)
 add_parts!(g, :E, 2, src=[1,2], tgt=[2,3], weight=[0.5,1.5])
 @test roundtrip_json_acset(g) == g
 
-SchLabeledDDS = BasicSchema([:X], [(:Φ,:X,:X)], [:Label], [(:label,:X,:Label)])
-@acset_type LabeledDDS(SchLabeledDDS, index=[:Φ])
+SchLabeledDDS4 = BasicSchema([:X], [(:Φ,:X,:X)], [:Label], [(:label,:X,:Label)], 
+                             [(:cycle4,:X,:X,((),(:Φ,:Φ,:Φ,:Φ)))])
+@acset_type LabeledDDS4(SchLabeledDDS4, index=[:Φ])
 
-ldds = LabeledDDS{Symbol}()
+ldds = LabeledDDS4{Symbol}()
 add_parts!(ldds, :Label, 2)
 add_parts!(ldds, :X, 4, Φ=[2,3,4,1], label=[AttrVar(1), :a, :b, AttrVar(2)])
 @test roundtrip_json_acset(ldds) == ldds
@@ -67,7 +68,7 @@ end
 
 json_schema = JSONSchema.Schema(acset_schema_json_schema())
 
-for schema in [SchGraph, SchWeightedGraph, SchLabeledDDS]
+for schema in [SchGraph, SchWeightedGraph, SchLabeledDDS4]
   schema_dict = generate_json_acset_schema(schema)
   @test isnothing(JSONSchema.validate(json_schema, schema_dict))
   @test roundtrip_json_acset_schema(schema) == schema
