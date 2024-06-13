@@ -164,7 +164,7 @@ function attr_dict(X::ACSet)
   Dict([k=>sort(collect(unique(v))) for (k,v) in collect(d)])
 end
 
-"""Data structure for undirected graph."""
+"""Data structure for simple undirected graph."""
 struct UnDiGraph
   V::Int
   src::Vector{Int}
@@ -194,9 +194,13 @@ function to_mat(u::UnDiGraph)::Matrix{Bool}
   mat
 end
 
-prime(hom_name::Symbol) = Symbol("$(hom_name)_$(hash(hom_name))")
+hashstr(x) = string(hash(x), base=36)[1:4]
+
+"""Avoid a name conflict with a user-defined ob or hom"""
+prime(hom_name::Symbol) = Symbol("$(hom_name)_$(hashstr(hom_name))")
 
 function to_unitrange(v::Vector{Int})
+  isempty(v) && return 1:0
   ur = minimum(v) : maximum(v)
   collect(ur) == v ? ur : error("Vector is not a UnitRange $v")
 end
@@ -217,24 +221,25 @@ For attributes, there is no possibility of Attr(X,X), so we simply have, e.g.:
     eₘ <-> weightₘ <-> Numberₙ
 """
 function to_udg(X::ACSet)
-  S        = acset_schema(X)
+  S = acset_schema(X)
   attrdict = attr_dict(X)
-  oinds    = get_oinds(X)
-  udg      = UnDiGraph(maximum(maximum.(values(oinds))))
+  oinds = get_oinds(X)
+  udg = UnDiGraph(maximum(maximum.(filter(!isempty,collect(values(oinds))))))
 
   for (hom_name, d, cd) in homs(S)
-    hom_name_ = prime(hom_name)
-    for (i, f_i) in enumerate(X[hom_name])
-      es = [(hom_name, i) => (d, i),         (hom_name, i)  => (cd, f_i),
-            (hom_name, i) => (hom_name_, i), (hom_name_, i) => (d, i)]
-      add_edges!(udg, [(oinds[x][a],oinds[y][b]) for ((x,a),(y,b)) in es])
+    hom_name′ = prime(hom_name)
+    for (i, fᵢ) in enumerate(X[hom_name])
+      es = [(hom_name, i) => (d, i),         (hom_name, i)  => (cd, fᵢ),
+            (hom_name, i) => (hom_name′, i), (hom_name′, i) => (d, i)]
+      add_edges!(udg, [(oinds[x][a], oinds[y][b]) for ((x,a), (y,b)) 
+                       in unique(es)]) # unique in case (d,i)==(cd,fᵢ)
     end
   end
 
   for (attr_name, d, cd) in attrs(S)
-    for (i, f_i) in enumerate(X[attr_name])
+    for (i, fᵢ) in enumerate(X[attr_name])
       es = [(attr_name, i) => (d, i), 
-            (attr_name, i) => (cd, findfirst(==(f_i), attrdict[cd]))]
+            (attr_name, i) => (cd, findfirst(==(fᵢ), attrdict[cd]))]
       add_edges!(udg, [(oinds[x][a], oinds[y][b]) for ((x,a),(y,b)) in es])
     end
   end
@@ -300,6 +305,15 @@ colornames(S) = [
 
 """
 Convert symmetric adjacency matrix to an ACSet which is isomorphic to `X`.
+
+The main work is reverse-engineering triangles of the form
+
+                        ↗ src′ₙ
+                      ↙    ↕
+                  eₙ <-> srcₙ <-> vₘ
+
+into hom values for the resulting ACSet. We call srcₙ a "hom-object" and 
+src′ₙ a "pseudo-hom-object". eₙ is the "src ind" and vₘ is the "tgt ind"
 """
 function from_adj(X::ACSet, oinds::Dict{Symbol, UnitRange},
                   m::AbstractMatrix{Bool})
@@ -307,25 +321,34 @@ function from_adj(X::ACSet, oinds::Dict{Symbol, UnitRange},
   Y = deepcopy(X) # DB with the right # of rows. We completely overwrite it.
   attrdict = attr_dict(X)
 
-  inv_dict = Dict(vcat(map(collect(oinds)) do (k,vs)
+  # Map the absolute position of an idx to its relative position w/in its set
+  # e.g. for oinds [V1,V2,V3,E1,E2], we get {1↦1, 2↦2, 3↦3, 4↦1 ,5↦2}
+  inv_dict = Dict{Int,Int}(vcat(map(collect(oinds)) do (k,vs)
     [v=>i for (i,v) in enumerate(vs)]
   end...))
 
   # Recover the homs
   for h in homs(S; just_names=true) 
-    h_ = prime(h)
-    for (_, h_i) in enumerate(oinds[h_])
-      src_ind, hom_ind = findall(m[h_i,:])
-      src_tgt = findall(m[hom_ind,:])
-      tgt_ind_ = setdiff(src_tgt, vcat([h_i,src_ind...]))
-      tgt_ind = isempty(tgt_ind_) ? src_ind : only(tgt_ind_)
+    for h′ᵢ in oinds[prime(h)] # the pseudo object that encodes directedness
+      # each pseudo-hom-object has *only* two connections.
+      src_ind, hᵢ = findall(m[h′ᵢ,:]) # the src object + the hom object
+      hom_adj = findall(m[hᵢ,:]) # everything homᵢ (e.g. src#2) touches
+      tgt_ind = if length(hom_adj) == 3 # normal case: src ≠ tgt
+        src_or_tgt..., pseudo_hom = hom_adj # don't know if src/tgt comes first
+        @assert src_ind ∈ src_or_tgt # src_ind is one of them, though
+        @assert pseudo_hom == h′ᵢ # we know the last value should be h′ᵢ
+        src_or_tgt[1] == src_ind ? src_or_tgt[2] : src_or_tgt[1]
+      else # the other case: src and tgt are the same part
+        @assert hom_adj == [src_ind, h′ᵢ]
+        first(hom_adj)
+      end
       set_subpart!(Y, inv_dict[src_ind], h, inv_dict[tgt_ind])
     end
   end
   # Recover the attributes
   for (h, _, t) in attrs(S) 
-    for h_i in oinds[h]
-      src_ind, tgt_ind = findall(m[h_i, :])
+    for h′i in oinds[h]
+      src_ind, tgt_ind = findall(m[h′i, :]) # attribute parts come after obs
       set_subpart!(Y, inv_dict[src_ind], h, attrdict[t][inv_dict[tgt_ind]])
     end
   end
@@ -335,10 +358,23 @@ end
 """
 Construct input for dreadnaut to compute automorphism group generators,
 canonical permutation/hash, and orbits.
+
+Note the Julia colorsarray must be changed from being 1-indexed to 0-indexed.
+
+Dreadnaut parameters:
+
+n - # of vertices
+g - provide input graph via command line rather than via a file
+f - use an initial partition of the vertices in the undirected graph
+c - find a canonical graph
+b - write out a canonical graph
+x - run nauty
+z - make a canonical hash
+o - write out the orbits
 """
 function dreadnaut(g::ACSet)
   m = to_mat(to_udg(g))
-  colorsarray = get_colorsarray(acset_schema(g), get_oinds(g))
+  colorsarray = sort(filter(!isempty,get_colorsarray(acset_schema(g), get_oinds(g))))
   join(["n=$(size(m)[1]) g",
         join(map(1:size(m)[1]) do r
           join(string.((x->x-1).(findall(==(1),m[r,:]))) ," ")

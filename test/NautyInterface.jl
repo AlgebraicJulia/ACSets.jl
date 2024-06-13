@@ -61,6 +61,43 @@ sqr = @acset Graph begin V=4;E=8;src=[1,2,3,4,1,2,3,4];
 # A square has D₄ symmetry id, s, r, r², r³, sr, sr², sr³
 @test all(h->iso(sqr, sqr, h), all_autos(call_nauty(sqr)))
 
+# Graph morphisms schema
+#########################
+SchGraphM = BasicSchema([:E1,:V1, :E2, :V2], [(:src1,:E1,:V1),(:tgt1,:E1,:V1),
+  (:src2,:E2,:V2),(:tgt2,:E2,:V2),(:fV, :V1, :V2),(:fE, :E1,:E2)])
+
+@acset_type GraphM(SchGraphM)
+
+# identity map on •→• 
+G = @acset GraphM begin 
+  V1=2; E1=1; src1=[1]; tgt1=[2];
+  V2=2; E2=1; src2=[1]; tgt2=[2];
+  fV=1:2; fE=[1]; 
+end
+
+H = @acset GraphM begin 
+  V1=2; E1=1; src1=[1]; tgt1=[2];
+  V2=2; E2=1; src2=[2]; tgt2=[1];
+  fV=[2,1]; fE=[1]; 
+end
+
+cG, cH = call_nauty.([G,H])
+@test canon(cG) == canon(cH)
+@test iso(G,cG) && iso(H,cH)
+
+
+# DDS 
+#####
+
+SchDDS = BasicSchema([:X], [(:Φ,:X,:X)])
+@acset_type DDS(SchDDS)
+
+G = @acset DDS begin X=3; Φ=[1,3,2] end
+H = @acset DDS begin X=3; Φ=[3,2,1] end
+
+cG, cH = call_nauty.([G,H])
+@test canon(cG) == canon(cH)
+@test iso(G,cG) && iso(H,cH)
 
 # ACSets
 ########

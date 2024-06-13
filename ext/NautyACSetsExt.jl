@@ -14,9 +14,11 @@ function nauty_res(g::ACSet)::AbstractString
   all(o -> nparts(g, o) == 0, attrtypes(acset_schema(g))) ||
     error("Nauty integration with VarACSets not yet supported")
   process = open(`$(nauty_jll.dreadnaut_path)`, write=true, read=true)
-  print(process, ACSets.NautyInterface.dreadnaut(g))
+  input_prog = ACSets.NautyInterface.dreadnaut(g)
+  print(process, input_prog)
   close(process.in)
-  read(process, String)
+  output_str = read(process, String)
+  return output_str
 end
 
 end # module
