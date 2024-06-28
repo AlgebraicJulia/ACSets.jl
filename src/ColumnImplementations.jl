@@ -1,11 +1,14 @@
 module ColumnImplementations
 export column_type, indexchoice,
-  HomChoice, AttrChoice, NoIndex, Index, UniqueIndex, Sparse, Dense, AttrVar 
+  HomChoice, AttrChoice, NoIndex, Index, UniqueIndex, Sparse, Dense, AttrVar,
+  getvalue
 
 using MLStyle
 using StructEquality
 using ..IndexUtils
 using ..Columns
+
+import AlgebraicInterfaces: getvalue
 
 
 """
@@ -16,7 +19,8 @@ our Attr Variable indices with the Julia type of Int
 @struct_hash_equal struct AttrVar 
   val::Int 
 end 
-Base.isless(x::AttrVar,y::AttrVar) = x.val < y.val
+getvalue(v::AttrVar) = v.val
+Base.isless(x::AttrVar,y::AttrVar) = getvalue(x) < getvalue(y)
 Base.convert(::Type{T}, x::T) where {T>:Union{Nothing,AttrVar}} = x
 Base.convert(::Type{T}, x::T) where {T>:Union{Missing,AttrVar}} = x
 Base.convert(::Type{T}, x::T) where {T>:AttrVar} = x

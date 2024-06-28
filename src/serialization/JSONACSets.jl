@@ -39,7 +39,7 @@ function generate_json_acset(X::ACSet)
   return result
 end
 
-attr_to_json(var::AttrVar) = (_var = var.val,)
+attr_to_json(var::AttrVar) = (_var = getvalue(var),)
 attr_to_json(val) = val
 
 """ Parse JSON-able object or JSON string representing an ACSet.
