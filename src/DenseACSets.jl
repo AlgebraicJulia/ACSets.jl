@@ -4,7 +4,7 @@ These are ACSets where the set associated to each object is of the form `1:n`
 module DenseACSets
 export @acset_type, @abstract_acset_type, StructACSet, StructCSet,
   DynamicACSet, SimpleACSet, AnonACSet, ACSetTableType, AnonACSetType,
-  IntParts, BitSetParts, sparsify, densify, idx
+  IntParts, BitSetParts, sparsify, densify, idx, getvalue
 
 using StructEquality
 using MLStyle: @match
@@ -620,13 +620,33 @@ ACSetInterface.set_subpart!(acs::DynamicACSet, part::Int, f::Symbol, subpart) =
     Tuple{[acs.type_assignment[t] for t in acs.schema.attrtypes]...}, 
     part, f, subpart)
 
-@ct_enable function _set_subpart!(acs::SimpleACSet, @ct(S), @ct(Ts), part, @ct(f), subpart)
+@ct_enable function _set_subpart!(acs::SimpleACSet{<:DenseParts}, @ct(S), @ct(Ts), part, @ct(f), subpart)
   @ct s = Schema(S)
   @ct_ctrl if f ∈ homs(s; just_names=true)
     @assert 0 <= subpart <= ACSetInterface.nparts(acs,@ct codom(s, f))
   end
+  @ct_ctrl if f ∈ attrs(s; just_names=true)
+    if subpart isa AttrVar 
+      @assert 0 < getvalue(subpart) <= ACSetInterface.nparts(acs,@ct codom(s, f))
+    end
+  end
+
   acs.subparts[@ct f][part] = subpart
 end
+
+@ct_enable function _set_subpart!(acs::SimpleACSet{<:MarkAsDeleted}, @ct(S), @ct(Ts), part, @ct(f), subpart)
+  @ct s = Schema(S)
+  @ct_ctrl if f ∈ homs(s; just_names=true)
+    @assert subpart ∈ ACSetInterface.parts(acs,@ct codom(s, f))
+  end
+  @ct_ctrl if f ∈ attrs(s; just_names=true)
+    if subpart isa AttrVar 
+      @assert getvalue(subpart) ∈ ACSetInterface.parts(acs,@ct codom(s, f))
+    end
+  end
+  acs.subparts[@ct f][part] = subpart
+end
+
 
 @inline ACSetInterface.clear_subpart!(acs::SimpleACSet, part::Int, f::Symbol) =
   delete!(acs.subparts[f], part)
@@ -839,7 +859,7 @@ ACSetInterface.copy_parts_only!(to::ACSet, from::ACSet, parts::NamedTuple) =
       if !(val isa AttrVar)
         set_subpart!(to, part, @ct(a), val)
       else
-        newindex = findfirst(==(val.val), get(parts, @ct(c), []))
+        newindex = findfirst(==(getvalue(val)), get(parts, @ct(c), []))
         if !isnothing(newindex)
           set_subpart!(to, part, @ct(a), AttrVar(newparts[@ct c][newindex]))
         end
@@ -874,6 +894,12 @@ function ACSetInterface.gc!(X::ACSet{<:MarkAsDeleted})
     end
     return o => (m, m⁻¹)
   end)
+
+  # Update types
+  for o in types(S)
+    gc!(X.parts[o], nparts(X,o))
+  end
+
   # Update homs and attrs
   for (h, a, b) in arrows(S)
     μᵦ = μ[b][2]
@@ -882,22 +908,18 @@ function ACSetInterface.gc!(X::ACSet{<:MarkAsDeleted})
     else 
       X[h] = map(μ[a][1]) do p
         p′ = X[p, h]
-        p′ isa AttrVar ? AttrVar(μᵦ[p′.val]) : p′
+        p′ isa AttrVar ? AttrVar(μᵦ[getvalue(p′)]) : p′
       end
     end
     for i in (nparts(X,a)+1) : X.parts[a].next.x
       clear_subpart!(X, i, h)
     end
   end
-
-  for o in types(S)
-    gc!(X.parts[o], nparts(X,o))
-  end
   return Dict([o=>μ[o][1] for o in types(S)])
 end
 
 function ACSetInterface.gc!(X::ACSet{<:DenseParts})
-  Dict(o=>1:nparts(X,o) for o in types(acset_schema(X)))
+  return Dict(o => 1:nparts(X,o) for o in types(acset_schema(X)))
 end
 
 sparsify(X::ACSet{<:MarkAsDeleted}) = X

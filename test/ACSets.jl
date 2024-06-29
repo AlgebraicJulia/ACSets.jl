@@ -204,7 +204,7 @@ for dds_maker in dds_makers
   @test_throws AssertionError add_part!(dds, :X, Φ=5)
   @test nparts(dds, :X) == 3
   @test subpart(dds, :Φ) == [1,1,1]
-  @test_throws AssertionError add_parts!(dds, :X, 2, Φ=[3,6])
+  @test_throws AssertionError add_parts!(dds, :X, 2, Φ=[3,8])
   @test nparts(dds, :X) == 3
   @test incident(dds, 3, :Φ) == []
 
@@ -297,7 +297,7 @@ for (dgram_maker, ldgram_maker) in dgram_makers
 
   # Copying parts.
   d2 = dgram_maker(Int)
-  copy_parts!(d2, d, X=[4,5], R=[A.val])
+  copy_parts!(d2, d, X=[4,5], R=[getvalue(A)])
   @test nparts(d2, :X) == 2
   @test subpart(d2, [1,2], :parent) == [2,2]
   @test subpart(d2, [1,2], :height) == [10, AttrVar(1)]
@@ -305,7 +305,7 @@ for (dgram_maker, ldgram_maker) in dgram_makers
   du = disjoint_union(d, d2)
   @test nparts(du, :X) == 7
   @test subpart(du, :parent) == [4,4,4,5,5,7,7]
-  @test subpart(du, :height) == [0,0,0,10,A,10,AttrVar(A.val+1)]
+  @test subpart(du, :height) == [0,0,0,10,A,10,AttrVar(getvalue(A)+1)]
 
   # Pretty printing of data attributes.
   s = sprint(show, d)
