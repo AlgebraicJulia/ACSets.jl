@@ -18,9 +18,12 @@ our Attr Variable indices with the Julia type of Int
 """
 @struct_hash_equal struct AttrVar 
   val::Int 
-end 
+end
+
 getvalue(v::AttrVar) = v.val
-Base.isless(x::AttrVar,y::AttrVar) = getvalue(x) < getvalue(y)
+
+Base.isless(x::AttrVar, y::AttrVar) = getvalue(x) < getvalue(y)
+
 Base.convert(::Type{T}, x::T) where {T>:Union{Nothing,AttrVar}} = x
 Base.convert(::Type{T}, x::T) where {T>:Union{Missing,AttrVar}} = x
 Base.convert(::Type{T}, x::T) where {T>:AttrVar} = x
