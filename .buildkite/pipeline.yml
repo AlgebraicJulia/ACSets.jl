@@ -9,7 +9,7 @@ steps:
       JULIA_DEPOT_PATH: "$GATAS_HOME"
     command: 
       - "module load julia"
-      - "julia --project=docs --color=yes -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.update(); Pkg.instantiate(); Pkg.precompile()'"
+      - "julia --project=docs --color=yes -e 'using Pkg; Pkg.update(); Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate(); Pkg.precompile()'"
          
   - wait 
 
