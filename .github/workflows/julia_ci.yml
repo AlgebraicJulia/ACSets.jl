@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: 0 0 * * *
   push:
-    branches: ["main"]
+    branches: ["main", "cm/buildkite"]
     tags: ["*"]
   pull_request:
   workflow_dispatch:
@@ -95,7 +95,6 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
   docs:
     name: Documentation
-    if: ${{ inputs.docs }}
     runs-on: ubuntu-latest
     env:
       # GR backend fix for Plots, discussed in https://github.com/jheinen/GR.jl/issues/422
