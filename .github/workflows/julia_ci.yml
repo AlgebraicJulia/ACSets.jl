@@ -95,7 +95,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
   docs:
     name: Documentation
-    if: ${{ inputs.docs }}
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
       # GR backend fix for Plots, discussed in https://github.com/jheinen/GR.jl/issues/422
