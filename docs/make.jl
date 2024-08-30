@@ -54,5 +54,6 @@ makedocs(
 deploydocs(
   target="build",
   repo="github.com/AlgebraicJulia/ACSets.jl.git",
-  branch="gh-pages"
+  branch="gh-pages",
+  push_preview = true
 )
