@@ -44,7 +44,7 @@ module Parsers
 @rule line  = ws & statement & ws & EOL
 @rule statement = keyWord & lparen & args & rparen
 @rule args = (arg & comma)[*] & arg
-@rule arg = args | (keyWord & eq & args) | keyWord
+@rule arg = args , (keyWord & eq & args) , keyWord
 
 
 end
