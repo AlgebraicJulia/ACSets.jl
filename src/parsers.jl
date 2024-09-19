@@ -53,7 +53,7 @@ export body, block, line, statement, args, arg
 # Line contians a statement followed by a new line or ";"
 @rule line  = ws & statement & ws & EOL |> v -> v[2]
 # Statement contains a call followed by arguments in parenthesis: "identifier(args)"
-@rule statement = identifier & lparen & args & rparen |> Statement(Symbol(v[1]), v[3])
+@rule statement = identifier & lparen & args & rparen |> v -> Statement(Symbol(v[1]), v[3])
 # args contains one or more arguments separated by commas
 @rule args = (arg & comma)[*] & arg |> v -> collect_args(v)
 # arg can be a list of further arguments, a key-value pair, or a single value
