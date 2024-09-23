@@ -21,7 +21,7 @@ export body, block, line, statement, args, arg
 # Basic Lexing rules for scanning sting of characters
 # Breaks up words/structures into tokens
 
-@rule ws = r"\s*"
+@rule ws = r"[^\S\r\n]*"
 @rule eq = r"="p
 @rule lparen = r"\("
 @rule rparen = r"\)"
@@ -57,13 +57,24 @@ export body, block, line, statement, args, arg
 # args contains one or more arguments separated by commas
 @rule args = (arg & comma)[*] & arg |> v -> collect_args(v)
 # arg can be a list of further arguments, a key-value pair, or a single value
-@rule arg = (lparen & args & rparen) |> v -> v[2], 
+@rule arg = ((lparen & args & rparen) |> v -> v[2]), 
             ((identifier & eq & arg) |> v -> Kwarg(Symbol(v[1]), v[3])), 
-            ((identifier) |> v -> Value(v[1]))
+            (identifier |> v -> parse_identifier(v[1]))            
+            # Adding another rule for checking numbers
 
 #Collects and flattens arguments into a single list
-collect_args(args) = begin
-    return 0 #Needs to be implemented
+collect_args(v::Vector{Any}) = begin
+    output = first.(v[1])
+    push!(output, last(v))
+end
+
+#Parses an identifier into a number or symbol
+parse_identifier(x) = begin 
+    try
+        return Value(parse(Int, x))
+    catch
+        return Value(Symbol(x))
+    end
 end
 
 end
