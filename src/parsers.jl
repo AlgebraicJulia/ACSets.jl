@@ -9,6 +9,7 @@ Tasks Left to Complete:
 - Add more test cases for the parser
 - Call parser from ADTs.jl acsetspec function
 - Add error handling for invalid input
+- Enable extraction from files?
 
 """
 

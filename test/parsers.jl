@@ -10,6 +10,19 @@ function Base.:(==)(s1::ACSets.ADTs.Statement, s2::ACSets.ADTs.Statement)
     return s1.table == s2.table && s1.element == s2.element
 end
 
+#Taken from "PEG.jl/blob/master/test/misc.jl" to test parsing failure
+function parse_fails_at(rule, input)
+    try
+      parse_whole(rule, input)
+      "parse succeeded!"
+    catch err
+      isa(err, Meta.ParseError) || rethrow()
+      m = match(r"^On line \d+, at column \d+ \(byte (\d+)\):", err.msg)
+      m == nothing && rethrow()
+      parse(Int, m.captures[1])
+    end
+  end
+
 
 @testset "arg_test" begin
     @test arg("1")[1] == Value(1)
@@ -43,6 +56,11 @@ end
 
 @testset "body_test" begin
     @test body("quote\n test(a)\n test(b)\n test(c)\n end")[1] == [Statement(:test, [Value(:a)]), Statement(:test, [Value(:b)]), Statement(:test, [Value(:c)])]
+end
+
+@testset "Error_Handling" begin
+    @test parse_fails_at(statement, "test(a, b") == 10
+    #Needs a lot more testing
 end
 
 end
