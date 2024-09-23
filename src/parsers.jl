@@ -4,6 +4,12 @@ Test case displaying parsing of ACSetSpecs using PEG.jl.
 This module also includes basic lexing rules as seen in
 SyntacticModels.jl.
 
+Tasks Left to Complete:
+
+- Add more test cases for the parser
+- Call parser from ADTs.jl acsetspec function
+- Add error handling for invalid input
+
 """
 
 module Parsers
