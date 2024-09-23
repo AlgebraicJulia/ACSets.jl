@@ -42,7 +42,7 @@ end
 end
 
 @testset "body_test" begin
-    #Needs to be implemented
+    @test body("quote\n test(a)\n test(b)\n test(c)\n end")[1] == [Statement(:test, [Value(:a)]), Statement(:test, [Value(:b)]), Statement(:test, [Value(:c)])]
 end
 
 end

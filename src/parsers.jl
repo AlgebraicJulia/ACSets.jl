@@ -47,7 +47,7 @@ export body, block, line, statement, args, arg
 # This PEG.jl based parser takes from the recursive decent
 # parser in ACSets.jl/ADTs.jl and parses the body in "acsetspec(head, body)"
 
-@rule body = r"quote" & block & r"end"p |> v -> v[2]
+@rule body = r"quote\s*"p & block & r"end"p |> v -> v[2]
 # Block contains one or more lines of statements
 @rule block = line[*] & r"\n?"p |> v -> v[1]
 # Line contians a statement followed by a new line or ";"
