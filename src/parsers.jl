@@ -67,7 +67,6 @@ export body, block, line, statement, args, arg
 @rule arg = ((lparen & args & rparen) |> v -> v[2]), 
             ((identifier & eq & arg) |> v -> Kwarg(Symbol(v[1]), v[3])), 
             (identifier |> v -> parse_identifier(v[1]))            
-            # Adding another rule for checking numbers
 
 #Collects and flattens arguments into a single list
 collect_args(v::Vector{Any}) = begin
