@@ -6,10 +6,16 @@ using ACSets, ACSets.ADTs
 using ACSets.Parsers
 
 
-#Overaloads "==" to properly comapre two statement structs
+#Overaloads "==" to properly compare two statement structs
 function Base.:(==)(s1::ACSets.ADTs.Statement, s2::ACSets.ADTs.Statement)
     return s1.table == s2.table && s1.element == s2.element
 end
+
+#Overloads "==" to peroperly compare two keyWord arguments
+# function Base.:(==)(a::Kwarg{T}, b::Kwarg{T}) where T
+#     return a.arg1 == b.arg1 && a.arg2 == b.arg2
+# end
+
 
 #Taken from "PEG.jl/blob/master/test/misc.jl" to test parsing failure
 function parse_fails_at(rule, input)
@@ -42,7 +48,10 @@ end
     @test statement("test(a)")[1] == Statement(:test, [Value(:a)])
     @test statement("test(a, b)")[1] == Statement(:test, [Value(:a), Value(:b)])
     @test statement("E(src=1,tgt=3)")[1] == Statement(:E, [Kwarg(:src, Value(1)), Kwarg(:tgt, Value(3))])
-
+    @test statement("A(src=(0,0), length=(1,1))")[1] == Statement(:A, [Kwarg(:src, Value([Value(0), Value(0)])), Kwarg(:length, Value([Value(1), Value(1)]))]) #Failing
+    @test statement("A(label=a, src=(0,0))")[1] == Statement(:A, [Kwarg(:length, Value(1)), Kwarg(:src, Value([Value(0), Value(0)]))])
+    #Check Type
+    println("Type of Array: ", typeof([Kwarg(:length, Value(1)), Kwarg(:src, Value([Value(0), Value(0)]))]))
 end
 
 @testset "line_test" begin
@@ -54,7 +63,6 @@ end
 @testset "block_test" begin
     @test block("test(a)\n test(b)\n test(c)\n")[1] == [Statement(:test, [Value(:a)]), Statement(:test, [Value(:b)]), Statement(:test, [Value(:c)])]
 end
-
 
 # -------------- Test Error Handling -------------- #
 
@@ -96,6 +104,7 @@ end
 
 # ------------ Full Scale Tests ----------- #
 
+#Enable/Disable Debugging to see live parsing
 PEG.setdebug!(false)
 
 SchLabeledGraph = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)],
@@ -129,6 +138,22 @@ SchLabeledGraph = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)],
     end"""
 
     @test construct(LabeledGraph{Symbol}, hspec) == construct(LabeledGraph{Symbol}, gspec)
+
+    #Non testable without CombinatorialSpaces.jl #Failing: (0,0) registered as an expression.
+    # In my implementation, it's implemented as a vector. 
+    PEG.setdebug!(false)
+    cspec = acsetspec"""
+     SemiSimplicialSet
+     begin
+      V(label=a, pos=(0,0))
+      V(label=b, pos=(1,0))
+      V(label=c, pos=(0,1))
+      E(1,2)
+      E(2,3)
+      E(3,1)
+      T(1,2,3)
+  end"""
+
 end
 
 end

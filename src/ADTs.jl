@@ -133,8 +133,8 @@ end
 expand_statement(args) = begin
   let ! = expand_statement
     @match args begin
-      as::AbstractVector => map(!, as)
-      Expr(:kw, args...) => Kwarg(args[1], !(args[2]))
+      as::AbstractVector => map(!, as) 
+      Expr(:kw, args...) => Kwarg(args[1], !(args[2]));
       x => Value(x)
       x => error("hit fallthrough on $(typeof(x)), $x")
     end

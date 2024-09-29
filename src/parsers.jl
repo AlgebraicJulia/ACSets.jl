@@ -61,8 +61,9 @@ export acset_spec, block, line, statement, args, arg
 
 #acset_spec takes in head and body args
 @rule acset_spec = ws & head & r"begin"p & block & r"end"p |> v -> ACSetSpec(v[2], v[4])
-#Head contains ACsetSpec Type
-@rule head = r"\S*"p |> v -> Symbol(v[2])
+#Head contains ACsetSpec Type: As acetspec(), the PEG parser, really does not parse the head.
+#It just ensure's that it exists.
+@rule head = r"\S*"p |> v -> Symbol(v)
 # Block contains one or more lines of statements
 @rule block = line[*] & r"\n?"p |> v -> v[1]
 # Line contians a statement followed by a new line or ";"
@@ -73,21 +74,32 @@ export acset_spec, block, line, statement, args, arg
 @rule args = (arg & ws & comma)[*] & arg |> v -> collect_args(v)
 # arg can be a list of further arguments, a key-value pair, or a single value
 @rule arg = ((lparen & args & rparen) |> v -> v[2]), 
-            ((identifier & eq & arg) |> v -> Kwarg(Symbol(v[1]), v[3])), 
+            ((identifier & eq & arg) |> v ->  parse_assignment(v)),
             (identifier |> v -> parse_identifier(v[1]))            
 
 #Collects and flattens arguments into a single list
 collect_args(v::Vector{Any}) = begin
-    output = first.(v[1])
+    output = Vector{Args}(first.(v[1]))
+    #output = Vector{Union{Symbol, Value{Int64}, Value{Vector{Int64}}}}(first.(v[1]))
     push!(output, last(v))
 end
 
 #Parses an identifier into a number or symbol
-parse_identifier(x) = begin 
+parse_identifier(v) = begin 
     try
-        return Value(parse(Int, x))
+        return Value(parse(Int, v))
     catch
-        return Value(Symbol(x))
+        return Value(Symbol(v))
+    end
+end
+
+#Parses an assignment statement - Kwarg only takes type Value for args. 
+#Other cases than vector should have already been wrapped in "parse_identifier" 
+parse_assignment(v) = begin
+    if isa(v[3], Vector)
+        return Kwarg(Symbol(v[1]), Value(v[3])) 
+    else
+        return Kwarg(Symbol(v[1]), v[3])
     end
 end
 
