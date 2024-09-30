@@ -5,6 +5,7 @@ using Test
 using ACSets, ACSets.ADTs
 using ACSets.Parsers
 
+PEG.setdebug!(false)
 
 #Overaloads "==" to properly compare two statement structs
 function Base.:(==)(s1::ACSets.ADTs.Statement, s2::ACSets.ADTs.Statement)
@@ -49,8 +50,18 @@ end
     @test statement("test(a, b)")[1] == Statement(:test, [Value(:a), Value(:b)])
     @test statement("E(src=1,tgt=3)")[1] == Statement(:E, [Kwarg(:src, Value(1)), Kwarg(:tgt, Value(3))])
     @test statement("A(src=(0,0), length=(1,1))")[1] == Statement(:A, [Kwarg(:src, Value([Value(0), Value(0)])), Kwarg(:length, Value([Value(1), Value(1)]))]) #Failing
-    @test statement("A(label=a, src=(0,0))")[1] == Statement(:A, [Kwarg(:length, Value(1)), Kwarg(:src, Value([Value(0), Value(0)]))])
+    @test statement("A(label=a, src=(0,0))")[1] == Statement(:A, [Kwarg(:length, Value(:a)), Kwarg(:src, Value([Value(0), Value(0)]))])
     #Check Type
+        println("Type Parsed: ", typeof(statement("A(label=a, src=(0,0))")[1]))
+        println("Type of Array: ", typeof(Statement(:A, [Kwarg(:length, Value(:a)), Kwarg(:src, Value([Value(0), Value(0)]))])))
+    #Further Type Checking
+        println("Args Types Parsed: ", typeof(statement("A(label=a, src=(0,0))")[1].element)) #Vector{ACSets.ADTs.Args}
+        println("Args Array: ", typeof([Kwarg(:length, Value(:a)), Kwarg(:src, Value([Value(0), Value(0)]))])) #Vector{ACSets.ADTs.Kwarg}
+    #Testing if we will have kwarg + value arrays in Julia:
+        println("Multi Type Array Check: ", typeof([Value(:a), Kwarg(:length, Value(:a))]))
+        #Outputs: Vector{ACSets.ADTs.Args{Symbol}}
+        #This implies, when we have an array of different types -> we naturally cast to supertype
+
     println("Type of Array: ", typeof([Kwarg(:length, Value(1)), Kwarg(:src, Value([Value(0), Value(0)]))]))
 end
 
@@ -141,7 +152,6 @@ SchLabeledGraph = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)],
 
     #Non testable without CombinatorialSpaces.jl #Failing: (0,0) registered as an expression.
     # In my implementation, it's implemented as a vector. 
-    PEG.setdebug!(false)
     cspec = acsetspec"""
      SemiSimplicialSet
      begin

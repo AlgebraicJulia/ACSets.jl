@@ -78,10 +78,35 @@ export acset_spec, block, line, statement, args, arg
             (identifier |> v -> parse_identifier(v[1]))            
 
 #Collects and flattens arguments into a single list
+# If a type conversion error occurs, simply casts entire vector to closest superType
 collect_args(v::Vector{Any}) = begin
-    output = Vector{Args}(first.(v[1]))
-    #output = Vector{Union{Symbol, Value{Int64}, Value{Vector{Int64}}}}(first.(v[1]))
-    push!(output, last(v))
+    try
+        output = first.(v[1])
+        push!(output, last(v))
+    catch error
+        if isa(error, MethodError)
+            #Grabs types that are failing to convert
+            #For some reason arg1 is the type while arg2 is the failing object
+            error_type_1 = error.args[1] 
+            println("error type 1: ", error_type_1)
+            error_type_2 = typeof(error.args[2])
+            println("error type 2: ", error_type_2)
+            #Checks if each type is of closest supertype
+            if (error_type_1 <: Kwarg &&  error_type_2 <: Kwarg)
+                output = Vector{Kwarg}(first.(v[1]))
+                println("kwarg casted")
+            elseif (error_type_1 <: Value &&  error_type_2 <: Value)
+                output = Vector{Value}(first.(v[1]))
+                println("value casted")
+            else
+                output = Vector{Args}(first.(v[1]))
+                println("arg casted")
+            end
+            push!(output, last(v))
+        else
+            rethrow(e)
+        end
+    end
 end
 
 #Parses an identifier into a number or symbol
