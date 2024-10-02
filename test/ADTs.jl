@@ -76,11 +76,6 @@ end
       E(3,1)
       T(1,2,3)
   end) # can't test this without CombinatorialSpaces.jl
-
-  #Test
-  test_spec = acsetspec(:SemiSimplicialSet,quote V(label=:a, pos=(0,0)) end)
-
-
 end
 
 using JSON3
