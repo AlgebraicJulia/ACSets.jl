@@ -1,24 +1,32 @@
-# ## Testing our parser
+""" ParserTests
+
+This module simply contains the different tests for ensuring proper functionality
+of the Parsers module. Specifically, it ensures unit tests for each PEG.jl rule functions,
+unit tests for error handling of each rule, and an end-to-end test for overall functionality.
+"""
+
 module ParserTests
 
 using Test
 using ACSets, ACSets.ADTs
 using ACSets.Parsers
 
-PEG.setdebug!(false)
-
 #Overaloads "==" to properly compare two statement structs
 function Base.:(==)(s1::ACSets.ADTs.Statement, s2::ACSets.ADTs.Statement)
-    return s1.table == s2.table && s1.element == s2.element
+    s1.table == s2.table && s1.element == s2.element
 end
 
-#Overloads "==" to peroperly compare two keyWord arguments
-# function Base.:(==)(a::Kwarg{T}, b::Kwarg{T}) where T
-#     return a.arg1 == b.arg1 && a.arg2 == b.arg2
-# end
+#Overloads "==" to properly compare two Kwargs
+function Base.:(==)(s1::ACSets.ADTs.Kwarg, s2::ACSets.ADTs.Kwarg)
+    s1._1 == s2._1 && s1._2 == s2._2
+end
 
+#Overloads "==" to properly compare two Values
+function Base.:(==)(s1::ACSets.ADTs.Value, s2::ACSets.ADTs.Value)
+    s1._1 == s2._1
+end
 
-#Taken from "PEG.jl/blob/master/test/misc.jl" to test parsing failure
+#Taken from "PEG.jl/blob/master/test/misc.jl" to test parsing exception handling
 function parse_fails_at(rule, input)
     try
       parse_whole(rule, input)
@@ -43,6 +51,9 @@ end
     @test args("1,2,3")[1] == ([Value(1), Value(2), Value(3)])
     @test args("1 , 1")[1] == ([Value(1), Value(1)])
     @test args("a=1, b=2, c=3")[1] == ([Kwarg(:a, Value(1)), Kwarg(:b, Value(2)), Kwarg(:c, Value(3))])
+    @test args("1, b=2, c=3")[1] == ([Value(1), Kwarg(:b, Value(2)), Kwarg(:c, Value(3))])
+    @test args("a=1, b=2, c=3, d=4")[1] == ([Kwarg(:a, Value(1)), Kwarg(:b, Value(2)), Kwarg(:c, Value(3)), Kwarg(:d, Value(4))])
+    @test args("a=1, b=(1,1), c=2")[1] == ([Kwarg(:a, Value(1)), Kwarg(:b, Value([Value(1), Value(1)])), Kwarg(:c, Value(2))])    
 end
 
 @testset "statement_test" begin
@@ -50,19 +61,8 @@ end
     @test statement("test(a, b)")[1] == Statement(:test, [Value(:a), Value(:b)])
     @test statement("E(src=1,tgt=3)")[1] == Statement(:E, [Kwarg(:src, Value(1)), Kwarg(:tgt, Value(3))])
     @test statement("A(src=(0,0), length=(1,1))")[1] == Statement(:A, [Kwarg(:src, Value([Value(0), Value(0)])), Kwarg(:length, Value([Value(1), Value(1)]))]) #Failing
-    @test statement("A(label=a, src=(0,0))")[1] == Statement(:A, [Kwarg(:length, Value(:a)), Kwarg(:src, Value([Value(0), Value(0)]))])
-    #Check Type
-        println("Type Parsed: ", typeof(statement("A(label=a, src=(0,0))")[1]))
-        println("Type of Array: ", typeof(Statement(:A, [Kwarg(:length, Value(:a)), Kwarg(:src, Value([Value(0), Value(0)]))])))
-    #Further Type Checking
-        println("Args Types Parsed: ", typeof(statement("A(label=a, src=(0,0))")[1].element)) #Vector{ACSets.ADTs.Args}
-        println("Args Array: ", typeof([Kwarg(:length, Value(:a)), Kwarg(:src, Value([Value(0), Value(0)]))])) #Vector{ACSets.ADTs.Kwarg}
-    #Testing if we will have kwarg + value arrays in Julia:
-        println("Multi Type Array Check: ", typeof([Value(:a), Kwarg(:length, Value(:a))]))
-        #Outputs: Vector{ACSets.ADTs.Args{Symbol}}
-        #This implies, when we have an array of different types -> we naturally cast to supertype
+    @test statement("A(label=a, src=(0,0))")[1] == Statement(:A, [Kwarg(:label, Value(:a)), Kwarg(:src, Value([Value(0), Value(0)]))])
 
-    println("Type of Array: ", typeof([Kwarg(:length, Value(1)), Kwarg(:src, Value([Value(0), Value(0)]))]))
 end
 
 @testset "line_test" begin
@@ -110,13 +110,11 @@ end
     # Missing head at index 1, however, parser will try and create a head until
     # it reaches a white space at index 6. This can be modified for better parsing errors.
     # However, for the simplicity of the grammar, I'm keeping it as is for now.
-    # Right now, it registers begin as a head and fails due to the true "begin" missing.
+    # Right now, it registers "begin" as the head and ultimately fails because "begin" is missing
+    # as "begin" has already been parsed in as the head.
 end
 
 # ------------ Full Scale Tests ----------- #
-
-#Enable/Disable Debugging to see live parsing
-PEG.setdebug!(false)
 
 SchLabeledGraph = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)],
                           [:L], [(:label,:V,:L)])
@@ -150,8 +148,7 @@ SchLabeledGraph = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)],
 
     @test construct(LabeledGraph{Symbol}, hspec) == construct(LabeledGraph{Symbol}, gspec)
 
-    #Non testable without CombinatorialSpaces.jl #Failing: (0,0) registered as an expression.
-    # In my implementation, it's implemented as a vector. 
+    #Construct cannot be tested without CombinatorialSpaces.jl
     cspec = acsetspec"""
      SemiSimplicialSet
      begin
