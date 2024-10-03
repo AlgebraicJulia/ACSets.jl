@@ -69,34 +69,33 @@ export acset_spec, block, line, statement, args, arg
 @rule args = (arg & ws & comma)[*] & arg |> v -> collect_args(v)
 # arg can be a list of further arguments, a key-value pair, or a single value
 @rule arg = ((lparen & args & rparen) |> v -> v[2]), 
-      ((identifier & eq & arg) |> v -> parse_assignment(v)),
-      (identifier |> v -> parse_identifier(v))
+            ((identifier & eq & arg) |> v -> parse_assignment(v)),
+            (identifier |> v -> parse_identifier(v))
 
 # Collects and flattens arguments into a single list
-collect_args(v::Vector{Any}) = begin
+function collect_args(v::Vector{Any})
   output = Vector{Args}(first.(v[1]))
   push!(output, last(v))
 end
 
 # Parses an identifier into a symbol/integer
-parse_identifier(v) = begin
+function parse_identifier(v)
   v_parsed = tryparse(Int, v)
-  
   if isnothing(v_parsed)
-    return Value(Symbol(v))
+    Value(Symbol(v))
   else
-    return Value(v_parsed)
+    Value(v_parsed)
   end
 end
 
 # Parses an assignment statement
 # Vectors wrapped as Value
 # Ensures singular Values are not wrapped twice
-parse_assignment(v) = begin
-  if isa(v[3], Vector)
-    return Kwarg(Symbol(v[1]), Value(v[3])) 
+function parse_assignment(v)
+  if v[3] isa Vector
+    Kwarg(Symbol(v[1]), Value(v[3])) 
   else
-    return Kwarg(Symbol(v[1]), v[3])
+    Kwarg(Symbol(v[1]), v[3])
   end
 end
 
