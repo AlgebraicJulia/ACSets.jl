@@ -20,6 +20,10 @@ end
   include("ACSets.jl")
 end
 
+@testset "Parsers" begin
+  include("Parsers.jl")
+end
+
 @testset "Serialization" begin
   include("serialization/Serialization.jl")
 end
