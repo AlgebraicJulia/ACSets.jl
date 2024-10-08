@@ -15,6 +15,7 @@ include("intertypes/InterTypes.jl")
 include("serialization/Serialization.jl")
 include("ADTs.jl")
 include("NautyInterface.jl")
+include("Parsers.jl")
 
 @reexport using .ColumnImplementations: AttrVar
 @reexport using .Schemas
@@ -23,6 +24,7 @@ include("NautyInterface.jl")
 @reexport using .InterTypes
 @reexport using .ACSetSerialization
 using .ADTs
+using .Parsers
 @reexport using .NautyInterface
 
 end
