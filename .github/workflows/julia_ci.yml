@@ -48,17 +48,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix: # use matrix notation for linux for easily testing more versions/architectures
-        version: [ "1.10.0" ]
+        version: [ "1.10", "1.11" ]
         os: [ubuntu-latest]
         arch: ["x64"]
         include:
           # test macOS and Windows with latest Julia only
           - os: macOS-latest
             arch: arm64
-            version:  "1.10.0" 
+            version:  "1.11"
           - os: windows-latest
             arch: x64
-            version:  "1.10.0" 
+            version:  "1.11"
 
     steps:
       - uses: actions/checkout@v4
