@@ -797,6 +797,20 @@ datcompdyn = DynamicACSet(datcomp)
 @test subpart(datcompdyn, :, (:f,)) == [1,2,3,1,2]
 @test subpart(datcompdyn, (:f,)) == [1,2,3,1,2]
 
+# Allocations of composites of subparts
+#------------------------------------
+# If type inference is successful, then this loop will be optimized to have 0 allocations.
+buffer = Vector{Symbol}(undef, nparts(datcomp, :Z))
+function assignment_loop!(buffer::Vector{Symbol}, dc::SimpleACSet)
+  @inbounds for i in parts(dc, :Z)
+    buffer[i] = subpart(dc, i, Val((:zattr,)))
+  end
+end
+@allocations assignment_loop!(buffer, datcomp)
+allocs = @allocations assignment_loop!(buffer, datcomp)
+@test allocs == 0
+
+
 # Composites of subparts for incident
 #------------------------------------
 
