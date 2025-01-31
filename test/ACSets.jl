@@ -16,11 +16,13 @@ SchDDS = BasicSchema([:X], [(:Φ,:X,:X)])
 @abstract_acset_type AbstractDDS
 @acset_type DDS(SchDDS, index=[:Φ]) <: AbstractDDS
 @acset_type BitSetDDS(SchDDS, part_type=BitSetParts) <: AbstractDDS
+@acset_type AltSyntax_BitSetDDS(SchDDS; part_type=BitSetParts) <: AbstractDDS
 @acset_type UnindexedDDS(SchDDS)
 @test DDS <: AbstractDDS
 @test DDS <: StructACSet
 @test DDS <: StructCSet
 @test DDS <: ACSet
+
 
 # Test cascading rem part results in a natural transformation
 #------------------------------------------------------------
@@ -51,6 +53,7 @@ end
 dds_makers = [
   DDS,
   BitSetDDS,
+  AltSyntax_BitSetDDS,
   UnindexedDDS,
   () -> DynamicACSet("DDS", SchDDS; index=[:Φ]),
   () -> DynamicACSet("DDS", SchDDS; index=[:Φ], part_type=MarkAsDeleted),

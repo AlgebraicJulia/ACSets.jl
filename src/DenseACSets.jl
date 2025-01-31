@@ -200,8 +200,8 @@ macro acset_type(head)
     _ => (head, [])
   end
   name, schema, idx_args = @match head′ begin
+    Expr(:call, name, Expr(:parameters, idx_args...), schema) => (name, schema, idx_args)
     Expr(:call, name, schema, idx_args...) => (name, schema, idx_args)
-    Expr(:call, name, idx_args, schema) => (name, schema, idx_args)
     _ => error("Unsupported head for @acset_type")
   end
   name′ = name
