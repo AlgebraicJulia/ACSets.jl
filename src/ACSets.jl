@@ -16,6 +16,7 @@ include("serialization/Serialization.jl")
 include("ADTs.jl")
 include("NautyInterface.jl")
 include("Parsers.jl")
+include("database/SQLACSets.jl")
 
 @reexport using .ColumnImplementations: AttrVar
 @reexport using .Schemas
@@ -26,5 +27,6 @@ include("Parsers.jl")
 using .ADTs
 using .Parsers
 @reexport using .NautyInterface
+@reexport using .SQLACSets
 
 end
