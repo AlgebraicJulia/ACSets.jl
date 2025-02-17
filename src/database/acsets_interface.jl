@@ -5,55 +5,43 @@
 # get the number of rows
 function ACSetInterface.nparts(acset::VirtualACSet{Conn}, table::Symbol) where Conn
     query = DBInterface.execute(acset.conn, "SELECT COUNT(*) FROM $table;")
-    DataFrames.DataFrame(query) # we need to send this to a 
+    DataFrames.DataFrame(query) 
 end
 
 function ACSetInterface.maxpart(acset::VirtualACSet, table::Symbol) end
 
-function ACSetInterface.subpart(acset::VirtualACSet, table::Symbol, cols::AbstractVector{Symbol})
-    stmt = tostring(Select(cols, table))
-    query = DBInterface.execute(acset.conn, stmt)
+# get value of 
+# subpart(acset, 1, :tgt) =
+# subpart(acset, :, col) = get all values in column
+function ACSetInterface.subpart(vas::VirtualACSet, table::Symbol, cols::AbstractVector{Symbol})
+    stmt = tostring(vas.conn, Select(cols, table))
+    query = DBInterface.execute(vas.conn, stmt)
     DataFrames.DataFrame(query)
 end
 
-function ACSetInterface.incident(acset::VirtualACSet, table::Symbol, names::AbstractVector{Symbol}) end
+# gets id where
+function ACSetInterface.incident(vas::VirtualACSet, table::Symbol, names::AbstractVector{Symbol}) end
 
-function ACSetInterface.add_part!(acset::VirtualACSet, table::Symbol, values::Vector{<:NamedTuple{T}}) where T 
-    stmt = tostring(Insert(table, cols, values))
-    query = DBInterface.execute(acset.conn, stmt)
-    DataFrames.DataFrames(query)
+function ACSetInterface.add_part!(vas::VirtualACSet, table::Symbol, values::Vector{<:NamedTuple{T}}) where T 
+    stmt = tostring(vas.conn, Insert(table, values))
+    query = DBInterface.execute(vas.conn, stmt)
+    DBInterface.lastrowid(query)
 end
 
 function ACSetInterface.set_subpart!(acset::VirtualACSet, args...) end
 
 function ACSetInterface.clear_subpart!(acset::VirtualACSet, args...) end
 
-function ACSetInterface.rem_part!(acset::VirtualACSet, args...) end
+function ACSetInterface.rem_part!(vas::VirtualACSet, table::Symbol, id::Int)
+    rem_parts!(vas, table, [id])
+end
+
+function ACSetInterface.rem_parts!(vas::VirtualACSet, table::Symbol, ids::Vector{Int}) 
+    stmt = tostring(vas.conn, Delete(table, ids))
+    query = DBInterface.execute(vas.conn, stmt)
+    result = tostring(vas.conn, Select(table))
+    query = DBInterface.execute(vas.conn, result)
+    DataFrames.DataFrame(query)
+end
 
 function ACSetInterface.cascading_rem_part!(acset::VirtualACSet, args...) end
-
-
-
-# DB Interface
-
-# # we will use this to test that a table has been written
-# function selectfrom(conn::MySQL.Connection, table::Symbol, cols::Vector{Symbol}=Vector{Symbol}())
-#     stmt = build(conn, Select, table, cols)
-#     query = DBInterface.execute(conn, stmt)
-#     DataFrames.DataFrame(query)
-# end
-
-# # we can get a dependency graph based on the ACSet
-# function build(conn::MySQL.Connection, ::Type{Insert}, x::SimpleACSet)
-#     schema = acset_schema(x)
-#     stmts = map(objects(schema)) do ob
-#         build(conn, Insert, x, ob)
-#     end
-#     join(stmts, " ")
-# end
-
-# function Base.insert!(conn::MySQL.Connection, x::SimpleACSet, stmt::Union{String, Nothing}=nothing)
-#     _stmt = isnothing(stmt) ? build(conn, Insert, x) : stmt
-#     DBInterface.executemultiple(conn, _stmt)
-# end
-

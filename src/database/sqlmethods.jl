@@ -3,7 +3,6 @@ export tostring
 
 function select end
 function create! end
-function insert end
 function delete end
 function alter end
 export create!
@@ -23,6 +22,19 @@ function VirtualACSet(conn::Conn, acs::SimpleACSet) where Conn <: DBInterface.Co
     VirtualACSet{Conn}(conn=conn, acsettype=typeof(acs))
 end
 
+# will this work how I want?
+function reload!(vas::VirtualACSet{Conn}) where Conn
+    vas.conn = DBInterface.connect(MySQL.Connection, "localhost", "mysql", db="acsets", 
+                                   unix_socket="/var/run/mysqld/mysqld.sock")
+end
+export reload
+
+function execute!(vas::VirtualACSet{Conn}, stmt::String) where Conn
+    result = DBInterface.executemultiple(vas.conn, stmt)
+    DataFrames.DataFrame(result)
+end
+export execute!
+
 function create!(conn::DBInterface.Connection, x::SimpleACSet)
     stmt = tostring(conn, Create(x))
     DBInterface.executemultiple(conn, stmt)
@@ -34,9 +46,13 @@ function create!(v::VirtualACSet{Conn}) where Conn
     DBInterface.execute(v.conn, query)
 end
 
+function insert!(v::VirtualACSet{Conn}, acset::SimpleACSet) where Conn
+    insert_stmts = tostring.(Ref(v.conn), Insert(v.conn, acset))
+    query = DBInterface.executemultiple(conn, insert_stmts)
+    DataFrames.DataFrmae(query)
+end
 
-
-    # this typing ensures that named tuples have the same keys
+# this typing ensures that named tuples have the same keys
 struct Values{T}
     table::Union{Symbol, Nothing}
     vals::Vector{<:NamedTuple{T}}
@@ -54,13 +70,26 @@ export columns
     Select(cols::Union{Vector{Symbol}, Nothing}, table::Symbol)
     Alter(table::Symbol, refdom::Symbol, refcodom::Symbol)
     Create(schema::BasicSchema{Symbol})
+    Delete(table::Symbol, ids::Vector{Int})
 end
-export SQLTerms, Values, Insert, Select, Alter, Create
+export SQLTerms, Values, Insert, Select, Alter, Create, Delete
 
 ## Constructors
 
+function Select(table::Symbol)
+    Select(nothing, table)
+end
+
+function Alter(table::Symbol, arrow::Pair{Symbol, Symbol})
+    Alter(table, arrow.first, arrow.second)
+end
+
 function Create(acset::SimpleACSet)
     Create(acset_schema(acset))
+end
+
+function Insert(table::Symbol, vs::Vector{<:NamedTuple{T}}) where T
+    Insert(table, Values(table, vs))
 end
 
 ## SQL Term Operations

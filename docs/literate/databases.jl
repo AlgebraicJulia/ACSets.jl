@@ -1,3 +1,30 @@
+using ACSets
+using Catlab
+using Catlab.Graphs
+#
+using DBInterface
+using MLStyle
+using DataFrames
+using MySQL # loads extension
+#
+conn = DBInterface.connect(MySQL.Connection, "localhost", "mysql", db="acsets", unix_socket="/var/run/mysqld/mysqld.sock")
+
+@present SchWeightedLabeledGraph <: SchLabeledGraph begin
+    Weight::AttrType
+    weight::Attr(E,Weight)
+end;
+@acset_type WeightedLabeledGraph(SchWeightedLabeledGraph, index=[:src, :tgt]) <: AbstractLabeledGraph
+g = erdos_renyi(WeightedLabeledGraph{Symbol,Float64}, 10, 0.25);
+g[:, :label] = Symbol.(collect('a':'z')[1:nv(g)]);
+g[:, :weight] = floor.(rand(ne(g)) .* 100);
+c = Create(g)
+
+vas = VirtualACSet(conn, g)
+i = join(tostring.(Ref(conn), Insert(conn, g)))
+execute!(vas, i)
+
+rem_part!(vas, :V, [12])
+
 ########
 @present SchJunct(FreeSchema) begin
     Name::AttrType

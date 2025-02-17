@@ -23,11 +23,12 @@ tosql(::MySQL.Connection, x) = x
 # String constructors
 function tostring(conn::MySQL.Connection, i::Insert) 
     cols = join(columns(i.values), ", ")
-    "INSERT IGNORE INTO $(i.table) ($cols) VALUES " * join(entuple(i.values;f=x -> tosql(conn, x)), ", ") * ";"
+    values = join(entuple(i.values; f=x->tosql(conn, x)), ", ")
+    "INSERT IGNORE INTO $(i.table) ($cols) VALUES $values ;"
 end
 
 function tostring(::MySQL.Connection, s::Select)
-    columns = !isempty(s.cols) ? join(s.cols, ", ") : "*"
+    columns = !isnothing(s.cols) ? join(s.cols, ", ") : "*"
     "SELECT $columns FROM $(s.table)" * ";"
 end
 
@@ -46,6 +47,10 @@ function tostring(conn::MySQL.Connection, c::Create)
                end, ", ")]), ", ") * ");"
     end
     join(create_stmts, " ")
+end
+
+function tostring(conn::MySQL.Connection, d::Delete)
+    "DELETE FROM $(d.table) WHERE _id IN ($(join(d.ids, ",")))"
 end
 
 function tostring(::MySQL.Connection, v::Values)
