@@ -13,11 +13,13 @@ function ACSetInterface.maxpart(acset::VirtualACSet, table::Symbol) end
 # get value of 
 # subpart(acset, 1, :tgt) =
 # subpart(acset, :, col) = get all values in column
-function ACSetInterface.subpart(vas::VirtualACSet, table::Symbol, cols::AbstractVector{Symbol})
-    stmt = tostring(vas.conn, Select(cols, table))
+function ACSetInterface.subpart(vas::VirtualACSet, table::Symbol, 
+        what::SQLSelectQuantity=SelectAll())
+    stmt = tostring(vas.conn, Select(table; what=what))
     query = DBInterface.execute(vas.conn, stmt)
     DataFrames.DataFrame(query)
 end
+# ambiguity
 
 # gets id where
 function ACSetInterface.incident(vas::VirtualACSet, table::Symbol, names::AbstractVector{Symbol}) end
@@ -26,6 +28,10 @@ function ACSetInterface.add_part!(vas::VirtualACSet, table::Symbol, values::Vect
     stmt = tostring(vas.conn, Insert(table, values))
     query = DBInterface.execute(vas.conn, stmt)
     DBInterface.lastrowid(query)
+end
+
+function ACSetInterface.add_part!(vas::VirtualACSet, table, value::NamedTuple{T}) where T
+    add_part!(vas, table, [value])
 end
 
 function ACSetInterface.set_subpart!(acset::VirtualACSet, args...) end

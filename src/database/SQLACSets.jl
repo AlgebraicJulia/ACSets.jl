@@ -8,10 +8,8 @@ using MLStyle
 using DataFrames
 using DBInterface
 
-flatify(xs::AbstractVector) = Iterators.flatten(xs) |> collect
-
+include("sqlsyntax.jl")
 include("sqlmethods.jl")
 include("acsets_interface.jl")
-
 
 end

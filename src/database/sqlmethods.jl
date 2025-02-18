@@ -18,19 +18,16 @@ end
 export VirtualACSet
 # TODO we need to convert the `view` into an ACSet
 
-function VirtualACSet(conn::Conn, acs::SimpleACSet) where Conn <: DBInterface.Connection
+function VirtualACSet(conn::Conn, acs::SimpleACSet) where Conn
     VirtualACSet{Conn}(conn=conn, acsettype=typeof(acs))
 end
 
-# will this work how I want?
-function reload!(vas::VirtualACSet{Conn}) where Conn
-    vas.conn = DBInterface.connect(MySQL.Connection, "localhost", "mysql", db="acsets", 
-                                   unix_socket="/var/run/mysqld/mysqld.sock")
-end
-export reload
+function reload! end
+export reload!
 
+# TODO generate multiple statements, then decide to execute single or multiple
 function execute!(vas::VirtualACSet{Conn}, stmt::String) where Conn
-    result = DBInterface.executemultiple(vas.conn, stmt)
+    result = DBInterface.execute(vas.conn, stmt)
     DataFrames.DataFrame(result)
 end
 export execute!
@@ -49,61 +46,7 @@ end
 function insert!(v::VirtualACSet{Conn}, acset::SimpleACSet) where Conn
     insert_stmts = tostring.(Ref(v.conn), Insert(v.conn, acset))
     query = DBInterface.executemultiple(conn, insert_stmts)
-    DataFrames.DataFrmae(query)
-end
-
-# this typing ensures that named tuples have the same keys
-struct Values{T}
-    table::Union{Symbol, Nothing}
-    vals::Vector{<:NamedTuple{T}}
-end
-
-Base.length(v::Values{T}) where T = length(v.vals)
-Base.iterate(v::Values{T}, args...) where T = iterate(v.vals, args...)
-Base.broadcast(f, v::Values{T}) where T = Values{T}(v.table, broadcast(f, v.vals))
-
-columns(v::Values{T}) where T = T
-export columns
-
-@data SQLTerms begin
-    Insert(table::Symbol, values::Values)
-    Select(cols::Union{Vector{Symbol}, Nothing}, table::Symbol)
-    Alter(table::Symbol, refdom::Symbol, refcodom::Symbol)
-    Create(schema::BasicSchema{Symbol})
-    Delete(table::Symbol, ids::Vector{Int})
-end
-export SQLTerms, Values, Insert, Select, Alter, Create, Delete
-
-## Constructors
-
-function Select(table::Symbol)
-    Select(nothing, table)
-end
-
-function Alter(table::Symbol, arrow::Pair{Symbol, Symbol})
-    Alter(table, arrow.first, arrow.second)
-end
-
-function Create(acset::SimpleACSet)
-    Create(acset_schema(acset))
-end
-
-function Insert(table::Symbol, vs::Vector{<:NamedTuple{T}}) where T
-    Insert(table, Values(table, vs))
-end
-
-## SQL Term Operations
-
-function Base.:+(v1::Values, v2::Values)
-    Values(v1._1 ∪ v2._1)
-end
-
-function Base.:+(i1::Insert, i2::Insert)
-    if i1.table == i2.table
-        Insert(i1.table, i1.values + i2.values)
-    else
-        [i1, i2]
-    end
+    DataFrames.DataFrame(query)
 end
 
 function tosql end
@@ -111,7 +54,7 @@ export tosql
 
 """
 """
-function entuple(v::Values;f::Function=identity)
+function entuple(v::Values; f::Function=identity)
     ["($(join(f.(vals), ",")))" for vals in values.(v.vals)]
 end
 export entuple
@@ -123,9 +66,11 @@ function entuple(nt::NamedTuple)
 end
 
 # get attrs
-getattrs(g::ACSet, table::Symbol) = first.(filter(attrs(acset_schema(g))) do (attr, tbl, _)
-    table == tbl
-end)
+function getattrs(g::ACSet, table::Symbol)
+    first.(filter(attrs(acset_schema(g))) do (attr, tbl, _)
+        table == tbl
+    end)
+end
 export getattrs
 
 gethoms(x::ACSet, table::Symbol) = first.(homs(acset_schema(x); from=table))

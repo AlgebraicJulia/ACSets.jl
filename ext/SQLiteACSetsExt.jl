@@ -1,3 +1,10 @@
+module SQLiteACSetsExt
+
+using ACSets
+
+using SQLite
+using DataFrames
+
 function selectfrom(db::SQLite.DB, table)
     query = DBInterface.execute(db, "SELECT * FROM $table")
     DataFrames.DataFrame(query)
@@ -44,4 +51,4 @@ DBInterface.execute(db, stmts)
 selectfrom(db, "artist")
 selectfrom(db, "track")
 
-
+end
