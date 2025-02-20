@@ -14,9 +14,8 @@ conn = DBInterface.connect(MySQL.Connection, "localhost", "mysql", db="acsets", 
     weight::Attr(E,Weight)
 end;
 @acset_type WeightedLabeledGraph(SchWeightedLabeledGraph, index=[:src, :tgt]) <: AbstractLabeledGraph
-g = erdos_renyi(WeightedLabeledGraph{Symbol,Float64}, 1000, 0.25);
-# g[:, :label] = Symbol.(collect('a':'z')[1:nv(g)]);
-g[:, :label] = Symbol.(floor.(rand(nv(g)) * nv(g)))
+g = erdos_renyi(WeightedLabeledGraph{Symbol,Float64}, 5, 0.25);
+g[:, :label] = Symbol.(floor.(rand(nv(g)) * nv(g)));
 g[:, :weight] = floor.(rand(ne(g)) .* 100);
 
 c = Create(g)
