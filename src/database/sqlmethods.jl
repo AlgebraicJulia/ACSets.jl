@@ -22,6 +22,15 @@ function VirtualACSet(conn::Conn, acs::SimpleACSet) where Conn
     VirtualACSet{Conn}(conn=conn, acsettype=typeof(acs))
 end
 
+function ACSet(vas::VirtualACSet{Conn}) where Conn
+    acset = vas.acsettype()
+    isnothing(vas.view) && return acset
+    # TODO testing
+    add_parts!(acset, :V, nrow(vas.view))
+    set_subpart!(acset, :label, Symbol.(vas.view.label))
+    acset
+end
+
 function reload! end
 export reload!
 
@@ -31,6 +40,15 @@ function execute!(vas::VirtualACSet{Conn}, stmt::String) where Conn
     DataFrames.DataFrame(result)
 end
 export execute!
+
+function execute!(vas::VirtualACSet{Conn}, query::SQLTerms) where Conn
+    execute!(vas, tostring(vas.conn, query))
+end
+
+function ACSet!(vas::VirtualACSet{Conn}, query::SQLTerms) where Conn
+    vas.view = execute!(vas, query)
+    ACSet(vas)
+end
 
 function create!(conn::DBInterface.Connection, x::SimpleACSet)
     stmt = tostring(conn, Create(x))

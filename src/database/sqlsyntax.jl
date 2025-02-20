@@ -78,8 +78,8 @@ function Create(acset::SimpleACSet)
     Create(acset_schema(acset))
 end
 
-function Insert(table::Symbol, vs::Vector{<:NamedTuple{T}}) where T
-    Insert(table, Values(table, vs), nothing)
+function Insert(table::Symbol, vs::Vector{<:NamedTuple{T}}, whereas::Union{WhereClause, Nothing}=nothing) where T
+    Insert(table, Values(table, vs), wheres)
 end
 
 ## SQL Term Operations

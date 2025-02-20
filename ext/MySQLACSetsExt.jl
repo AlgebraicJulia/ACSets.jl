@@ -107,7 +107,7 @@ end
 function ACSets.Insert(conn::MySQL.Connection, acset::ACSet, table::Symbol)
     cols = colnames(acset, table)
     vals = getrows(conn, acset, table)
-    Insert(table, vals)
+    Insert(table, vals, nothing)
 end
 
 end
