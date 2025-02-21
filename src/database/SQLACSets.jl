@@ -8,8 +8,8 @@ using MLStyle
 using DataFrames
 using DBInterface
 
-include("sqlsyntax.jl")
-include("sqlmethods.jl")
+include("syntax.jl")
+include("methods.jl")
 include("acsets_interface.jl")
 
 end

@@ -8,7 +8,8 @@ using MySQL
 
 const MYSQL_DELIMITER = "//"
 
-function ACSets.reload!(vas::VirtualACSet{Conn}) where Conn
+# need to pass in user config
+function ACSets.reload!(vas::VirtualACSet{MySQL.Connection})
     vas.conn = DBInterface.connect(MySQL.Connection, "localhost", "mysql", 
                                    db="acsets", 
                                    unix_socket="/var/run/mysqld/mysqld.sock")
@@ -17,22 +18,22 @@ end
 function tosql end
 
 # DB specific, type conversion
-tosql(::MySQL.Connection, ::Type{<:Real}) = "REAL"
-tosql(::MySQL.Connection, ::Type{<:AbstractString}) = "TEXT"
-tosql(::MySQL.Connection, ::Type{<:Symbol}) = "TEXT"
-tosql(::MySQL.Connection, ::Type{<:Integer}) = "INTEGER"
-tosql(::MySQL.Connection, T::DataType) = error("$T is not supported in this MySQL implementation")
+tosql(::VirtualACSet{MySQL.Connection}, ::Type{<:Real}) = "REAL"
+tosql(::VirtualACSet{MySQL.Connection}, ::Type{<:AbstractString}) = "TEXT"
+tosql(::VirtualACSet{MySQL.Connection}, ::Type{<:Symbol}) = "TEXT"
+tosql(::VirtualACSet{MySQL.Connection}, ::Type{<:Integer}) = "INTEGER"
+tosql(::VirtualACSet{MySQL.Connection}, T::DataType) = error("$T is not supported in this MySQL implementation")
 # value conversion
-tosql(::MySQL.Connection, ::Nothing) = "NULL"
-tosql(::MySQL.Connection, s::Symbol) = string(s)
-tosql(::MySQL.Connection, s::String) = "\'$s\'"
-tosql(::MySQL.Connection, x) = x
+tosql(::VirtualACSet{MySQL.Connection}, ::Nothing) = "NULL"
+tosql(::VirtualACSet{MySQL.Connection}, s::Symbol) = string(s)
+tosql(::VirtualACSet{MySQL.Connection}, s::String) = "\'$s\'"
+tosql(::VirtualACSet{MySQL.Connection}, x) = x
 
 # TODO I don't like that the conversion function is also formatting. 
 # I would be at peace if formatting and value representation were separated
 function tosql(vas::VirtualACSet{MySQL.Connection}, v::NamedTuple{T}; key::Bool=true) where T
     join(collect(Iterators.map(pairs(v)) do (k, v)
-        key ? "$(tosql(vas.conn, k)) = $(tosql(vas.conn, v))" : "$(tosql(vas.conn, v))"
+        key ? "$(tosql(vas, k)) = $(tosql(vas, v))" : "$(tosql(vas, v))"
     end), ", ")
 end
 
@@ -107,12 +108,12 @@ function ACSets.tostring(vas::VirtualACSet, c::Create)
             join(filter(!isempty, ["_id INTEGER PRIMARY KEY",
                 # column_name column_type
                 join(map(homs(c.schema; from=ob)) do (col, src, tgt)
-                       tgttype = tosql(vas.conn, Int)
+                       tgttype = tosql(vas, Int)
                        "$(col) $tgttype"
                 end, ", "),
                 join(map(obattrs) do (col, _, type)
                     # FIXME
-                    "$(col) $(tosql(vas.conn, subpart_type(vas.acsettype(), type)))" 
+                    "$(col) $(tosql(vas, subpart_type(vas.acsettype(), type)))" 
                end, ", ")]), ", ") * ");"
     end
     join(create_stmts, " ")

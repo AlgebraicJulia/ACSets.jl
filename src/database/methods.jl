@@ -31,13 +31,6 @@ Base.show(io::IOBuffer, v::VirtualACSet) = println(io, "$(v.conn)\n$(v.view)")
 # how do we know which view we are looking at?
 
 # upstream to basic ACSets
-function Base.fill!(acset::StructACSet, part::Symbol, n::Integer)
-    if nparts(acset, part) < n
-        add_parts!(acset, part, n - nparts(acset, part))
-    else
-        1:0 # for type stability
-    end
-end
 
 # blends homs and attrs together. not idea
 function namesrctgt(schema::BasicSchema)

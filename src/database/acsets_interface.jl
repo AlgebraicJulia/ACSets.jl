@@ -2,8 +2,12 @@
 ### ACSets Interface
 #####################
 
+function (vas::VirtualACSet)(f::Function, args...; kwargs...)
+    vas.view = f(vas, args...; kwargs...)
+end
+
 # get the number of rows
-function ACSetInterface.nparts(acset::VirtualACSet{Conn}, table::Symbol) where Conn
+function ACSetInterface.nparts(acset::VirtualACSet{Conn}, table::Symbol)::DataFrame where Conn
     query = DBInterface.execute(acset.conn, "SELECT COUNT(*) FROM $table;")
     DataFrames.DataFrame(query) 
 end
