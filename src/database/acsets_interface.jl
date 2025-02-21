@@ -13,13 +13,15 @@ function ACSetInterface.maxpart(acset::VirtualACSet, table::Symbol) end
 function ACSetInterface.subpart(vas::VirtualACSet, table::Symbol, select::Select)
     stmt = tostring(vas, select)
     query = DBInterface.execute(vas.conn, stmt)
-    DataFrames.DataFrame(query)
+    df = DataFrames.DataFrame(query); metadata!(df, "ob", table; style=:note)
+    df
 end
 
 function ACSetInterface.subpart(vas::VirtualACSet, table::Symbol, what::SQLSelectQuantity=SelectAll())
-    stmt = tostring(vas.conn, Select(table; what=what))
+    stmt = tostring(vas, Select(table; what=what))
     query = DBInterface.execute(vas.conn, stmt)
-    DataFrames.DataFrame(query)
+    df = DataFrames.DataFrame(query); metadata!(df, "ob", table; style=:note)
+    df
 end
 
 function ACSetInterface.subpart(vas::VirtualACSet, key::Vector{Int}, column::Symbol)
@@ -61,9 +63,11 @@ function ACSetInterface.incident(vas::VirtualACSet, table::Symbol, names::Abstra
     table = nst[names]
 end
 
+# add_part!
+
 function ACSetInterface.add_part!(vas::VirtualACSet, table::Symbol, values::Vector{<:NamedTuple{T}}) where T 
-    stmt = tostring(vas.conn, Insert(table, values))
-    query = DBInterface.execute(vas.conn, stmt)
+    stmt = tostring(vas, Insert(table, values))
+    query = DBInterface.execute(vas, stmt)
     DBInterface.lastrowid(query)
 end
 
@@ -71,19 +75,29 @@ function ACSetInterface.add_part!(vas::VirtualACSet, table, value::NamedTuple{T}
     add_part!(vas, table, [value])
 end
 
-function ACSetInterface.set_subpart!(acset::VirtualACSet, args...) end
+# set_subpart!
+
+function ACSetInterface.set_subpart!(vas::VirtualACSet, 
+        table::Symbol, values::Vector{<:NamedTuple{T}}; wheres::Union{WhereClause, Nothing}=nothing) where T 
+    stmt = tostring(vas, Update(table, values, wheres))
+    query = DBInterface.execute(vas.conn, stmt)
+    df = DataFrames.DataFrame(query); metadata!(df, "ob", table, style=:note)
+    df
+end
+
+# clear_subpart!
 
 function ACSetInterface.clear_subpart!(acset::VirtualACSet, args...) end
 
 function ACSetInterface.rem_part!(vas::VirtualACSet, table::Symbol, id::Int)
-    # if a table is constrained by another we might need to turn off foreign_key_checks
     rem_parts!(vas, table, [id])
 end
 
 function ACSetInterface.rem_parts!(vas::VirtualACSet, table::Symbol, ids::Vector{Int}) 
-    stmt = tostring(vas.conn, Delete(table, ids))
+    # if a table is constrained by another we might need to turn off foreign_key_checks
+    stmt = tostring(vas, Delete(table, ids))
     query = DBInterface.execute(vas.conn, stmt)
-    result = tostring(vas.conn, Select(table))
+    result = tostring(vas, Select(table))
     query = DBInterface.execute(vas.conn, result)
     DataFrames.DataFrame(query)
 end

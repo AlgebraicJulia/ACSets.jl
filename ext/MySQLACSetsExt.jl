@@ -37,7 +37,11 @@ function tosql(vas::VirtualACSet{MySQL.Connection}, v::NamedTuple{T}; key::Bool=
 end
 
 function tosql(vas::VirtualACSet{MySQL.Connection}, values::Values{T}; key::Bool=true) where T
-    join(["($x)" for x ∈ tosql.(Ref(vas), values.vals; key=key)], ", ")
+    if length(values.vals) == 1
+        "$(tosql(vas, only(values.vals); key=key))"
+    else
+        join(["($x)" for x ∈ tosql.(Ref(vas), values.vals; key=key)], ", ")
+    end
 end
 
 # String constructors
@@ -49,8 +53,8 @@ end
 
 function ACSets.tostring(vas::VirtualACSet{MySQL.Connection}, u::Update) 
     cols = join(columns(u.values), ", ")
-    wheres = !isnothing(u.wheres) ? tostring(conn, u.wheres) : ""
-    "UPDATE $(u.table) SET $(tosql(vas.conn, u.values)) " * wheres * ";"
+    wheres = !isnothing(u.wheres) ? tostring(vas, u.wheres) : ""
+    "UPDATE $(u.table) SET $(tosql(vas, u.values)) " * wheres * ";"
 end
 
 # TODO might have to refactor so we can reuse code for show method

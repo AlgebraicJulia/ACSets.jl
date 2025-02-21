@@ -30,7 +30,9 @@ execute!(vas, i)
 
 subpart(vas, :V)
 
-# TODO move "LastRowId" to a type so we can dispatch on it 
+incident(vas, nparts(vas, :V).var"COUNT(*)"[1], :src)
+
+# TODO move "LastRowId" to a type so we can dispatch on it
 add_part!(vas, :V, (_id = nparts(vas, :V).var"COUNT(*)"[1] + 1, label = "a")) 
 
 rem_part!(vas, :V, 10) # this will fail because of db constraints
@@ -44,6 +46,9 @@ execute!(vas, s0)
 
 s1 = Select(:E, what=SelectColumns(:E => :_id, :E => :tgt), wheres=WhereClause(:in, :_id => [1,2,3]))
 execute!(vas, s1)
+
+# TODO should be able to pass in Julia expressions for conditions like `where`
+set_subpart!(vas, :V, [(label=0,)]; wheres=WhereClause(:in, :_id => [1]))
 
 
 subpart(vas, 1, :tgt)
@@ -60,3 +65,13 @@ tostring(conn, u)
 
 
 ForeignKeyChecks(conn, tostring(conn, i))
+
+# want just a diagram of the 
+h = WeightedLabeledGraph{DataFrame, DataFrame}()
+
+v = subpart(vas, :V)
+e = subpart(vas, :E)
+
+add_part!(h, :V, label = v)
+
+add_part!(h, :E, weight = e)
