@@ -1,10 +1,14 @@
+using MLStyle.Modules.Cond
+
 function tostring end
 export tostring
 
 function select end
+function delete! end
 function create! end
-function delete end
-function alter end
+function alter! end
+function update! end
+
 export create!
 
 abstract type AbstractVirtualACSet end
@@ -22,14 +26,43 @@ function VirtualACSet(conn::Conn, acs::SimpleACSet) where Conn
     VirtualACSet{Conn}(conn=conn, acsettype=typeof(acs))
 end
 
-function ACSet(vas::VirtualACSet{Conn}) where Conn
+Base.show(io::IOBuffer, v::VirtualACSet) = println(io, "$(v.conn)\n$(v.view)")
+
+# how do we know which view we are looking at?
+
+# upstream to basic ACSets
+function Base.fill!(acset::StructACSet, part::Symbol, n::Integer)
+    if nparts(acset, part) < n
+        add_parts!(acset, part, n - nparts(acset, part))
+    else
+        1:0 # for type stability
+    end
+end
+
+# blends homs and attrs together. not idea
+function namesrctgt(schema::BasicSchema)
+    Dict([name => src => tgt for (name, src, tgt) in schema.homs ∪ schema.attrs])
+end
+
+function toacset(vas::VirtualACSet{Conn}) where Conn
     acset = vas.acsettype()
     isnothing(vas.view) && return acset
-    # TODO testing
-    add_parts!(acset, :V, nrow(vas.view))
-    set_subpart!(acset, :label, Symbol.(vas.view.label))
+    schema = acset_schema(acset)
+    # get columns in schema
+    kvs = namesrctgt(schema)
+    # exclude primary key column
+    subview = vas.view[!, Not(:_id)]
+    cols = propertynames(subview)
+    ob = first.(getindex.(Ref(kvs), cols)) |> unique |> only
+    # instantiate 
+    add_parts!(acset, ob, nrow(vas.view))
+    for (name, column) in pairs(eachcol(subview))
+        fill!(acset, kvs[name].second, Int64(maximum(column))) # whattabout symbols?
+        set_subpart!(acset, name, Int64.(vas.view[!, name]))
+    end
     acset
 end
+export toacset
 
 function reload! end
 export reload!
@@ -42,7 +75,7 @@ end
 export execute!
 
 function execute!(vas::VirtualACSet{Conn}, query::SQLTerms) where Conn
-    execute!(vas, tostring(vas.conn, query))
+    execute!(vas, tostring(vas, query))
 end
 
 function ACSet!(vas::VirtualACSet{Conn}, query::SQLTerms) where Conn
@@ -67,12 +100,17 @@ function insert!(v::VirtualACSet{Conn}, acset::SimpleACSet) where Conn
     DataFrames.DataFrame(query)
 end
 
+function update!(v::VirtualACSet, acset::SimpleACSet)
+    update_stmts = to_string(v.conn, Update(v.conn, acset))
+    query = DBInterface.executemultiple(conn, update_stmts)
+    DataFrames.DataFrame(query)
+end
+
 function tosql end
 export tosql
 
-"""
-"""
-function entuple(v::Values; f::Function=identity)
+""" """
+function entuple(v::Values; f::Function=identity, values::Bool=true)
     ["($(join(f.(vals), ",")))" for vals in values.(v.vals)]
 end
 export entuple
@@ -84,18 +122,18 @@ function entuple(nt::NamedTuple)
 end
 
 # get attrs
-function getattrs(g::ACSet, table::Symbol)
+function getattrs(g::SimpleACSet, table::Symbol)
     first.(filter(attrs(acset_schema(g))) do (attr, tbl, _)
         table == tbl
     end)
 end
 export getattrs
 
-gethoms(x::ACSet, table::Symbol) = first.(homs(acset_schema(x); from=table))
+gethoms(x::SimpleACSet, table::Symbol) = first.(homs(acset_schema(x); from=table))
 export gethoms
 
 # Values should have a method which turns single values into "(1)"
-function getrows(conn::Conn, x::ACSet, table::Symbol) where Conn <: DBInterface.Connection
+function getrows(conn::Conn, x::SimpleACSet, table::Symbol) where Conn <: DBInterface.Connection
     cols = gethoms(x, table) ∪ getattrs(x, table)
     x = map(parts(x, table)) do id
         (;zip([:_id, cols...], [id, tosql.(Ref(conn), subpart.(Ref(x), Ref(id), cols))...])...)
@@ -105,7 +143,7 @@ end
 export getrows
 
 # FIXME Set
-function colnames(x::ACSet, table::Symbol)
+function colnames(x::SimpleACSet, table::Symbol)
     homnames = first.(homs(acset_schema(x); from=table))
     gattrs = getattrs(x, table)
     # I don't like this as it assumes the order of the columns would agree
@@ -114,3 +152,7 @@ function colnames(x::ACSet, table::Symbol)
 end
 export colnames
 
+function wrap(stmt::String, left::String, right::String)
+    join([left, stmt, right], " ")
+end
+export wrap

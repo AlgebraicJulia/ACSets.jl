@@ -22,23 +22,41 @@ c = Create(g)
 
 vas = VirtualACSet(conn, g)
 
-i = join(tostring.(Ref(conn), Insert(conn, g)))
+execute!(vas, c)
+
+i = join(tostring.(Ref(conn), Insert(conn, g)), " ")
 
 execute!(vas, i)
 
 subpart(vas, :V)
 
-add_part!(vas, :V, (_id = 10, label = "a")) 
+# TODO move "LastRowId" to a type so we can dispatch on it 
+add_part!(vas, :V, (_id = nparts(vas, :V).var"COUNT(*)"[1] + 1, label = "a")) 
 
-rem_part!(vas, :V, 10)
+rem_part!(vas, :V, 10) # this will fail because of db constraints
 
 rem_part!(vas, :E, 10)
 
 subpart(vas, :V)
 
 s0 = Select(:V, what=SelectColumns(:V => :label))
-s1 = Select(:E, what=SelectColumns(:E => :_id, :E => :tgt), wheres=WhereClause(:in, :_id => [1,2,3]))
-
-tostring(conn, s1)
-
 execute!(vas, s0)
+
+s1 = Select(:E, what=SelectColumns(:E => :_id, :E => :tgt), wheres=WhereClause(:in, :_id => [1,2,3]))
+execute!(vas, s1)
+
+
+subpart(vas, 1, :tgt)
+subpart(vas, [1,2], :tgt)
+
+
+execute!(vas, s1)
+
+i=Insert(:Persons, [(PersonID=1, LastName="Last", FirstName="First", Address="a", City="b")])
+execute!(vas, i)
+
+u=Update(:Persons, [(LastName="First", FirstName="Last")], WhereClause(:in, :PersonID => [1]))
+tostring(conn, u)
+
+
+ForeignKeyChecks(conn, tostring(conn, i))

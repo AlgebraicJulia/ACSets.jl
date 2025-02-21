@@ -49,17 +49,18 @@ SelectColumns(varargs...) = SelectColumns([varargs...])
 
 @data SQLTerms begin
     Insert(table::Symbol, values::Values, wheres::Union{WhereClause, Nothing})
+    Update(table::Symbol, values::Values, wheres::Union{WhereClause, Nothing})
     Select(qty::SQLSelectQuantity, 
             from::Union{Symbol, Vector{Symbol}}, 
             on::Union{Vector{SQLEquation}, Nothing},
-            wheres::Union{WhereClause, Nothing}) 
+            wheres::Union{WhereClause, Nothing})
     # Select(table::Symbol, cols::Union{Vector{Symbol}, Nothing},
     #   wheres::Union{WhereClause, Nothing})
     Alter(table::Symbol, refdom::Symbol, refcodom::Symbol)
     Create(schema::BasicSchema{Symbol})
     Delete(table::Symbol, ids::Vector{Int})
 end
-export SQLTerms, Values, Insert, Select, Alter, Create, Delete
+export SQLTerms, Values, Insert, Update, Select, Alter, Create, Delete
 
 ## Constructors
 
@@ -78,8 +79,12 @@ function Create(acset::SimpleACSet)
     Create(acset_schema(acset))
 end
 
-function Insert(table::Symbol, vs::Vector{<:NamedTuple{T}}, whereas::Union{WhereClause, Nothing}=nothing) where T
+function Insert(table::Symbol, vs::Vector{<:NamedTuple{T}}, wheres::Union{WhereClause, Nothing}=nothing) where T
     Insert(table, Values(table, vs), wheres)
+end
+
+function Update(table::Symbol, vs::Vector{<:NamedTuple{T}}, wheres::Union{WhereClause, Nothing}=nothing) where T
+    Update(table, Values(table, vs), wheres)
 end
 
 ## SQL Term Operations
@@ -96,3 +101,9 @@ function Base.:+(i1::Insert, i2::Insert)
     end
 end
 
+abstract type DatabaseEnvironmentConfig end
+
+struct ForeignKeyChecks <: DatabaseEnvironmentConfig 
+    bool::Bool
+end
+export ForeignKeyChecks

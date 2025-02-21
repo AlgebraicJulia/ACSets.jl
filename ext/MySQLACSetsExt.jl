@@ -28,31 +28,49 @@ tosql(::MySQL.Connection, s::Symbol) = string(s)
 tosql(::MySQL.Connection, s::String) = "\'$s\'"
 tosql(::MySQL.Connection, x) = x
 
+# TODO I don't like that the conversion function is also formatting. 
+# I would be at peace if formatting and value representation were separated
+function tosql(vas::VirtualACSet{MySQL.Connection}, v::NamedTuple{T}; key::Bool=true) where T
+    join(collect(Iterators.map(pairs(v)) do (k, v)
+        key ? "$(tosql(vas.conn, k)) = $(tosql(vas.conn, v))" : "$(tosql(vas.conn, v))"
+    end), ", ")
+end
+
+function tosql(vas::VirtualACSet{MySQL.Connection}, values::Values{T}; key::Bool=true) where T
+    join(["($x)" for x ∈ tosql.(Ref(vas), values.vals; key=key)], ", ")
+end
+
 # String constructors
-function ACSets.tostring(conn::MySQL.Connection, i::Insert) 
+function ACSets.tostring(vas::VirtualACSet{MySQL.Connection}, i::Insert) 
     cols = join(columns(i.values), ", ")
-    values = join(entuple(i.values; f=x->tosql(conn, x)), ", ")
+    values = tosql(vas, i.values; key=false)
     "INSERT IGNORE INTO $(i.table) ($cols) VALUES $values ;"
 end
 
+function ACSets.tostring(vas::VirtualACSet{MySQL.Connection}, u::Update) 
+    cols = join(columns(u.values), ", ")
+    wheres = !isnothing(u.wheres) ? tostring(conn, u.wheres) : ""
+    "UPDATE $(u.table) SET $(tosql(vas.conn, u.values)) " * wheres * ";"
+end
+
 # TODO might have to refactor so we can reuse code for show method
-function ACSets.tostring(conn::MySQL.Connection, s::Select)
+function ACSets.tostring(vas::VirtualACSet{MySQL.Connection}, s::Select)
     from = s.from isa Vector ? join(s.from, ", ") : s.from
-    qty = tostring(conn, s.qty)
-    wheres = !isnothing(s.wheres) ? tostring(conn, s.wheres) : ""
+    qty = tostring(vas, s.qty)
+    wheres = !isnothing(s.wheres) ? tostring(vas, s.wheres) : ""
     "SELECT $qty FROM $from " * wheres * ";"
 end
 
-function ACSets.tostring(conn::MySQL.Connection, qty::SQLSelectQuantity)
+function ACSets.tostring(vas::VirtualACSet{MySQL.Connection}, qty::SQLSelectQuantity)
     @match qty begin
         ::SelectAll => "*"
         ::SelectDistinct => "*" # TODO
         ::SelectDistinctRow => "*" # TODO
-        SelectColumns(cols) => join(tostring.(Ref(conn), cols), ", ")
+        SelectColumns(cols) => join(tostring.(Ref(vas), cols), ", ")
     end
 end
 
-function ACSets.tostring(::MySQL.Connection, column::Union{Pair{Symbol, Symbol}, Symbol})
+function ACSets.tostring(::VirtualACSet{MySQL.Connection}, column::Union{Pair{Symbol, Symbol}, Symbol})
     @match column begin
         ::Pair{Symbol, Symbol} => "$(column.first).$(column.second)"
         _ => column
@@ -60,54 +78,65 @@ function ACSets.tostring(::MySQL.Connection, column::Union{Pair{Symbol, Symbol},
 end
 
 # TODO
-function ACSets.tostring(::MySQL.Connection, wheres::WhereClause)
+function ACSets.tostring(::VirtualACSet{MySQL.Connection}, wheres::WhereClause)
     @match wheres begin
         WhereClause(op, d::Pair) => "WHERE $(d.first) $op ($(join(d.second, ", ")))"
         _ => wheres
     end
 end
 
-function ACSets.tostring(conn::MySQL.Connection, c::Create)
+function ACSets.tostring(vas::VirtualACSet, c::Create)
     create_stmts = map(objects(c.schema)) do ob
         obattrs = attrs(c.schema; from=ob)
         "CREATE TABLE IF NOT EXISTS $(ob)(" * 
             join(filter(!isempty, ["_id INTEGER PRIMARY KEY",
                 # column_name column_type
                 join(map(homs(c.schema; from=ob)) do (col, src, tgt)
-                       tgttype = tosql(conn, Int)
+                       tgttype = tosql(vas.conn, Int)
                        "$(col) $tgttype"
                 end, ", "),
                 join(map(obattrs) do (col, _, type)
                     # FIXME
-                   "$(col) $(tosql(conn, subpart_type(c.schema, type)))" 
+                    "$(col) $(tosql(vas.conn, subpart_type(vas.acsettype(), type)))" 
                end, ", ")]), ", ") * ");"
     end
     join(create_stmts, " ")
 end
 
-function ACSets.tostring(conn::MySQL.Connection, d::Delete)
+function ACSets.tostring(vas::VirtualACSet{MySQL.Connection}, d::Delete)
     "DELETE FROM $(d.table) WHERE _id IN ($(join(d.ids, ",")))"
 end
 
-function ACSets.tostring(::MySQL.Connection, v::Values)
+function ACSets.tostring(::VirtualACSet{MySQL.Connection}, v::Values)
     "VALUES " * join(entuple(v), ", ") * ";"
 end
 
-function ACSets.tostring(::MySQL.Connection, a::Alter)
+function ACSets.tostring(::VirtualACSet{MySQL.Connection}, a::Alter)
     "ALTER TABLE $(a.refdom) ADD CONSTRAINT fk_$(ref) FOREIGN KEY ($(a.ref)) REFERENCES $(a.refcodom)(_id); "
 end
 
+function ACSets.tostring(::VirtualACSet{MySQL.Connection}, fkc::ForeignKeyChecks)
+    "SET FOREIGN_KEY_CHECKS = $(Int(fkc.bool)) ;"
+end
+
+# convenience
+function ACSets.ForeignKeyChecks(vas::VirtualACSet{MySQL.Connection}, stmt::String)
+    l, r = tostring.(Ref(conn), ForeignKeyChecks.([false, true]))
+    wrap(stmt, l, r)
+end
+
 # overloading syntactical constructors 
-function ACSets.Insert(conn::MySQL.Connection, acset::ACSet)
+function ACSets.Insert(vas::VirtualACSet{MySQL.Connection}, acset::ACSet)
     map(objects(acset_schema(acset))) do ob
-        Insert(conn, acset, ob)
+        Insert(vas.conn, acset, ob)
     end
 end
 
-function ACSets.Insert(conn::MySQL.Connection, acset::ACSet, table::Symbol)
+function ACSets.Insert(vas::VirtualACSet{MySQL.Connection}, acset::ACSet, table::Symbol)
     cols = colnames(acset, table)
-    vals = getrows(conn, acset, table)
-    Insert(table, vals, nothing)
+    vals = getrows(vas.conn, acset, table)
+    Insert(vas.table, vals, nothing)
 end
+
 
 end
