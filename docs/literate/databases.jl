@@ -18,9 +18,9 @@ g = erdos_renyi(WeightedLabeledGraph{Symbol,Float64}, 5, 0.25);
 g[:, :label] = Symbol.(floor.(rand(nv(g)) * nv(g)));
 g[:, :weight] = floor.(rand(ne(g)) .* 100);
 
-c = Create(g)
-
 vas = VirtualACSet(conn, g)
+
+c = Create(g)
 
 execute!(vas, c)
 
@@ -63,15 +63,31 @@ execute!(vas, i)
 u=Update(:Persons, [(LastName="First", FirstName="Last")], WhereClause(:in, :PersonID => [1]))
 tostring(conn, u)
 
+# s=Select(qty=SelectAll(), from=[:V, :E],  
+
+j=Join(:LEFT, :V, SQLEquation(:E => :src, :V => :_id))
+
+s=Select(SelectColumns([:E=>[:_id, :src, :tgt, :weight], :V=>:label]), :E, Join(:LEFT, :V, SQLEquation(:E => :src, :V => :_id)), nothing)
+
+s=Select(SelectColumns([:Junct=>:_id, :Student=>:name]), :Junct, 
+         Join(:RIGHT, :Student, SQLEquation(:Junct => :student, :Student => :_id)), nothing)
 
 ForeignKeyChecks(conn, tostring(conn, i))
 
+struct GraphSchema
+    graph::WeightedLabeledGraph{DataFrame, DataFrame}
+    function GraphSchema()
+        new(WeightedLabeledGraph{DataFrame, DataFrame}())
+    end
+end
+
 # want just a diagram of the 
-h = WeightedLabeledGraph{DataFrame, DataFrame}()
+h = GraphSchema()
 
 v = subpart(vas, :V)
 e = subpart(vas, :E)
 
-add_part!(h, :V, label = v)
+add_part!(h.graph, :V, label = v)
+add_part!(h.graph, :E, weight = e)
 
-add_part!(h, :E, weight = e)
+

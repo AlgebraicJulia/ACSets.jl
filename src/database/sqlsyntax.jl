@@ -47,15 +47,31 @@ export SQLSelectQuantity, SelectAll, SelectDistinct, SelectDistinctRow, SelectCo
 SelectColumns(t::Union{Symbol, Pair{Symbol, Symbol}}) = SelectColumns([t])
 SelectColumns(varargs...) = SelectColumns([varargs...])
 
+function SelectColumns(t::Vector{Pair{Symbol, Any}})
+    xs = Vector{Pair{Symbol, Symbol}}()
+    foreach(t) do (k, v)
+        v isa Symbol ? push!(xs, k => v) : push!.(Ref(xs), (=>).(Ref(k), v))
+    end
+    SelectColumns(xs)
+end
+
+struct Join
+    type::Symbol
+    table::Symbol
+    on::Union{Vector{SQLEquation}, Nothing}
+    function Join(type::Symbol, table::Symbol, on::SQLEquation)
+        new(type, table, [on])
+    end
+end
+export Join
+
 @data SQLTerms begin
     Insert(table::Symbol, values::Values, wheres::Union{WhereClause, Nothing})
     Update(table::Symbol, values::Values, wheres::Union{WhereClause, Nothing})
     Select(qty::SQLSelectQuantity, 
-            from::Union{Symbol, Vector{Symbol}}, 
-            on::Union{Vector{SQLEquation}, Nothing},
+            from::Union{Symbol, Vector{Symbol}}, # TODO could be subquery 
+            join::Union{Join, Nothing},
             wheres::Union{WhereClause, Nothing})
-    # Select(table::Symbol, cols::Union{Vector{Symbol}, Nothing},
-    #   wheres::Union{WhereClause, Nothing})
     Alter(table::Symbol, refdom::Symbol, refcodom::Symbol)
     Create(schema::BasicSchema{Symbol})
     Delete(table::Symbol, ids::Vector{Int})

@@ -44,6 +44,8 @@ function ACSetInterface.subpart(vas::VirtualACSet, (:), column::Symbol; what::SQ
 end
 # TODO we can probably use DataFrames metadata to look at two dataframes as if we were looking at an ACSet. Maybe we can have a diagram of BasicSchema, say E ⇉ V where the values on these nodes are data frames
 
+# incident
+
 # TODO names::Vector{Symbol}
 function ACSetInterface.incident(vas::VirtualACSet, ids::Vector{Int}, name::Symbol)
     nst = namesrctgt(acset_schema(vas.acsettype()))
@@ -58,10 +60,10 @@ function ACSetInterface.incident(vas::VirtualACSet, id::Int, name::Symbol)
     incident(vas, [id], name)
 end
 
-function ACSetInterface.incident(vas::VirtualACSet, table::Symbol, names::AbstractVector{Symbol}) 
-    nst = namesrctgt(acset_schema(vas.acsettype()))
-    table = nst[names]
-end
+# function ACSetInterface.incident(vas::VirtualACSet, table::Symbol, names::AbstractVector{Symbol}) 
+#     nst = namesrctgt(acset_schema(vas.acsettype()))
+#     table = nst[names]
+# end
 
 # add_part!
 

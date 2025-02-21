@@ -61,8 +61,19 @@ end
 function ACSets.tostring(vas::VirtualACSet{MySQL.Connection}, s::Select)
     from = s.from isa Vector ? join(s.from, ", ") : s.from
     qty = tostring(vas, s.qty)
+    join = !isnothing(s.join) ? tostring(vas, s.join) : " "
     wheres = !isnothing(s.wheres) ? tostring(vas, s.wheres) : ""
-    "SELECT $qty FROM $from " * wheres * ";"
+    "SELECT $qty FROM $from " * join * wheres * ";"
+end
+
+function ACSets.tostring(vas::VirtualACSet{MySQL.Connection}, j::Join)
+    "$(j.type) JOIN $(j.table) ON $(tostring(vas, j.on))"
+end
+function ACSets.tostring(vas::VirtualACSet{MySQL.Connection}, ons::Vector{SQLEquation})
+    join(tostring.(Ref(vas), ons), " AND ")
+end
+function ACSets.tostring(vas::VirtualACSet{MySQL.Connection}, eq::SQLEquation)
+    "$(eq.lhs.first).$(eq.rhs.second) = $(eq.rhs.first).$(eq.rhs.second)"
 end
 
 function ACSets.tostring(vas::VirtualACSet{MySQL.Connection}, qty::SQLSelectQuantity)
