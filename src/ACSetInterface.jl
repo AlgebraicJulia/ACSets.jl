@@ -5,7 +5,7 @@ export ACSet, acset_schema, acset_name, dom_parts, codom_parts, subpart_type,
   rem_part!, rem_parts!, cascading_rem_part!, cascading_rem_parts!, gc!,
   copy_parts!, copy_parts_only!, disjoint_union, tables, pretty_tables,
   @acset, constructor, undefined_subparts, PartsType, DenseParts, MarkAsDeleted,
-  rem_free_vars!, parts_type
+  rem_free_vars!, parts_type, ensure_size!
 
 using MLStyle: @match
 using StaticArrays: StaticArray
@@ -287,17 +287,24 @@ end
 
 """Fill an ACSet
 
+Adds parts for a given part `part` up to a given number `n`. Unlike `add_part!`, this is idempotent.
+
+Example:
+
 Consider a cycle graph `g` with 3 vertices and 3 edges. Then
 ```
-fill!(g, :V, 5) # = 4:5
+ensure_size!(g, :V, 5) # = 4:5
 ``` 
 adds vertices 4 and 5. Suppose instead we added an edge,
 ```
-fill!(g, :E, 4) # = 4:4
+ensure_size!(g, :E, 4) # = 4:4
 ```
-
+Repeating this operation, we see that no new edges are added.
+```
+ensure_size!(g, :E, 4) # = 1:0
+```
 """
-function Base.fill!(acs::ACSet, part::Symbol, n::Integer)
+function ensure_size!(acs::ACSet, part::Symbol, n::Integer)
     if nparts(acs, part) < n
         add_parts!(acs, part, n - nparts(acs, part))
     else

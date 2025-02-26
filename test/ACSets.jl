@@ -384,8 +384,8 @@ rem_part!(A, :Set, 2)
 rem_part!(B, :Set, 1)
 @test 1 ∈ B
 
-@test fill!(A, :Sub, 3) == 2:3
-@test fill!(A, :Sub, 3) == 1:0 # idempotent
+@test ensure_size!(A, :Sub, 3) == 2:3
+@test ensure_size!(A, :Sub, 3) == 1:0 # idempotent
 @test subpart(A, 2:3, :ι) == [0, 0] 
 
 # Labeled sets
