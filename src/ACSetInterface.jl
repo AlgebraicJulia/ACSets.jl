@@ -284,6 +284,27 @@ end
 @inline Base.setindex!(acs::ACSet, val, part, name) = set_subpart!(acs, part, name, val)
 @inline Base.setindex!(acs::ACSet, vals, name) = set_subpart!(acs, name, vals)
 
+
+"""Fill an ACSet
+
+Consider a cycle graph `g` with 3 vertices and 3 edges. Then
+```
+fill!(g, :V, 5) # = 4:5
+``` 
+adds vertices 4 and 5. Suppose instead we added an edge,
+```
+fill!(g, :E, 4) # = 4:4
+```
+
+"""
+function Base.fill!(acs::ACSet, part::Symbol, n::Integer)
+    if nparts(acs, part) < n
+        add_parts!(acs, part, n - nparts(acs, part))
+    else
+        1:0 # type stability
+    end
+end
+
 """Clear a subpart in a C-set
 
 If the subpart is a hom, this is equivalent to setting it to 0
