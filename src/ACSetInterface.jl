@@ -246,6 +246,26 @@ function add_parts! end
   parts
 end
 
+""" Add parts to an ACSet up to a certain number
+
+Returns the range of IDs for the added parts. This is idempotent.
+
+Example:
+Given an ACSet `acset` with part `V` (such as a Graph),
+```
+fill!(acset, :V, 4)
+```
+adds up to 4 vertex parts.
+
+"""
+function Base.fill!(acset::ACSet, part::Symbol, n::Integer)
+    if nparts(acset, part) < n
+        add_parts!(acset, part, n - nparts(acset, part))
+    else
+        1:0 # for type stability
+    end
+end
+
 
 """ Mutate subpart of a part in a C-set.
 
