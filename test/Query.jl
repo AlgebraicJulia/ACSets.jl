@@ -1,5 +1,7 @@
 using Test
 
+using ACSets
+
 SchDDS = BasicSchema([:X], [(:Φ,:X,:X)])
 
 @abstract_acset_type AbstractDDS
@@ -37,8 +39,14 @@ g = @acset DecGraph{String} begin
   dec = ["a","b","c","d"]
 end
 
+# When we process the `Where` condition with a function on the RHS, we splat
+# the values entered into the function. This means that strings get splatted
+# into Char. To make sure that strings are properly compared, the user must reconstruct it with a String([x]) function.
 q = From(:V) |> Where(:dec, x -> String([x]) != "a") |> Select(:dec)
 @test q(g) == ["b", "c", "d"]
 
 q = From(:V) |> Where(:src, 1) & Where(:tgt, 2) |> Select(:dec)
 @test q(g) == ["a"]
+
+q = From(:E) |> Where([:src, :tgt], (x,y) -> x + 1 == y)
+@test q(g) == [1,2,3]

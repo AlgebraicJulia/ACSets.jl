@@ -26,9 +26,7 @@ struct WhereCondition <: AbstractCondition
 end
 export WhereCondition
 
-abstract type HasConds <: AbstractCondition end
-
-@as_record struct AndWhere <: HasConds
+@as_record struct AndWhere <: AbstractCondition
 	conds::Vector{<:AbstractCondition}
     AndWhere(conds::Vector{<:AbstractCondition}) = new(conds)
     AndWhere(a::AndWhere, b) = AndWhere(a.conds, b)
@@ -40,7 +38,7 @@ function Base.:&(a::S, b::T) where {T<:AbstractCondition, S<:AbstractCondition}
 	AndWhere(a, b)
 end
 
-@as_record struct OrWhere <: HasConds
+@as_record struct OrWhere <: AbstractCondition
 	conds::Vector{<:AbstractCondition}
     OrWhere(conds::Vector{<:AbstractCondition}) = OrWhere(conds)
     OrWhere(a::OrWhere, b) = OrWhere(a.conds, b)
@@ -80,6 +78,9 @@ function Base.:|(n::SQLACSetNode, a::AbstractCondition)
     n
 end
 
+function From end
+export From
+
 # TODO handle nothing case
 From(table::Symbol) = SQLACSetNode(table; cond=AbstractCondition[], select=Symbol[])
 
@@ -92,7 +93,6 @@ function From(sql::SQLACSetNode; table::Symbol)
     sql.from = [sql.from; table]
     sql
 end
-export From
 
 function Where end
 export Where
@@ -102,11 +102,13 @@ Where(lhs::Symbol, rhs::Function) = Where(lhs, |>, rhs)
 Where(lhs::Symbol, rhs::Any) = Where(lhs, ∈, rhs)
 Where(lhs, rhs::Function) = Where(lhs, |>, rhs)
 
+function Select end
+export Select
+
 function Select(sql::SQLACSetNode; columns::Union{Symbol, Vector{Symbol}})
     push!(sql.select, columns...)
     sql
 end
-export Select
 
 function Select(cols::Union{Symbol, Vector{Symbol}})
     sql -> Select(sql; columns=[Symbol[];cols])
@@ -143,18 +145,23 @@ end
 """
 A query with no select overly-specified:
 ```
-q = From(:Summand)
+q = From(:Tri)
 ```
-A query with the select specified. `_id` is reserved for the part.
+A query with the select specified. Since the part name is `Tri`, we get the part number, analogous to getting the primary key.
 ```
-q = From(:Summand) |>
-Select(:_id)
+q = From(:Tri) |> Select(:Tri)
 ```
-A query with two where statements. One Where uses another query
+We can also select with Julia's Pair data structure. Here we retrieve the column `∂e0`.
 ```
-q = From(:Op1) |>
-Where(:src, :∈, invasion[:res] ∪ invasion[:sum] ∪ infer_states(invasion)) |>
-Where(:src, :∈, From(:Op1) |> Where(:op1, :∈, black_list) |> Select(:tgt))
+q = From(:Tri => :∂e0)
+```
+A query with a `Where` statement.
+```
+q = From(:Tri) |> Where(:∂e0, x -> x < 10)
+```
+A query with a function on multiple columns
+```
+q = From(:Tri) |> Where([:∂e0, :∂e1, :∂e2], (x,y,z) -> StatsBase.var([x,y,z]) < 2)
 ```
 """
 function (q::SQLACSetNode)(acset::ACSet)
@@ -163,8 +170,7 @@ function (q::SQLACSetNode)(acset::ACSet)
     isempty(result) && return []
     selected = @match q.select begin
         ::Nothing || Symbol[] => return result
-        ::Symbol => subpart(acset, result, q.select)
-        selects => map(selects) do select
+        ::Union{Symbol, Vector{Symbol}} => map([Symbol[]; q.select]) do select
             acset_select(acset, select)[result]
         end
     end
