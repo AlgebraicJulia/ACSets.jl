@@ -7,12 +7,14 @@ using ..DenseACSets: @acset_type
 using MLStyle
 using DataFrames: DataFrame, nrow
 
+# TODO upstream?
 # for iterating over something that might be a singleton
 function iterable(x::T) where T
     S = T <: AbstractVector ? eltype(T) : T
     [S[]; x]
 end
 
+# TODO upstream?
 function select_part end
 export select_part
 
@@ -91,7 +93,6 @@ end
 function From end
 export From
 
-# TODO handle nothing case
 From(table::Symbol) = SQLACSetNode(table; cond=AbstractCondition[], select=[])
 
 function From(tablecol::Pair{Symbol, Symbol})
@@ -153,7 +154,7 @@ function process_where(w::AndWhere, acset::ACSet)
 end
 
 function process_select(q::SQLACSetNode, acset::ACSet, result::AbstractVector)
-    !isempty(q.select) || return result
+    !isempty(q.select) || return q.from => result
     map(iterable(q.select)) do select
         select => @match select begin
             ::Val{T} where T => [T for _ in 1:length(result)]
@@ -200,17 +201,15 @@ function (q::SQLACSetNode)(acset::ACSet; formatter=nothing)
     output
 end
 
-function to_name(x)
-    @match x begin
-        ::Pair => Symbol("$(x.second)$(x.first)")
-        ::Val{T} where T => Symbol("Val_$T")
-        _ => x
-    end
+to_name(x) = @match x begin
+    ::Pair => Symbol("$(x.second)$(x.first)")
+    ::Val{T} where T => Symbol("Val_$T")
+    _ => x
 end
 
 function build_nt(q::SQLACSetNode, selected; second=false)
-    names = to_name.(q.select)
-    NamedTuple{Tuple(names)}(getfield.(selected, 2))
+    names = isempty(q.select) ? [q.from] : to_name.(q.select)
+    NamedTuple{Tuple(names)}(getfield.(iterable(selected), :second))
 end
 
 end
