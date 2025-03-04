@@ -42,7 +42,7 @@ end
 export WhereCondition
 
 struct AndWhere <: AbstractCondition
-	conds::Vector{<:AbstractCondition}
+    conds::Vector{<:AbstractCondition}
     AndWhere(conds::Vector{<:AbstractCondition}) = new(conds)
     AndWhere(a::AndWhere, b) = AndWhere(a.conds, b)
     AndWhere(a, b::AndWhere) = AndWhere(a, b.conds)
@@ -50,11 +50,11 @@ struct AndWhere <: AbstractCondition
 end
 
 function Base.:&(a::S, b::T) where {T<:AbstractCondition, S<:AbstractCondition}
-	AndWhere(a, b)
+    AndWhere(a, b)
 end
 
 struct OrWhere <: AbstractCondition
-	conds::Vector{<:AbstractCondition}
+    conds::Vector{<:AbstractCondition}
     OrWhere(conds::Vector{<:AbstractCondition}) = OrWhere(conds)
     OrWhere(a::OrWhere, b) = OrWhere(a.conds, b)
     OrWhere(a, b::OrWhere) = OrWhere(a, b.conds)
@@ -74,18 +74,18 @@ end
 export SQLACSetNode
 
 function (w::WhereCondition)(node::SQLACSetNode)
-	push!(node.cond, AndWhere([w]))
-	node
+    push!(node.cond, AndWhere([w]))
+    node
 end
 
 function (ac::AbstractCondition)(node::SQLACSetNode)
-	push!(node.cond, ac)
-	node
+    push!(node.cond, ac)
+    node
 end
 
 function Base.:&(n::SQLACSetNode, a::AbstractCondition)
-	n.cond = n.cond & a
-	n
+    n.cond = n.cond & a
+    n
 end
 
 function Base.:|(n::SQLACSetNode, a::AbstractCondition)
