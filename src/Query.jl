@@ -5,11 +5,15 @@ using ..DenseACSets: @acset_type
 using MLStyle
 using DataFrames: DataFrame, nrow
 
-to_name(x) = @match x begin
-    ::Pair => Symbol("$(x.second)$(x.first)")
-    ::Val{T} where T => Symbol("Val_$T")
-    _ => x
+function to_name(x::Pair)
+    Symbol("$(x.second)$(x.first)")
 end
+
+function to_name(x::Val{T}) where T
+    Symbol("Val_$T")
+end
+
+to_name(x) = x
 
 # for iterating over something that might be a singleton
 function iterable(x::T) where T
@@ -17,19 +21,14 @@ function iterable(x::T) where T
     [S[]; x]
 end
 
-# TODO upstream?
-function select_part end
-export select_part
-
-function select_part(acset::ACSet, select::Symbol, idx=[]; schema=acset_schema(acset))
+function Base.get(acset::ACSet, select::Symbol, idx=[]; schema=acset_schema(acset))
     val = select ∈ objects(schema) ? parts(acset, select) : subpart(acset, select)
     !isempty(idx) ? val[idx] : val
 end
 
-function select_part(acset, selects::Vector{Symbol}, idx=[]; kwargs...)
-    zip(select_part.(Ref(acset), selects; kwargs...)...)
+function Base.get(acset, selects::Vector{Symbol}, idx=[]; kwargs...)
+    zip(get.(Ref(acset), selects; kwargs...)...)
 end
-
 
 abstract type AbstractCondition end
 export AbstractCondition
@@ -137,7 +136,7 @@ function process_wheres(conds::Vector{<:AbstractCondition}, acset)
 end
 
 function process_where(cond::WhereCondition, acset::ACSet)
-    values = select_part(acset, cond.lhs)
+    values = get(acset, cond.lhs)
     @match cond.rhs begin
         # if SQLACSetNode specifies a Select, then it'll return an array. 
         # XXX This hare-brained shim assumes that there will only be one select in a subquery. 
@@ -163,8 +162,8 @@ function process_select(q::SQLACSetNode, acset::ACSet, result::AbstractVector)
     map(q.select) do select
         to_name(select) => @match select begin
             ::Val{T} where T => [T for _ in 1:length(result)]
-            ::Symbol => select_part(acset, select, result)
-            ::Pair{Symbol, <:Function} => select_part(acset, select.first, result) .|> select.second
+            ::Symbol => get(acset, select, result)
+            ::Pair{Symbol, <:Function} => get(acset, select.first, result) .|> select.second
         end
     end
 end

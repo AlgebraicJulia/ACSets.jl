@@ -1,6 +1,7 @@
 using Test
 
 using ACSets
+using DataFrames: nrow
 
 SchDDS = BasicSchema([:X], [(:Φ,:X,:X)])
 @abstract_acset_type AbstractDDS
@@ -53,6 +54,7 @@ q = From(:E) |> Where([:src, :tgt], (x,y) -> x + 1 == y)
 q = From(:E) |> Select(Val(:a), :src)
 df = q(g; formatter=:df)
 
+@test nrow(df) == nparts(g, :E)
 @test df[!, :Val_a] == fill(:a, nparts(g, :E))
 
 # Catlab.jl allows us to build conjunctive queries on ACSets with the `@relation` macro. In this example, we will show how we can specify conjunctive queries with a FunSQL-like syntax. Let's load up our student-class schema again.
@@ -60,11 +62,11 @@ SchJunct = BasicSchema([:Student, :Class, :Junct], [(:student, :Junct, :Student)
                        [:Name], [(:name, :Student, :Name), (:subject, :Class, :Name)])
    @acset_type JunctionData(SchJunct, index=[:name])
 jd = JunctionData{Symbol}()
-#
+
 df = Dict(:Fiona => [:Math, :Philosophy, :Music],
           :Gregorio => [:Cooking, :Math, :CompSci],
           :Heather => [:Gym, :Art, :Music, :Math])
-#
+
 foreach(keys(df)) do student
     classes = df[student]
     # let's make this idempotent by adding student only if they aren't in the system
