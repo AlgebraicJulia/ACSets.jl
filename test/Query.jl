@@ -52,7 +52,7 @@ q = From(:E) |> Where([:src, :tgt], (x,y) -> x + 1 == y)
 
 # data frames
 q = From(:E) |> Select(Val(:a), :src)
-df = q(g; formatter=:df)
+df = q(g; formatter=DFQueryFormatter())
 
 @test nrow(df) == nparts(g, :E)
 @test df[!, :Val_a] == fill(:a, nparts(g, :E))

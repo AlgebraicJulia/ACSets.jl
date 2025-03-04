@@ -131,7 +131,7 @@ function process_wheres end
 export process_wheres
 
 function process_wheres(conds::Vector{<:AbstractCondition}, acset)
-	isempty(conds) && return nothing
+    isempty(conds) && return nothing
     process_where.(conds, Ref(acset))
 end
 
@@ -168,6 +168,28 @@ function process_select(q::SQLACSetNode, acset::ACSet, result::AbstractVector)
     end
 end
 
+abstract type AbstractQueryFormatter end
+
+struct SimpleQueryFormatter <: AbstractQueryFormatter end
+export SimpleQueryFormatter
+
+(qf::SimpleQueryFormatter)(q, a, s) = s
+
+struct NamedQueryFormatter <: AbstractQueryFormatter end
+export NamedQueryFormatter
+
+(qf::NamedQueryFormatter)(q, a, s) = build_nt(q, s)
+
+struct DFQueryFormatter <: AbstractQueryFormatter end
+export DFQueryFormatter
+
+(qf::DFQueryFormatter)(q, a, s) = DataFrame(build_nt(q, s))
+
+function build_nt(q::SQLACSetNode, selected)
+    names = isempty(q.select) ? [q.from] : to_name.(q.select)
+    NamedTuple{Tuple(names)}(getfield.(iterable(selected), :second))
+end
+
 """
 A query with no select overly-specified:
 ```
@@ -190,24 +212,15 @@ A query with a function on multiple columns
 q = From(:Tri) |> Where([:∂e0, :∂e1, :∂e2], (x,y,z) -> StatsBase.var([x,y,z]) < 2)
 ```
 """
-function (q::SQLACSetNode)(acset::ACSet; formatter=nothing)
+function process_query(q::SQLACSetNode, acset::ACSet; formatter::AbstractQueryFormatter)
     idx = process_wheres(q.cond, acset)
     result = isnothing(idx) ? parts(acset, q.from) : parts(acset, q.from)[first(idx)]
     isempty(result) && return []
     selected = process_select(q, acset, result)
-    output = @match formatter begin
-        nothing     => selected
-        :df         => DataFrame(build_nt(q, selected))
-        :named      => build_nt(q, selected)
-        ::Function  => formatter(q, acset, selected)
-        _           => nothing
-    end
-    output
+    formatter(q, acset, selected)
 end
 
-function build_nt(q::SQLACSetNode, selected)
-    names = isempty(q.select) ? [q.from] : to_name.(q.select)
-    NamedTuple{Tuple(names)}(getfield.(iterable(selected), :second))
-end
+(q::SQLACSetNode)(acset::ACSet; formatter::AbstractQueryFormatter=SimpleQueryFormatter()) =
+    process_query(q, acset; formatter)
 
 end
