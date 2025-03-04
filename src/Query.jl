@@ -137,13 +137,13 @@ end
 
 function process_where(cond::WhereCondition, acset::ACSet)
     values = get(acset, cond.lhs)
-    @match cond.rhs begin
-        # if SQLACSetNode specifies a Select, then it'll return an array. 
-        # XXX This hare-brained shim assumes that there will only be one select in a subquery. 
-        ::SQLACSetNode => map(x -> cond.op(x, cond.rhs(acset)[1].second), values)
-        ::Vector => map(x -> cond.op(iterable(x)..., cond.rhs), values)
-        ::Function => map(x -> x isa Union{Tuple, AbstractVector} ? cond.rhs(x...) : cond.rhs(x), values)
-        _ => map(x -> cond.op(iterable(x)..., [cond.rhs]), values)
+    map(values) do value
+        @match cond.rhs begin
+            ::SQLACSetNode => cond.op(value, cond.rhs(acset)[1].second)
+            ::Vector       => cond.op(iterable(value)..., cond.rhs)
+            ::Function     => value isa Union{Tuple, AbstractVector} ? cond.rhs(value...) : cond.rhs(value)
+            _              => cond.op(iterable(value)..., [cond.rhs])
+        end
     end
 end
 

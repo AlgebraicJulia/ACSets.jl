@@ -40,7 +40,7 @@ end
 
 # When we process the `Where` condition with a function on the RHS, we splat
 # the values entered into the function. This means that strings get splatted
-# into Char. To make sure that strings are properly compared, the user must reconstruct it with a String([x]) function.
+# into Char. 
 q = From(:V) |> Where(:dec, x -> String(x) != "a") |> Select(:dec)
 @test q(g) == [:dec => ["b", "c", "d"]]
 
