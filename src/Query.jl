@@ -1,5 +1,3 @@
-# TODO Select should be able to return a Val
-# ```From(:V => :tgt) |> Select(Val(1))```
 module Query
 
 using ..ACSetInterface, ..Schemas
@@ -7,7 +5,12 @@ using ..DenseACSets: @acset_type
 using MLStyle
 using DataFrames: DataFrame, nrow
 
-# TODO upstream?
+to_name(x) = @match x begin
+    ::Pair => Symbol("$(x.second)$(x.first)")
+    ::Val{T} where T => Symbol("Val_$T")
+    _ => x
+end
+
 # for iterating over something that might be a singleton
 function iterable(x::T) where T
     S = T <: AbstractVector ? eltype(T) : T
@@ -18,7 +21,7 @@ end
 function select_part end
 export select_part
 
-function select_part(acset::ACSet, select::Symbol, idx=[]; schema::Any=acset_schema(acset))
+function select_part(acset::ACSet, select::Symbol, idx=[]; schema=acset_schema(acset))
     val = select ∈ objects(schema) ? parts(acset, select) : subpart(acset, select)
     !isempty(idx) ? val[idx] : val
 end
@@ -32,9 +35,9 @@ abstract type AbstractCondition end
 export AbstractCondition
 
 struct WhereCondition <: AbstractCondition
-    lhs::Any
+    lhs
     op::Function
-    rhs::Any
+    rhs
 end
 export WhereCondition
 
@@ -65,7 +68,7 @@ end
 mutable struct SQLACSetNode
     from::Symbol
     cond::Union{Vector{<:AbstractCondition}, Nothing}
-    select::Any
+    select
     SQLACSetNode(from::Symbol; cond=nothing, select=nothing) = new(from, cond, select)
 end
 export SQLACSetNode
@@ -108,9 +111,9 @@ end
 function Where end
 export Where
 
-Where(lhs, op::Function, rhs::Any) = WhereCondition(lhs, op, rhs)
+Where(lhs, op::Function, rhs) = WhereCondition(lhs, op, rhs)
 Where(lhs::Symbol, rhs::Function) = Where(lhs, |>, rhs)
-Where(lhs::Symbol, rhs::Any) = Where(lhs, ∈, rhs)
+Where(lhs::Symbol, rhs) = Where(lhs, ∈, rhs)
 Where(lhs, rhs::Function) = Where(lhs, |>, rhs)
 
 function Select end
@@ -130,16 +133,18 @@ export process_wheres
 
 function process_wheres(conds::Vector{<:AbstractCondition}, acset)
 	isempty(conds) && return nothing
-	process_where.(conds, Ref(acset))
+    process_where.(conds, Ref(acset))
 end
 
 function process_where(cond::WhereCondition, acset::ACSet)
     values = select_part(acset, cond.lhs)
     @match cond.rhs begin
-        ::SQLACSetNode => map(x -> cond.op(x..., cond.rhs(acset)), values)
+        # if SQLACSetNode specifies a Select, then it'll return an array. 
+        # This hare-brained shim assumes that there will only be one select in a subquery. 
+        ::SQLACSetNode => map(x -> cond.op(x, cond.rhs(acset)[1].second), values)
         ::Vector => map(x -> cond.op(iterable(x)..., cond.rhs), values)
-        ::Function => map(x -> cond.rhs(x...), values)
-        _ => map(x -> cond.op(x..., [cond.rhs]), values)
+        ::Function => map(x -> x isa Union{Tuple, AbstractVector} ? cond.rhs(x...) : cond.rhs(x), values)
+        _ => map(x -> cond.op(iterable(x)..., [cond.rhs]), values)
     end
 end
 
@@ -155,8 +160,8 @@ end
 
 function process_select(q::SQLACSetNode, acset::ACSet, result::AbstractVector)
     !isempty(q.select) || return q.from => result
-    map(iterable(q.select)) do select
-        select => @match select begin
+    map(q.select) do select
+        to_name(select) => @match select begin
             ::Val{T} where T => [T for _ in 1:length(result)]
             ::Symbol => select_part(acset, select, result)
             ::Pair{Symbol, <:Function} => select_part(acset, select.first, result) .|> select.second
@@ -199,12 +204,6 @@ function (q::SQLACSetNode)(acset::ACSet; formatter=nothing)
         _           => nothing
     end
     output
-end
-
-to_name(x) = @match x begin
-    ::Pair => Symbol("$(x.second)$(x.first)")
-    ::Val{T} where T => Symbol("Val_$T")
-    _ => x
 end
 
 function build_nt(q::SQLACSetNode, selected; second=false)
