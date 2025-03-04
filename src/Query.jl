@@ -140,7 +140,7 @@ function process_where(cond::WhereCondition, acset::ACSet)
     values = select_part(acset, cond.lhs)
     @match cond.rhs begin
         # if SQLACSetNode specifies a Select, then it'll return an array. 
-        # This hare-brained shim assumes that there will only be one select in a subquery. 
+        # XXX This hare-brained shim assumes that there will only be one select in a subquery. 
         ::SQLACSetNode => map(x -> cond.op(x, cond.rhs(acset)[1].second), values)
         ::Vector => map(x -> cond.op(iterable(x)..., cond.rhs), values)
         ::Function => map(x -> x isa Union{Tuple, AbstractVector} ? cond.rhs(x...) : cond.rhs(x), values)
@@ -206,7 +206,7 @@ function (q::SQLACSetNode)(acset::ACSet; formatter=nothing)
     output
 end
 
-function build_nt(q::SQLACSetNode, selected; second=false)
+function build_nt(q::SQLACSetNode, selected)
     names = isempty(q.select) ? [q.from] : to_name.(q.select)
     NamedTuple{Tuple(names)}(getfield.(iterable(selected), :second))
 end
