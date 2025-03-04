@@ -21,9 +21,9 @@ function iterable(x::T) where T
     [S[]; x]
 end
 
-function Base.get(acset::ACSet, select::Symbol, idx=[]; schema=acset_schema(acset))
+function Base.get(acset::ACSet, select::Symbol, idx=Colon(); schema=acset_schema(acset))
     val = select ∈ objects(schema) ? parts(acset, select) : subpart(acset, select)
-    !isempty(idx) ? val[idx] : val
+    val[idx]
 end
 
 function Base.get(acset, selects::Vector{Symbol}, idx=[]; kwargs...)
@@ -158,10 +158,10 @@ function process_where(w::AndWhere, acset::ACSet)
 end
 
 function process_select(q::SQLACSetNode, acset::ACSet, result::AbstractVector)
-    !isempty(q.select) || return q.from => result
+    isempty(q.select) && return q.from => result
     map(q.select) do select
         to_name(select) => @match select begin
-            ::Val{T} where T => [T for _ in 1:length(result)]
+            ::Val{T} where T => [T for _ in eachindex(result)]
             ::Symbol => get(acset, select, result)
             ::Pair{Symbol, <:Function} => get(acset, select.first, result) .|> select.second
         end
