@@ -5,15 +5,9 @@ using ..DenseACSets: @acset_type
 using MLStyle
 using DataFrames: DataFrame, nrow
 
-function to_name(x::Pair)
-    Symbol("$(x.second)$(x.first)")
-end
-
-function to_name(x::Val{T}) where T
-    Symbol("Val_$T")
-end
-
 to_name(x) = x
+to_name(x::Pair) = Symbol("$(x.second)$(x.first)")
+to_name(x::Val{T}) where T = Symbol("Val_$T")
 
 # for iterating over something that might be a singleton
 function iterable(x::T) where T
@@ -131,18 +125,20 @@ function process_wheres end
 export process_wheres
 
 function process_wheres(conds::Vector{<:AbstractCondition}, acset)
-    isempty(conds) && return nothing
+    isempty(conds) && return [Colon()]
     process_where.(conds, Ref(acset))
 end
 
 function process_where(cond::WhereCondition, acset::ACSet)
     values = get(acset, cond.lhs)
     map(values) do value
-        @match cond.rhs begin
-            ::SQLACSetNode => cond.op(value, cond.rhs(acset)[1].second)
-            ::Vector       => cond.op(iterable(value)..., cond.rhs)
-            ::Function     => value isa Union{Tuple, AbstractVector} ? cond.rhs(value...) : cond.rhs(value)
-            _              => cond.op(iterable(value)..., [cond.rhs])
+        @match (value, cond.rhs) begin
+            (_, ::SQLACSetNode)            => cond.op(value, cond.rhs(acset)[1].second)
+            (::Tuple,          ::Function) => cond.rhs(value...)
+            (::AbstractVector, ::Function) => cond.rhs(value...)
+            (_, ::Function)                => cond.rhs(value)
+            (_, ::Vector)                  => cond.op(iterable(value)..., cond.rhs)
+            _                              => cond.op(iterable(value)..., [cond.rhs])
         end
     end
 end
@@ -161,8 +157,8 @@ function process_select(q::SQLACSetNode, acset::ACSet, result::AbstractVector)
     isempty(q.select) && return q.from => result
     map(q.select) do select
         to_name(select) => @match select begin
-            ::Val{T} where T => [T for _ in eachindex(result)]
-            ::Symbol => get(acset, select, result)
+            ::Val{T} where T           => [T for _ in eachindex(result)]
+            ::Symbol                   => get(acset, select, result)
             ::Pair{Symbol, <:Function} => get(acset, select.first, result) .|> select.second
         end
     end
@@ -214,7 +210,7 @@ q = From(:Tri) |> Where([:∂e0, :∂e1, :∂e2], (x,y,z) -> StatsBase.var([x,y,
 """
 function process_query(q::SQLACSetNode, acset::ACSet; formatter::AbstractQueryFormatter)
     idx = process_wheres(q.cond, acset)
-    result = isnothing(idx) ? parts(acset, q.from) : parts(acset, q.from)[first(idx)]
+    result = parts(acset, q.from)[only(idx)]
     isempty(result) && return []
     selected = process_select(q, acset, result)
     formatter(q, acset, selected)
