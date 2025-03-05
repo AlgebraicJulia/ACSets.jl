@@ -20,8 +20,8 @@ function Base.get(acset::ACSet, select::Symbol, idx=Colon(); schema=acset_schema
     val[idx]
 end
 
-function Base.get(acset, selects::Vector{Symbol}, idx=[]; kwargs...)
-    zip(get.(Ref(acset), selects; kwargs...)...)
+function Base.get(acset, selects::Vector{Symbol}, idx=Colon(); kwargs...)
+    zip(get.(Ref(acset), selects, idx; kwargs...)...)
 end
 
 abstract type AbstractCondition end
@@ -201,7 +201,7 @@ q = From(:Tri => :∂e0)
 ```
 A query with a `Where` statement.
 ```
-q = From(:Tri) |> Where(:∂e0, x -> x < 10)
+q = From(:Tri) |> Where(:∂e0, <(10))
 ```
 A query with a function on multiple columns
 ```
