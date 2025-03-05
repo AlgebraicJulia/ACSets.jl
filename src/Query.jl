@@ -1,5 +1,7 @@
 module Query
 
+export AbstractCondition, WhereCondition, SQLACSetNode, From, Where, Select, AbstractQueryFormatter, SimpleQueryFormatter, DFQueryFormatter 
+
 using ..ACSetInterface, ..Schemas
 using ..DenseACSets: @acset_type
 using MLStyle
@@ -25,7 +27,6 @@ function Base.get(acset, selects::Vector{Symbol}, idx=Colon(); kwargs...)
 end
 
 abstract type AbstractCondition end
-export AbstractCondition
 
 struct WhereCondition <: AbstractCondition
     lhs
@@ -64,7 +65,6 @@ mutable struct SQLACSetNode
     select
     SQLACSetNode(from::Symbol; cond=nothing, select=nothing) = new(from, cond, select)
 end
-export SQLACSetNode
 
 function (w::WhereCondition)(node::SQLACSetNode)
     push!(node.cond, AndWhere([w]))
@@ -86,9 +86,6 @@ function Base.:|(n::SQLACSetNode, a::AbstractCondition)
     n
 end
 
-function From end
-export From
-
 From(table::Symbol) = SQLACSetNode(table; cond=AbstractCondition[], select=[])
 
 function From(tablecol::Pair{Symbol, Symbol})
@@ -102,7 +99,6 @@ function From(sql::SQLACSetNode; table::Symbol)
 end
 
 function Where end
-export Where
 
 Where(lhs, op::Function, rhs) = WhereCondition(lhs, op, rhs)
 Where(lhs::Symbol, rhs::Function) = Where(lhs, |>, rhs)
@@ -110,7 +106,6 @@ Where(lhs::Symbol, rhs) = Where(lhs, ∈, rhs)
 Where(lhs, rhs::Function) = Where(lhs, |>, rhs)
 
 function Select end
-export Select
 
 function Select(sql::SQLACSetNode, columns::Vector)
     push!(sql.select, columns...)
@@ -167,17 +162,14 @@ end
 abstract type AbstractQueryFormatter end
 
 struct SimpleQueryFormatter <: AbstractQueryFormatter end
-export SimpleQueryFormatter
 
 (qf::SimpleQueryFormatter)(q, a, s) = s
 
 struct NamedQueryFormatter <: AbstractQueryFormatter end
-export NamedQueryFormatter
 
 (qf::NamedQueryFormatter)(q, a, s) = build_nt(q, s)
 
 struct DFQueryFormatter <: AbstractQueryFormatter end
-export DFQueryFormatter
 
 (qf::DFQueryFormatter)(q, a, s) = DataFrame(build_nt(q, s))
 
