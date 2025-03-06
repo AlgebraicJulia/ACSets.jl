@@ -35,17 +35,14 @@ g = @acset DecGraph{String} begin
   E = 4
   src = [1,2,3,4]
   tgt = [2,3,4,1]
-  dec = ["a","b","c","d"]
+  dec = ["az","bz","cz","dz"]
 end
 
-# When we process the `Where` condition with a function on the RHS, we splat
-# the values entered into the function. This means that strings get splatted
-# into Char. 
-q = From(:V) |> Where(:dec, x -> String(x) != "a") |> Select(:dec)
-@test q(g) == [:dec => ["b", "c", "d"]]
+q = From(:V) |> Where(:dec, !=("az")) |> Select(:dec)
+@test q(g) == [:dec => ["bz", "cz", "dz"]]
 
 q = From(:V) |> Where(:src, 1) & Where(:tgt, 2) |> Select(:dec)
-@test q(g) == [:dec => ["a"]]
+@test q(g) == [:dec => ["az"]]
 
 q = From(:E) |> Where([:src, :tgt], (x,y) -> x + 1 == y)
 @test q(g) == (:E => [1,2,3])
