@@ -1,6 +1,6 @@
 module Query
 
-export AbstractCondition, WhereCondition, SQLACSetNode, From, Where, Select, AbstractQueryFormatter, SimpleQueryFormatter, DFQueryFormatter 
+export From, Where, Select, SimpleQueryFormatter, NamedQueryFormatter, DFQueryFormatter
 
 using ..ACSetInterface, ..Schemas
 using ..DenseACSets: @acset_type
@@ -33,7 +33,6 @@ struct WhereCondition <: AbstractCondition
     op::Function
     rhs
 end
-export WhereCondition
 
 struct AndWhere <: AbstractCondition
     conds::Vector{<:AbstractCondition}
@@ -92,20 +91,10 @@ function From(tablecol::Pair{Symbol, Symbol})
     SQLACSetNode(tablecol.first; cond=AbstractCondition[], select=[tablecol.second])
 end
 
-# TODO looks like we don't do this anymore. From is singleton for the time being.
-function From(sql::SQLACSetNode; table::Symbol)
-    sql.from = [sql.from; table]
-    sql
-end
-
-function Where end
-
 Where(lhs, op::Function, rhs) = WhereCondition(lhs, op, rhs)
 Where(lhs::Symbol, rhs::Function) = Where(lhs, |>, rhs)
 Where(lhs::Symbol, rhs) = Where(lhs, ∈, rhs)
 Where(lhs, rhs::Function) = Where(lhs, |>, rhs)
-
-function Select end
 
 function Select(sql::SQLACSetNode, columns::Vector)
     push!(sql.select, columns...)
@@ -115,9 +104,6 @@ end
 function Select(columns...)
     sql -> Select(sql, [columns...])
 end
-
-function process_wheres end
-export process_wheres
 
 function process_wheres(conds::Vector{<:AbstractCondition}, acset)
     isempty(conds) && return [Colon()]
@@ -162,15 +148,11 @@ end
 abstract type AbstractQueryFormatter end
 
 struct SimpleQueryFormatter <: AbstractQueryFormatter end
-
-(qf::SimpleQueryFormatter)(q, a, s) = s
-
 struct NamedQueryFormatter <: AbstractQueryFormatter end
-
-(qf::NamedQueryFormatter)(q, a, s) = build_nt(q, s)
-
 struct DFQueryFormatter <: AbstractQueryFormatter end
 
+(qf::SimpleQueryFormatter)(q, a, s) = s
+(qf::NamedQueryFormatter)(q, a, s) = build_nt(q, s)
 (qf::DFQueryFormatter)(q, a, s) = DataFrame(build_nt(q, s))
 
 function build_nt(q::SQLACSetNode, selected)
