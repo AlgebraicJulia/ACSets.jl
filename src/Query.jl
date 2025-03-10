@@ -1,16 +1,22 @@
 module Query
 
-export From, Where, Select, SimpleQueryFormatter, NamedQueryFormatter, DFQueryFormatter
+export From, Where, Select, AbstractQueryFormatter, SimpleQueryFormatter, NamedQueryFormatter, DFQueryFormatter
 
 using ..ACSetInterface, ..Schemas
 using MLStyle
 using DataFrames: DataFrame
+using StructEquality
 
 to_name(x) = x
 to_name(x::Pair) = Symbol("$(x.second)$(x.first)")
 to_name(x::Val{T}) where T = Symbol("Val_$T")
 
-# for iterating over something that might be a singleton
+""" This function lifts a singleton into an iterator. This prevents branches in the control flow.
+```
+a=1; @test [k for k ∈ iterable(a)] == [1]
+a=[1,2,3]; @test [k for k ∈ iterable(a)] == [1,2,3]
+```
+"""
 function iterable(x::T) where T
   S = T <: AbstractVector ? eltype(T) : T
   [S[]; x]
@@ -27,67 +33,73 @@ end
 
 abstract type AbstractCondition end
 
-struct WhereCondition <: AbstractCondition
+@struct_hash_equal struct WhereCondition <: AbstractCondition
   lhs
   op::Function
   rhs
 end
 
-struct AndWhere <: AbstractCondition
+@struct_hash_equal struct AndWhere <: AbstractCondition
   conds::Vector{<:AbstractCondition}
   AndWhere(conds::Vector{<:AbstractCondition}) = new(conds)
-  AndWhere(a::AndWhere, b) = AndWhere(a.conds, b)
-  AndWhere(a, b::AndWhere) = AndWhere(a, b.conds)
   AndWhere(a, b) = new([a; b])
 end
+
+AndWhere(a::AndWhere, b) = AndWhere(a.conds, b)
+AndWhere(a, b::AndWhere) = AndWhere(a, b.conds)
 
 function Base.:&(a::S, b::T) where {T<:AbstractCondition, S<:AbstractCondition}
   AndWhere(a, b)
 end
 
-struct OrWhere <: AbstractCondition
+@struct_hash_equal struct OrWhere <: AbstractCondition
   conds::Vector{<:AbstractCondition}
-  OrWhere(conds::Vector{<:AbstractCondition}) = OrWhere(conds)
-  OrWhere(a::OrWhere, b) = OrWhere(a.conds, b)
-  OrWhere(a, b::OrWhere) = OrWhere(a, b.conds)
+  OrWhere(conds::Vector{<:AbstractCondition}) = new(conds)
   OrWhere(a, b) = new([a; b])
 end
+
+OrWhere(a::OrWhere, b) = OrWhere(a.conds, b)
+OrWhere(a, b::OrWhere) = OrWhere(a, b.conds)
 
 function Base.:|(a::S, b::T) where {T<:AbstractCondition, S<:AbstractCondition}
   OrWhere(a, b)
 end
 
-mutable struct SQLACSetNode
-  from::Symbol
+""" """
+mutable struct ACSetSQLNode
+  const from::Symbol
   cond::Union{Vector{<:AbstractCondition}, Nothing}
   select
-  SQLACSetNode(from::Symbol; cond=nothing, select=nothing) = new(from, cond, select)
+  ACSetSQLNode(from::Symbol; cond=nothing, select=nothing) = new(from, cond, select)
 end
 
-function (w::WhereCondition)(node::SQLACSetNode)
+function (w::WhereCondition)(node::ACSetSQLNode)
   push!(node.cond, AndWhere([w]))
   node
 end
 
-function (ac::AbstractCondition)(node::SQLACSetNode)
+function (ac::AbstractCondition)(node::ACSetSQLNode)
   push!(node.cond, ac)
   node
 end
 
-function Base.:&(n::SQLACSetNode, a::AbstractCondition)
+function Base.:&(n::ACSetSQLNode, a::AbstractCondition)
   n.cond = n.cond & a
   n
 end
 
-function Base.:|(n::SQLACSetNode, a::AbstractCondition)
+function Base.:|(n::ACSetSQLNode, a::AbstractCondition)
   n.cond = n.cond | a
   n
 end
 
-From(table::Symbol) = SQLACSetNode(table; cond=AbstractCondition[], select=[])
+function From(table::Symbol; select=nothing)
+  select = isnothing(select) ? [] : [select]
+  ACSetSQLNode(table; cond=AbstractCondition[], select=select)
+end
 
 function From(tablecol::Pair{Symbol, Symbol})
-  SQLACSetNode(tablecol.first; cond=AbstractCondition[], select=[tablecol.second])
+  ACSetSQLNode(tablecol.first; cond=AbstractCondition[], select=[tablecol.second])
 end
 
 Where(lhs, op::Function, rhs) = WhereCondition(lhs, op, rhs)
@@ -95,13 +107,13 @@ Where(lhs::Symbol, rhs::Function) = Where(lhs, |>, rhs)
 Where(lhs::Symbol, rhs) = Where(lhs, ∈, rhs)
 Where(lhs, rhs::Function) = Where(lhs, |>, rhs)
 
-function Select(sql::SQLACSetNode, columns::Vector)
+function Select(sql::ACSetSQLNode, columns::Vector)
   push!(sql.select, columns...)
   sql
 end
 
 function Select(columns...)
-  sql -> Select(sql, [columns...])
+  sql -> Select(sql, Any[columns...])
 end
 
 function process_wheres(conds::Vector{<:AbstractCondition}, acset)
@@ -113,7 +125,8 @@ function process_where(cond::WhereCondition, acset::ACSet)
   values = get(acset, cond.lhs)
   map(values) do value
     @match (value, cond.rhs) begin
-      (_, ::SQLACSetNode)            => cond.op(value, cond.rhs(acset)[1].second)
+      # TODO
+      (_, ::ACSetSQLNode)            => cond.op(value, cond.rhs(acset)[1].second)
       (::Tuple,          ::Function) => cond.rhs(value...)
       (::AbstractVector, ::Function) => cond.rhs(value...)
       (_, ::Function)                => cond.rhs(value)
@@ -133,7 +146,7 @@ function process_where(w::AndWhere, acset::ACSet)
   reduce((x,y) -> x .& y, process_wheres(w.conds, acset))
 end
 
-function process_select(q::SQLACSetNode, acset::ACSet, result::AbstractVector)
+function process_select(q::ACSetSQLNode, acset::ACSet, result::AbstractVector)
   isempty(q.select) && return q.from => result
   map(q.select) do select
     to_name(select) => @match select begin
@@ -144,23 +157,58 @@ function process_select(q::SQLACSetNode, acset::ACSet, result::AbstractVector)
   end
 end
 
+"""  AbstractQueryFormatter
+
+Concrete, fieldless structs which are subtypes of AbstractQueryFormatter should have a callable method which ingests a ACSetSQLNode, an ACSet, and the `selected`, the result of the query subject to the given ACSetSQL Select statements.
+
+For example, the standard format for ACSetSQL output is
+
+```
+struct SimpleQueryFormatter <: AbstractQueryFormatter end
+
+(qf::SimpleQueryFormatter)(q, a, s) = s
+
+```
+
+See also [`SimpleQueryFormatter`](@ref), [`NamedQueryFormatter`](@ref), [`DFQueryFormatter`](@ref).
+"""
 abstract type AbstractQueryFormatter end
 
+"""  SimpleQueryFormatter <: AbstractQueryFormatter
+
+The callable method of this fieldless struct consumes an ACSetSQLNode, an ACSet, and the result selection and returns just the result selection.
+
+See also [`AbstractQueryFormatter`](@ref)
+"""
 struct SimpleQueryFormatter <: AbstractQueryFormatter end
+
+"""  NamedQueryFormatter <: AbstractQueryFormatter
+
+The callable method of this fieldless struct consumes an ACSetSQLNode, an ACSet, and the result selection and returns a named tuple of the selection columns and their values.
+
+See also [`AbstractQueryFormatter`](@ref)
+"""
 struct NamedQueryFormatter <: AbstractQueryFormatter end
+
+"""  DFQueryFormatter <: AbstractQueryFormatter
+
+The callable method of this fieldless struct consumes an ACSetSQLNode, an ACSet, and the result selection and returns a data frame.
+
+See also [`AbstractQueryFormatter`](@ref)
+"""
 struct DFQueryFormatter <: AbstractQueryFormatter end
 
 (qf::SimpleQueryFormatter)(q, a, s) = s
 (qf::NamedQueryFormatter)(q, a, s) = build_nt(q, s)
 (qf::DFQueryFormatter)(q, a, s) = DataFrame(build_nt(q, s))
 
-function build_nt(q::SQLACSetNode, selected)
+function build_nt(q::ACSetSQLNode, selected)
   names = isempty(q.select) ? [q.from] : to_name.(q.select)
   NamedTuple{Tuple(names)}(getfield.(iterable(selected), :second))
 end
 
 """
-A query with no select overly-specified:
+A query with no Select overtly-specified:
 ```
 q = From(:Tri)
 ```
@@ -181,7 +229,7 @@ A query with a function on multiple columns
 q = From(:Tri) |> Where([:∂e0, :∂e1, :∂e2], (x,y,z) -> StatsBase.var([x,y,z]) < 2)
 ```
 """
-function process_query(q::SQLACSetNode, acset::ACSet; formatter::AbstractQueryFormatter)
+function process_query(q::ACSetSQLNode, acset::ACSet; formatter::AbstractQueryFormatter)
   idx = process_wheres(q.cond, acset)
   result = parts(acset, q.from)[only(idx)]
   isempty(result) && return []
@@ -189,7 +237,7 @@ function process_query(q::SQLACSetNode, acset::ACSet; formatter::AbstractQueryFo
   formatter(q, acset, selected)
 end
 
-(q::SQLACSetNode)(acset::ACSet; formatter::AbstractQueryFormatter=SimpleQueryFormatter()) =
+(q::ACSetSQLNode)(acset::ACSet; formatter::AbstractQueryFormatter=SimpleQueryFormatter()) =
   process_query(q, acset; formatter)
 
 end
