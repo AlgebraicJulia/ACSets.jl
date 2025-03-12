@@ -8,6 +8,12 @@ using DataFrames: DataFrame
 using StructEquality
 
 to_name(x) = x
+"""
+E.g., suppose we want to replace the values in column `name` with Boolean values for whether they equal YourName. Our function `:name => !=(:YourName)` will be represented as `Symbol("!=(YourName)")`
+"""
+function to_name(p::Pair{Symbol, Base.Fix1{S, T}}) where {S, T}
+    Symbol("$(Symbol(S.instance))($(p.second.x))")
+end
 to_name(x::Pair) = Symbol("$(x.second)$(x.first)")
 to_name(x::Val{T}) where T = Symbol("Val_$T")
 
@@ -51,7 +57,7 @@ abstract type AbstractCondition end
 A struct containing enough information to specifying a WHERE clause in SQL.
 """
 @struct_hash_equal struct WhereCondition <: AbstractCondition
-  lhs
+  lhs::Union{Symbol, Vector{Symbol}}
   op::Function
   rhs
 end
@@ -112,11 +118,11 @@ function (ac::AbstractCondition)(node::ACSetSQLNode)
 end
 
 function Base.:&(n::ACSetSQLNode, a::AbstractCondition)
-  n.cond = n.cond &= a
+  n.cond &= a
 end
 
 function Base.:|(n::ACSetSQLNode, a::AbstractCondition)
-  n.cond = n.cond |= a
+  n.cond |= a
 end
 
 function From(table::Symbol; select=nothing)

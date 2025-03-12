@@ -143,7 +143,7 @@ d = DDS(5)
   @test q(jd) == [:name => [:Fiona, :Heather]]
   
   # apply function to Select
-  q = From(:Student) |> Select(:name => isGregorio)
-  @test q(jd) == [:isGregorioname => [0, 1, 0]]
+  q = From(:Student) |> Select(:name => Fix1(!=, :Gregorio))
+  @test q(jd) == [Symbol("!=(Gregorio)") => [1, 0, 1]]
 
 end
