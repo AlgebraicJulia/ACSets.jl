@@ -85,18 +85,25 @@ d = DDS(5)
   
   # Catlab.jl allows us to build conjunctive queries on ACSets with the `@relation` macro. In this example, we will show how we can specify conjunctive queries with a FunSQL-like syntax. Let's load up our student-class schema again.
   SchJunct = BasicSchema([:Student, :Class, :Junct], [(:student, :Junct, :Student), (:class, :Junct, :Class)],
-                         [:Name], [(:name, :Student, :Name), (:subject, :Class, :Name)])
+                         [:Name, :Clubs], 
+                         [(:name, :Student, :Name), (:clubs, :Student, :Clubs), (:subject, :Class, :Name)])
   @acset_type JunctionData(SchJunct, index=[:name])
-  jd = JunctionData{Symbol}()
-  
+  jd = JunctionData{Symbol, Vector{Symbol}}()
+ 
+  clubs = [:MarchingBand, :DebateClub, :TractorWrassling, :Weightlifting, :DresageClub, :DeescalationClub]
+
   df = Dict(:Fiona => [:Math, :Philosophy, :Music],
             :Gregorio => [:Cooking, :Math, :CompSci],
             :Heather => [:Gym, :Art, :Music, :Math])
+
+  student_clubs = Dict(:Fiona => [:MarchingBand, :DebateClub, :TractorWrassling],
+                       :Gregorio => [:DresageClub, :Weightlighting],
+                       :Heather => [:DresageClub, :DeescalationClub, :DebateClub])
   
   foreach(keys(df)) do student
     classes = df[student]
     student_id = incident(jd, student, :name)
-    if isempty(student_id); student_id = add_part!(jd, :Student, name=student) end
+    if isempty(student_id); student_id = add_part!(jd, :Student, name=student, clubs=student_clubs[student]) end
     foreach(classes) do class
       class_id = incident(jd, class, :subject)
       if isempty(class_id); class_id = add_part!(jd, :Class, subject=class) end
@@ -107,35 +114,32 @@ d = DDS(5)
   q = From(:Student) |> Select(:name)
   @test q(jd) == [:name => [:Fiona, :Gregorio, :Heather]]
   
-  q = From(:Student) |> Where(:Student, From(:Junct => :student)) |> 
-      Select(:name)
+  q = From(:Student => :name) |> Where(:Student, From(:Junct => :student)) 
   @test q(jd) == [:name => [:Fiona, :Gregorio, :Heather]]
+
+  using Base: Fix1
+
+  q = From(:Student => :name) |> Where(:clubs, Fix1(!isempty∘intersect, [:MarchingBand, :DebateClub]))
+  @test q(jd) == [:name => [:Fiona, :Heather]]
   
   q = From(:Student) |> 
-     Where(:Student, From(:Junct) |> Select(:student)) |> 
+      Where(:Student, From(:Junct)|>Select(:student)) |> 
       Select(:Student)
   @test q(jd) == [:Student => [1,2,3]]
   
   # not specifying a select statement defaults to the From
-  q = From(:Student) |> 
-      Where(:Student, From(:Junct) |> Select(:student)) 
+  q = From(:Student) |> Where(:Student, From(:Junct)|>Select(:student)) 
   @test q(jd) == (:Student => [1,2,3])
   
   q = From(:Student) |>
-  Where(:Student, From(:Junct => :student)) &
-  Where(:name, :Gregorio) | Where(:name, :Fiona) |> Select(:name)
+      Where(:Student, From(:Junct => :student)) &
+      Where(:name, :Gregorio) | Where(:name, :Fiona) |> Select(:name)
   @test q(jd) == [:name => [:Fiona, :Gregorio]]
   
   q = From(:Student) |> Where(:name, [:Gregorio, :Fiona]) |> Select(:name);
   @test q(jd) == [:name => [:Fiona, :Gregorio]]
   
   q = From(:Student) |> Where(:name, !=(:Gregorio)) |> Select(:name);
-  @test q(jd) == [:name => [:Fiona, :Heather]]
-  
-  isGregorio(x::Symbol) = x == :Gregorio
-  @test !isGregorio(:Heather)
-  
-  q = From(:Student) |> Where(:name, !isGregorio) |> Select(:name);
   @test q(jd) == [:name => [:Fiona, :Heather]]
   
   # apply function to Select

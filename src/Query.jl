@@ -11,16 +11,25 @@ to_name(x) = x
 to_name(x::Pair) = Symbol("$(x.second)$(x.first)")
 to_name(x::Val{T}) where T = Symbol("Val_$T")
 
-""" This function lifts a singleton into an iterator. This prevents branches in the control flow.
+"""  iterable(x::T)
+
+This function lifts a singleton into an iterator. This prevents branches in the control flow.
 ```
-a=1; @test [k for k ∈ iterable(a)] == [1]
-a=[1,2,3]; @test [k for k ∈ iterable(a)] == [1,2,3]
+x=1; @assert [k for k ∈ iterable(x)] == [1]
+x=[1,2,3]; @assert [k for k ∈ iterable(x)] == [1,2,3]
+x=[[:a, :b]]; @assert [k for k ∈ iterable(x)] == [[:a, :b]]
+```
+Moreover, given `foo(x) = x`,
+```
+splat(foo)(:a) # breaks
+splat(foo)(iterable(:a)) # works
 ```
 """
 function iterable(x::T) where T
   S = T <: AbstractVector ? eltype(T) : T
   [S[]; x]
 end
+public iterable
 
 function Base.get(acset::ACSet, select::Symbol, idx=Colon(); schema=acset_schema(acset))
   val = select ∈ objects(schema) ? parts(acset, select) : subpart(acset, select)
@@ -31,14 +40,26 @@ function Base.get(acset, selects::Vector{Symbol}, idx=Colon(); kwargs...)
   zip(get.(Ref(acset), selects, idx; kwargs...)...)
 end
 
+"""  AbstractCondition 
+
+A common type for [`WhereCondition`](@ref), [`AndWhere`](@ref), and [`OrWhere`](@ref).
+"""
 abstract type AbstractCondition end
 
+"""  WhereCondition <: [`AbstractCondition`](@ref)
+
+A struct containing enough information to specifying a WHERE clause in SQL.
+"""
 @struct_hash_equal struct WhereCondition <: AbstractCondition
   lhs
   op::Function
   rhs
 end
 
+"""  AndWhere <: [`AbstractCondition`](@ref)
+
+A struct containing a list of conditions which are all expected to hold true.
+"""
 @struct_hash_equal struct AndWhere <: AbstractCondition
   conds::Vector{<:AbstractCondition}
   AndWhere(conds::Vector{<:AbstractCondition}) = new(conds)
@@ -52,6 +73,10 @@ function Base.:&(a::S, b::T) where {T<:AbstractCondition, S<:AbstractCondition}
   AndWhere(a, b)
 end
 
+"""  OrWhere <: [`AbstractCondition`](@ref)
+
+A struct containing a list of conditions which any are expected to hold true.
+"""
 @struct_hash_equal struct OrWhere <: AbstractCondition
   conds::Vector{<:AbstractCondition}
   OrWhere(conds::Vector{<:AbstractCondition}) = new(conds)
@@ -65,7 +90,10 @@ function Base.:|(a::S, b::T) where {T<:AbstractCondition, S<:AbstractCondition}
   OrWhere(a, b)
 end
 
-""" """
+""" ACSetSQLNode
+
+This data structure stores the necessary information for specifying a query on an ACSet. It is not intended to be instantiated outright; instead, the [`From`](@ref) function will return a ACSetSQLNode with the expectation that composition with [`Where`](@ref) and [`Select`](@ref) functions will mutate this node with more information.
+"""
 mutable struct ACSetSQLNode
   const from::Symbol
   cond::Union{Vector{<:AbstractCondition}, Nothing}
@@ -84,13 +112,11 @@ function (ac::AbstractCondition)(node::ACSetSQLNode)
 end
 
 function Base.:&(n::ACSetSQLNode, a::AbstractCondition)
-  n.cond = n.cond & a
-  n
+  n.cond = n.cond &= a
 end
 
 function Base.:|(n::ACSetSQLNode, a::AbstractCondition)
-  n.cond = n.cond | a
-  n
+  n.cond = n.cond |= a
 end
 
 function From(table::Symbol; select=nothing)
@@ -121,17 +147,21 @@ function process_wheres(conds::Vector{<:AbstractCondition}, acset)
   process_where.(conds, Ref(acset))
 end
 
+"""  process_where
+Iterates over the values specified by the left-hand side of the [`WhereCondition`](@ref) and applies a conditional.
+
+*Note:* If the value is a tuple and the right-hand side is `::Function`, then the value will be splatted into the argument of the function.
+"""
 function process_where(cond::WhereCondition, acset::ACSet)
   values = get(acset, cond.lhs)
   map(values) do value
     @match (value, cond.rhs) begin
-      # TODO
-      (_, ::ACSetSQLNode)            => cond.op(value, cond.rhs(acset)[1].second)
-      (::Tuple,          ::Function) => cond.rhs(value...)
-      (::AbstractVector, ::Function) => cond.rhs(value...)
-      (_, ::Function)                => cond.rhs(value)
-      (_, ::Vector)                  => cond.op(iterable(value)..., cond.rhs)
-      _                              => cond.op(iterable(value)..., [cond.rhs])
+      # TODO Find a more principled away of extracting the ACSetSQLNode
+      (_, ::ACSetSQLNode)   => cond.op(value, cond.rhs(acset)[1].second)
+      (::Tuple, ::Function) => cond.rhs(value...) # tuples are splatted
+      (_, ::Function)       => cond.rhs(value)
+      (_, ::Vector)         => cond.op(iterable(value)..., cond.rhs)
+      _                     => cond.op(iterable(value)..., [cond.rhs])
     end
   end
 end
