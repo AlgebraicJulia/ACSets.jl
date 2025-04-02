@@ -35,7 +35,6 @@ function iterable(x::T) where T
   S = T <: AbstractVector ? eltype(T) : T
   [S[]; x]
 end
-public iterable
 
 function Base.get(acset::ACSet, select::Symbol, idx=Colon(); schema=acset_schema(acset))
   val = select ∈ objects(schema) ? parts(acset, select) : subpart(acset, select)
