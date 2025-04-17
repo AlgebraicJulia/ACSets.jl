@@ -27,13 +27,7 @@ SchDDS = BasicSchema([:X], [(:Φ,:X,:X)])
 # Test cascading rem part results in a natural transformation
 #------------------------------------------------------------
 DDS(i::Int) = DDS(rand(1:i, i))
-
-function DDS(v::Vector{Int})
-  x = DDS()
-  add_parts!(x, :X, length(v))
-  set_subpart!(x, :Φ, v)
-  x
-end
+DDS(v::Vector{Int}) = @acset DDS begin X=length(v); Φ=v end
 
 function cascading_delete_is_natural(i::Int)
   X = DDS(i)

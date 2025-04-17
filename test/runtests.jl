@@ -36,6 +36,10 @@ end
   include("ADTs.jl")
 end
 
+@testset "Query" begin
+  include("Query.jl")
+end
+
 if !Sys.iswindows()
   @testset "Nauty" begin
     include("NautyInterface.jl")
