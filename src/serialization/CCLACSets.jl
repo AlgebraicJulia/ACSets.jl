@@ -26,11 +26,17 @@ end
 # Interface
 ###########
 
+struct ImplError <: Exception
+    type::String
+end
+
+Base.showerror(io, e::ImplError) = println(io, "Parsing for `$(e.type)` not yet implemented")
+
 function parse_json(json::AbstractDict; predecessor=nothing)
     @match json.type begin
         "model" => parse_model(json, predecessor)
         "diagram" => parse_diagram(json, predecessor)
-        _ => nothing
+        x => throw(ImplError(json.type))
     end
 end
 
