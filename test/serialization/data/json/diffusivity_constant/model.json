@@ -242,6 +242,30 @@
         },
         "id": "0194d39e-5d44-77cd-bc5e-1aa6b0a2d8d4",
         "tag": "formal"
+      },
+      {
+        "tag": "formal",
+        "id": "01960dde-1194-729d-92f7-8c876f072ff8",
+        "content": {
+          "tag": "morphism",
+          "id": "01960dde-1193-7132-b662-9bf24ed05264",
+          "name": "any_scalar",
+          "morType": {
+            "tag": "Hom",
+            "content": {
+              "tag": "Basic",
+              "content": "Object"
+            }
+          },
+          "dom": {
+            "tag": "Basic",
+            "content": "0194d398-d0cb-7308-b7e0-eace5b21af24"
+          },
+          "cod": {
+            "tag": "Basic",
+            "content": "0194d398-d0cb-7308-b7e0-eace5b21af24"
+          }
+        }
       }
     ]
   },
