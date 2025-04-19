@@ -36,13 +36,13 @@ function iterable(x::T) where T
   [S[]; x]
 end
 
-function Base.get(acset::ACSet, select::Symbol, idx=Colon(); schema=acset_schema(acset))
+function get_rows(acset::ACSet, select::Symbol, idx=Colon(); schema=acset_schema(acset))
   val = select ∈ objects(schema) ? parts(acset, select) : subpart(acset, select)
   val[idx]
 end
 
-function Base.get(acset, selects::Vector{Symbol}, idx=Colon(); kwargs...)
-  zip(get.(Ref(acset), selects, idx; kwargs...)...)
+function get_rows(acset, selects::Vector{Symbol}, idx=Colon(); kwargs...)
+  zip(get_rows.(Ref(acset), selects, idx; kwargs...)...)
 end
 
 """  AbstractCondition 
@@ -158,7 +158,7 @@ Iterates over the values specified by the left-hand side of the [`WhereCondition
 *Note:* If the value is a tuple and the right-hand side is `::Function`, then the value will be splatted into the argument of the function.
 """
 function process_where(cond::WhereCondition, acset::ACSet)
-  values = get(acset, cond.lhs)
+  values = get_rows(acset, cond.lhs)
   map(values) do value
     @match (value, cond.rhs) begin
       # TODO Find a more principled away of extracting the ACSetSQLNode
@@ -186,8 +186,8 @@ function process_select(q::ACSetSQLNode, acset::ACSet, result::AbstractVector)
   map(q.select) do select
     to_name(select) => @match select begin
       ::Val{T} where T           => [T for _ in eachindex(result)]
-      ::Symbol                   => get(acset, select, result)
-      ::Pair{Symbol, <:Function} => get(acset, select.first, result) .|> select.second
+      ::Symbol                   => get_rows(acset, select, result)
+      ::Pair{Symbol, <:Function} => get_rows(acset, select.first, result) .|> select.second
     end
   end
 end
