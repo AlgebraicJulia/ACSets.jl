@@ -15,33 +15,8 @@ end
 
 struct CCLModel
     name::Symbol
-    elem::Dict{String, AnElement}
-end
-
-struct CCLDiagram
-    name::Symbol
-    elem::Dict{String, AnElement}
-end
-
-# Interface
-###########
-
-struct ImplError <: Exception
-    type::String
-end
-
-Base.showerror(io, e::ImplError) = println(io, "Parsing for `$(e.type)` not yet implemented")
-
-function parse_json(json::AbstractDict; predecessor=nothing)
-    @match json.type begin
-        "model" => parse_model(json, predecessor)
-        "diagram" => parse_diagram(json, predecessor)
-        x => throw(ImplError(json.type))
-    end
-end
-
-# TODO convert function name to constructor
-function parse_model(json::AbstractDict, predecessor=nothing)
+    elems::Dict{String, AnElement}
+    function CCLModel(json::AbstractDict, predecessor=nothing)
     dict = Dict{String,AnElement}()
     foreach(json.notebook.cells) do cell
         @match cell.content.tag begin
@@ -64,10 +39,15 @@ function parse_model(json::AbstractDict, predecessor=nothing)
             end
         end
     end
-    CCLModel(Symbol(json.theory), dict)
+    new(Symbol(json.theory), dict)
+end 
 end
+export CCLModel
 
-function parse_diagram(json::AbstractDict, predecessor=nothing)
+struct CCLDiagram
+    name::Symbol
+    elems::Dict{String, AnElement}
+    function CCLDiagram(json::AbstractDict, predecessor=nothing)
     dict = Dict{String,AnElement}()
     foreach(json.notebook.cells) do cell
         @match cell.content.tag begin
@@ -95,7 +75,29 @@ function parse_diagram(json::AbstractDict, predecessor=nothing)
             end
         end
     end
-    CCLDiagram(gensym(), dict)
+    new(gensym(), dict)
+end
+end
+export CCLDiagram
+
+# Interface
+###########
+
+struct ImplError <: Exception
+    type::String
+end
+
+Base.showerror(io, e::ImplError) = println(io, "Parsing for `$(e.type)` not yet implemented")
+
+"""
+Dispatches parser based on value in `type` field
+"""
+function parse_json(json::AbstractDict; predecessor=nothing)
+    @match json.type begin
+        "model" => CCLModel(json, predecessor)
+        "diagram" => CCLDiagram(json, predecessor)
+        x => throw(ImplError(json.type))
+    end
 end
 
 SchLabeledGraph = BasicSchema([:E, :V], 
@@ -111,7 +113,7 @@ function UUIDLabeledGraph(m::CCLModel)
     # TODO a little redundant
     newobs = Dict()
     newhoms = Dict()
-    foreach(pairs(m.elem)) do (k,v)
+    foreach(pairs(m.elems)) do (k,v)
         @match v begin
             ::ObjectElem => push!(newobs, k => v)
             ::HomElem => push!(newhoms, k => v)
@@ -140,14 +142,14 @@ function UUIDLabeledGraph(m::CCLDiagram)
     # TODO a little redundant
     newobs = Dict()
     newhoms = Dict()
-    foreach(pairs(m.elem)) do (k,v)
+    foreach(pairs(m.elems)) do (k,v)
         @match v begin
             ::ObjectElem => push!(newobs, k => v)
             ::HomElem => push!(newhoms, k => v)
         end
     end
     nc = 0
-    foreach(filter(x -> x[2] isa ObjectElem, pairs(m.elem))) do (k, v)
+    foreach(filter(x -> x[2] isa ObjectElem, pairs(m.elems))) do (k, v)
         add_part!(g, :V, vlabel=v.name, vUuid=k, vtype=v.type)
     end
     foreach(pairs(newhoms)) do (k,v)
