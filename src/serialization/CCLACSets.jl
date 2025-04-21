@@ -70,8 +70,7 @@ struct CCLDiagram
                 if label == ["EMPTY"]
                     @warn cell
                 end
-                push!(dict, cell.content[:id] => 
-                      HomElem(only(label), cell.content[:dom][:content], cell.content[:cod][:content]))
+                push!(dict, cell.content[:id] => HomElem(only(label), cell.content[:dom][:content], cell.content[:cod][:content]))
             end
         end
     end
@@ -107,6 +106,9 @@ SchLabeledGraph = BasicSchema([:E, :V],
 @acset_type UUIDLabeledGraph(SchLabeledGraph, index=[:src,:tgt])
 
 emptyMaybe(x) = isempty(x) ? nothing : Some(x)
+emptyMaybe(x::Union{RegexMatch, Nothing}) = isnothing(x) ? nothing : Some(x)
+
+@active Re{r :: Regex}(x) begin emptyMaybe(match(r, x)); end
 
 function UUIDLabeledGraph(m::CCLModel)
     g = UUIDLabeledGraph{String, String}()
@@ -120,8 +122,14 @@ function UUIDLabeledGraph(m::CCLModel)
         end
     end
     nc = 0
-    foreach(pairs(newobs)) do (k,v)
-        add_part!(g, :V, vlabel=v.name, vUuid=k)
+    foreach(pairs(newobs)) do (k,v) 
+        typelabel = @match v.name begin
+            Re{r"Primal (\d)-form"}(x) => "Form$(first(x.captures))"
+            Re{r"Dual (\d)-form"}(x) => "DualForm$(first(x.captures))"
+            Re{r"(\d)-form"}(x) => "Form$(first(x.captures))"
+            x => x
+        end
+        add_part!(g, :V, vlabel=typelabel, vUuid=k)
     end
     foreach(pairs(newhoms)) do (k,v)
         src = @something emptyMaybe(incident(g, v.dom, :vUuid)) begin
