@@ -877,6 +877,18 @@ function replace_colons(acs::ACSet, parts::NamedTuple{types}) where {types}
   end)
 end
 
+function Base.empty(acs::T) where T<:ACSet
+    T()
+end
+
+function Base.similar(acs::ACSet)
+  out = Base.empty(acs)
+  foreach(objects(acset_schema(out))) do ob
+    add_parts!(out, ob, length(parts(acs, ob)))
+  end
+  out
+end
+
 # Garbage collection 
 ####################
 
