@@ -140,7 +140,7 @@ function UUIDLabeledGraph(m::CCLModel)
                              nc += 1
                              add_part!(g, :V, vlabel="•$nc", vUuid=v.cod)
                         end
-        add_part!(g, :E, src=only(src), tgt=only(tgt), eUuid=k, elabel=v.name)
+                        add_part!(g, :E, src=only(src), tgt=only(tgt), eUuid=k, elabel=strip(v.name))
     end
     g
 end
