@@ -4,7 +4,6 @@ export From, Where, Select, AbstractQueryFormatter, SimpleQueryFormatter, NamedQ
 
 using ..ACSetInterface, ..Schemas
 using MLStyle
-using DataFrames: DataFrame
 using StructEquality
 
 to_name(x) = x
@@ -227,7 +226,9 @@ struct NamedQueryFormatter <: AbstractQueryFormatter end
 
 """  DFQueryFormatter <: AbstractQueryFormatter
 
-The callable method of this fieldless struct consumes an ACSetSQLNode, an ACSet, and the result selection and returns a data frame.
+The callable method of this fieldless struct consumes an ACSetSQLNode, an ACSet, and the result selection and returns a DataFrame.
+
+This method requires the `DataFrames` package.
 
 See also [`AbstractQueryFormatter`](@ref)
 """
@@ -235,7 +236,7 @@ struct DFQueryFormatter <: AbstractQueryFormatter end
 
 (qf::SimpleQueryFormatter)(q, a, s) = s
 (qf::NamedQueryFormatter)(q, a, s) = build_nt(q, s)
-(qf::DFQueryFormatter)(q, a, s) = DataFrame(build_nt(q, s))
+# DFQueryFormatter is defined in an extension.
 
 function build_nt(q::ACSetSQLNode, selected)
   names = isempty(q.select) ? [q.from] : to_name.(q.select)

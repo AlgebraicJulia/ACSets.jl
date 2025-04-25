@@ -3,7 +3,7 @@ using Test
 using ACSets
 using ACSets.Query: AndWhere, OrWhere, WhereCondition
 
-using DataFrames: nrow
+using DataFrames
 
 @testset "Conditionals" begin
 
