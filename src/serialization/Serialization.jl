@@ -36,8 +36,10 @@ function read_acset! end
 
 include("JSONACSets.jl")
 include("ExcelACSets.jl")
+include("CCLACSets.jl")
 
 @reexport using .JSONACSets
 @reexport using .ExcelACSets
+@reexport using .CCLACSets
 
 end
