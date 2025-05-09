@@ -43,7 +43,7 @@ Base.in(s::SortedSet{T}, x::T) where {T} = begin
   i <= length(a) && a[i] == x
 end
 
-Base.values(s::SortedSet) = s.v
+Base.values(s::SortedSet) = copy(s.v)
 Base.length(s::SortedSet) = length(s.v)
 
 end

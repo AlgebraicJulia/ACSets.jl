@@ -22,4 +22,10 @@ ss2 = copy(ss)
 push!(ss2, 3)
 @test length.([ss,ss2]) == [1,2]
 
+push!(ss, 1)
+vals = values(ss)
+@test vals == [1,2]
+setdiff!(vals, 1)
+@test values(ss) == [1,2]
+
 end # module
