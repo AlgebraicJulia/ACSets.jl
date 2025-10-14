@@ -3,7 +3,7 @@ module Query
 export From, Where, Select, AbstractQueryFormatter, SimpleQueryFormatter, NamedQueryFormatter, DFQueryFormatter
 
 using ..ACSetInterface, ..Schemas
-using MLStyle
+using MLStyle: @match
 using StructEquality
 
 to_name(x) = x

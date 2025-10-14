@@ -213,6 +213,7 @@ macro acset_type(head)
     $(esc(:eval))($(GlobalRef(DenseACSets, :struct_acset))(
       $(Expr(:quote, name)), $(Expr(:quote, parent)), $(esc(schema));
       $((esc(arg) for arg in idx_args)...)))
+    Core.@latestworld
       $assgn
       Core.@__doc__ $(esc(name′))
   end
