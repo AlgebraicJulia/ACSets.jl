@@ -2,7 +2,7 @@ name = "ACSets"
 uuid = "227ef7b5-1206-438b-ac65-934d6da304b8"
 license = "MIT"
 authors = ["Owen Lynch <owen@topos.institute>", "Kris Brown <kris@topos.institute>", "Evan Patterson <evan@epatters.org>", "AlgebraicJulia Team"]
-version = "0.2.25"
+version = "0.2.26"
 
 [deps]
 AlgebraicInterfaces = "23cfdc9f-0504-424a-be1f-4892b28e2f0c"
