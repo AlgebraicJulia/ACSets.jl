@@ -474,7 +474,7 @@ end
 pretty_tables(acs::ACSet; kw...) = pretty_tables(stdout, acs; kw...)
 
 const default_pretty_table_options = (
-  show_first_column_label_only = false,
+  show_first_column_label_only = true,
   show_row_number_column = false,
 )
 
