@@ -466,7 +466,7 @@ function pretty_tables(io::IO, acs::ACSet; tables=nothing, kw...)
 
     # By necessity, omit tables with no rows. PrettyTables will not print them.
     Tables.rowcount(table) == 0 && continue
-    pretty_table(io, table; row_label_column_title=string(name),
+    pretty_table(io, table; stubhead_label=string(name),
                  row_labels=collect(parts(acs,name)), options...)
   end
 end
@@ -474,8 +474,8 @@ end
 pretty_tables(acs::ACSet; kw...) = pretty_tables(stdout, acs; kw...)
 
 const default_pretty_table_options = (
-  show_subheader = false,
-  show_row_number = false,
+  show_first_column_label_only = true,
+  show_row_number_column = false,
 )
 
 function Base.show(io::IO, ::MIME"text/plain", acs::T) where T <: ACSet
@@ -493,7 +493,7 @@ function Base.show(io::IO, ::MIME"text/html", acs::T) where T <: ACSet
   print(io, " {")
   join(io, ["$(ob):$(nparts(acs,ob))" for ob in types(acset_schema(acs))], ", ")
   println(io, "}</span>")
-  pretty_tables(io, acs, backend=Val(:html), standalone=false)
+  pretty_tables(io, acs, backend=:html, stand_alone=false)
   println(io, "</div>")
 end
 
