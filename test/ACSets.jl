@@ -491,6 +491,25 @@ g = @acset DecGraph{String} begin
   dec = ["a","b","c","d"]
 end
 
+
+io = IOBuffer()
+show(io, MIME("text/plain"), g)
+s = String(take!(io))
+close(io)
+# Observe that in a REPL environment,
+# "Main.TestACSetDataStructures." will be elided.
+@test s ==
+"Main.TestACSetDataStructures.DecGraph{String} {E:4, V:4, X:0}
+┌───┬─────┬─────┬─────┐
+│ E │ src │ tgt │ dec │
+├───┼─────┼─────┼─────┤
+│ 1 │   1 │   2 │   a │
+│ 2 │   2 │   3 │   b │
+│ 3 │   3 │   4 │   c │
+│ 4 │   4 │   1 │   d │
+└───┴─────┴─────┴─────┘
+"
+
 @test nparts(g, :V) == 4
 @test subpart(g, :, :src) == [1,2,3,4]
 @test incident(g, 1, :src) == [1]
