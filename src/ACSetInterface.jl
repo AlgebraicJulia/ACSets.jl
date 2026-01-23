@@ -473,7 +473,10 @@ end
 
 pretty_tables(acs::ACSet; kw...) = pretty_tables(stdout, acs; kw...)
 
-const default_pretty_table_options = (;)
+const default_pretty_table_options = (
+  show_first_column_label_only = false,
+  show_row_number_column = false,
+)
 
 function Base.show(io::IO, ::MIME"text/plain", acs::T) where T <: ACSet
   print(io, acset_name(acs))
