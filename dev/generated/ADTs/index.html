@@ -52,19 +52,19 @@ g = construct(LabeledGraph{Symbol}, gspec)</code></pre><div class="c-set">
 <span class="c-set-summary">Main.__atexample__named__ADTs.LabeledGraph{Symbol} {E:2, V:3, L:0}</span>
 <table>
   <thead>
-    <tr class = "header headerLastRow">
-      <th class = "rowLabel" style = "font-weight: bold; text-align: right;">E</th>
-      <th style = "text-align: right;">src</th>
-      <th style = "text-align: right;">tgt</th>
+    <tr class = "columnLabelRow">
+      <th class = "stubheadLabel" style = "font-weight: bold; text-align: right;">E</th>
+      <th style = "font-weight: bold; text-align: right;">src</th>
+      <th style = "font-weight: bold; text-align: right;">tgt</th>
     </tr>
   </thead>
   <tbody>
-    <tr>
+    <tr class = "dataRow">
       <td class = "rowLabel" style = "font-weight: bold; text-align: right;">1</td>
       <td style = "text-align: right;">1</td>
       <td style = "text-align: right;">3</td>
     </tr>
-    <tr>
+    <tr class = "dataRow">
       <td class = "rowLabel" style = "font-weight: bold; text-align: right;">2</td>
       <td style = "text-align: right;">2</td>
       <td style = "text-align: right;">3</td>
@@ -73,21 +73,21 @@ g = construct(LabeledGraph{Symbol}, gspec)</code></pre><div class="c-set">
 </table>
 <table>
   <thead>
-    <tr class = "header headerLastRow">
-      <th class = "rowLabel" style = "font-weight: bold; text-align: right;">V</th>
-      <th style = "text-align: right;">label</th>
+    <tr class = "columnLabelRow">
+      <th class = "stubheadLabel" style = "font-weight: bold; text-align: right;">V</th>
+      <th style = "font-weight: bold; text-align: right;">label</th>
     </tr>
   </thead>
   <tbody>
-    <tr>
+    <tr class = "dataRow">
       <td class = "rowLabel" style = "font-weight: bold; text-align: right;">1</td>
       <td style = "text-align: right;">a</td>
     </tr>
-    <tr>
+    <tr class = "dataRow">
       <td class = "rowLabel" style = "font-weight: bold; text-align: right;">2</td>
       <td style = "text-align: right;">b</td>
     </tr>
-    <tr>
+    <tr class = "dataRow">
       <td class = "rowLabel" style = "font-weight: bold; text-align: right;">3</td>
       <td style = "text-align: right;">c</td>
     </tr>
@@ -109,4 +109,4 @@ end
   E(src=2,tgt=3)
  end</code></pre><p>The <code>acsetspec</code> function is a good example of embedding your custom language into Julia syntax That save you the trouble of writing your own lexer and parser for your custom language.</p><pre><code class="language-julia hljs">construct(LabeledGraph{Symbol}, hspec) == construct(LabeledGraph{Symbol}, gspec)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre><p>You can export your specification to a dictionary and put that dictionary into a JSON document this gives you a nice way of serializing the ACSet that is machine readable and row oriented. The ACSet serialization is by column oriented which might be inconvenient for your consumers.</p><pre><code class="language-julia hljs">to_dict(gspec)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Dict{Symbol, Any} with 2 entries:
   :type =&gt; &quot;LabeledGraph{Symbol}&quot;
-  :data =&gt; Dict{Symbol, Any}[Dict(:table=&gt;:V, :fields=&gt;Dict(:label=&gt;:a)), Dict(…</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../json_serialization/">« Serializing acsets as JSON</a><a class="docs-footer-nextpage" href="../../api/">Library Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.15.0 on <span class="colophon-date" title="Wednesday 29 October 2025 15:44">Wednesday 29 October 2025</span>. Using Julia version 1.10.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+  :data =&gt; Dict{Symbol, Any}[Dict(:table=&gt;:V, :fields=&gt;Dict(:label=&gt;:a)), Dict(…</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../json_serialization/">« Serializing acsets as JSON</a><a class="docs-footer-nextpage" href="../../api/">Library Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Monday 9 February 2026 19:18">Monday 9 February 2026</span>. Using Julia version 1.10.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
