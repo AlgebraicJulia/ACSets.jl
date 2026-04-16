@@ -3,6 +3,7 @@ using Test
 using ACSets
 using ACSets.Query: AndWhere, OrWhere, WhereCondition
 
+using OrderedCollections: OrderedDict
 using DataFrames
 
 @testset "Conditionals" begin
@@ -47,13 +48,13 @@ d = DDS(5)
 @testset "Querying" begin
 
   q = From(:X)
-  @test q(d) == (:X => parts(d, :X))
+  @test q(d) == OrderedDict(:X => parts(d, :X))
   
   q = From(:X) |> Select(:X)
-  @test q(d) == [:X => parts(d, :X)]
+  @test q(d) == OrderedDict(:X => parts(d, :X))
   
   q = From(:X) |> Select(:Φ)
-  @test q(d) == [:Φ => subpart(d, :Φ)]
+  @test q(d) == OrderedDict(:Φ => subpart(d, :Φ))
   
   SchDecGraph = BasicSchema([:E,:V], [(:src,:E,:V),(:tgt,:E,:V)],
                             [:X], [(:dec,:E,:X)])
@@ -68,17 +69,17 @@ d = DDS(5)
   end
   
   q = From(:V) |> Where(:dec, !=("az")) |> Select(:dec)
-  @test q(g) == [:dec => ["bz", "cz", "dz"]]
+  @test q(g) == OrderedDict(:dec => ["bz", "cz", "dz"])
 
   q = From(:V) |> Where(:dec, ==("ez")) |> Select(:dec)
   # TODO: How do other functional SQL frameworks handle this?
-  @test q(g) == [:dec => String[]]
+  @test q(g) == OrderedDict(:dec => String[])
   
   q = From(:V) |> Where(:src, 1) & Where(:tgt, 2) |> Select(:dec)
-  @test q(g) == [:dec => ["az"]]
+  @test q(g) == OrderedDict(:dec => ["az"])
   
   q = From(:E) |> Where([:src, :tgt], (x,y) -> x + 1 == y)
-  @test q(g) == (:E => [1,2,3])
+  @test q(g) == OrderedDict(:E => [1,2,3])
   
   # data frames
   q = From(:E) |> Select(Val(:a), :src)
@@ -89,16 +90,18 @@ d = DDS(5)
   
   # Catlab.jl allows us to build conjunctive queries on ACSets with the `@relation` macro. In this example, we will show how we can specify conjunctive queries with a FunSQL-like syntax. Let's load up our student-class schema again.
   SchJunct = BasicSchema([:Student, :Class, :Junct], [(:student, :Junct, :Student), (:class, :Junct, :Class)],
-                         [:Name, :Clubs], 
-                         [(:name, :Student, :Name), (:clubs, :Student, :Clubs), (:subject, :Class, :Name)])
+                         [:Name, :Clubs, :Year], 
+                         [(:name, :Student, :Name), (:year, :Student, :Year), (:clubs, :Student, :Clubs), (:subject, :Class, :Name)])
   @acset_type JunctionData(SchJunct, index=[:name])
-  jd = JunctionData{Symbol, Vector{Symbol}}()
+  jd = JunctionData{Symbol, Vector{Symbol}, Int}()
  
   clubs = [:MarchingBand, :DebateClub, :TractorWrassling, :Weightlifting, :DresageClub, :DeescalationClub]
 
   df = Dict(:Fiona => [:Math, :Philosophy, :Music],
             :Gregorio => [:Cooking, :Math, :CompSci],
             :Heather => [:Gym, :Art, :Music, :Math])
+
+  years = Dict(:Fiona => 1, :Gregorio => 2, :Heather => 3)
 
   student_clubs = Dict(:Fiona => [:MarchingBand, :DebateClub, :TractorWrassling],
                        :Gregorio => [:DresageClub, :Weightlighting],
@@ -107,7 +110,7 @@ d = DDS(5)
   foreach(keys(df)) do student
     classes = df[student]
     student_id = incident(jd, student, :name)
-    if isempty(student_id); student_id = add_part!(jd, :Student, name=student, clubs=student_clubs[student]) end
+    if isempty(student_id); student_id = add_part!(jd, :Student, name=student, clubs=student_clubs[student], year=years[student]) end
     foreach(classes) do class
       class_id = incident(jd, class, :subject)
       if isempty(class_id); class_id = add_part!(jd, :Class, subject=class) end
@@ -115,39 +118,39 @@ d = DDS(5)
     end
   end
   
-  q = From(:Student) |> Select(:name)
-  @test q(jd) == [:name => [:Fiona, :Gregorio, :Heather]]
+  q = From(:Student) |> Select(:name, :year)
+  @test q(jd) == OrderedDict(:name => [:Fiona, :Gregorio, :Heather], :year => [1,2,3])
   
   q = From(:Student => :name) |> Where(:Student, From(:Junct => :student)) 
-  @test q(jd) == [:name => [:Fiona, :Gregorio, :Heather]]
+  @test q(jd) == OrderedDict(:name => [:Fiona, :Gregorio, :Heather])
 
   using Base: Fix1
 
   q = From(:Student => :name) |> Where(:clubs, Fix1(!isempty∘intersect, [:MarchingBand, :DebateClub]))
-  @test q(jd) == [:name => [:Fiona, :Heather]]
+  @test q(jd) == OrderedDict(:name => [:Fiona, :Heather])
   
   q = From(:Student) |> 
       Where(:Student, From(:Junct)|>Select(:student)) |> 
       Select(:Student)
-  @test q(jd) == [:Student => [1,2,3]]
+  @test q(jd) == OrderedDict(:Student => [1,2,3])
   
   # not specifying a select statement defaults to the From
   q = From(:Student) |> Where(:Student, From(:Junct)|>Select(:student)) 
-  @test q(jd) == (:Student => [1,2,3])
+  @test q(jd) == OrderedDict(:Student => [1,2,3])
   
   q = From(:Student) |>
       Where(:Student, From(:Junct => :student)) &
       Where(:name, :Gregorio) | Where(:name, :Fiona) |> Select(:name)
-  @test q(jd) == [:name => [:Fiona, :Gregorio]]
+  @test q(jd) == OrderedDict(:name => [:Fiona, :Gregorio])
   
   q = From(:Student) |> Where(:name, [:Gregorio, :Fiona]) |> Select(:name);
-  @test q(jd) == [:name => [:Fiona, :Gregorio]]
+  @test q(jd) == OrderedDict(:name => [:Fiona, :Gregorio])
   
   q = From(:Student) |> Where(:name, !=(:Gregorio)) |> Select(:name);
-  @test q(jd) == [:name => [:Fiona, :Heather]]
+  @test q(jd) == OrderedDict(:name => [:Fiona, :Heather])
   
   # apply function to Select
   q = From(:Student) |> Select(:name => Fix1(!=, :Gregorio))
-  @test q(jd) == [Symbol("!=(Gregorio)") => [1, 0, 1]]
+  @test q(jd) == OrderedDict(Symbol("!=(Gregorio)") => [1, 0, 1])
 
 end

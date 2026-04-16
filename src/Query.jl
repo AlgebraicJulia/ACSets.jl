@@ -5,6 +5,7 @@ export From, Where, Select, AbstractQueryFormatter, SimpleQueryFormatter, NamedQ
 using ..ACSetInterface, ..Schemas
 using MLStyle: @match
 using StructEquality
+using OrderedCollections: OrderedDict
 
 to_name(x) = x
 """
@@ -73,9 +74,7 @@ end
 AndWhere(a::AndWhere, b) = AndWhere(a.conds, b)
 AndWhere(a, b::AndWhere) = AndWhere(a, b.conds)
 
-function Base.:&(a::S, b::T) where {T<:AbstractCondition, S<:AbstractCondition}
-  AndWhere(a, b)
-end
+Base.:&(a::S, b::T) where {T<:AbstractCondition, S<:AbstractCondition} = AndWhere(a, b)
 
 """  OrWhere <: [`AbstractCondition`](@ref)
 
@@ -90,9 +89,7 @@ end
 OrWhere(a::OrWhere, b) = OrWhere(a.conds, b)
 OrWhere(a, b::OrWhere) = OrWhere(a, b.conds)
 
-function Base.:|(a::S, b::T) where {T<:AbstractCondition, S<:AbstractCondition}
-  OrWhere(a, b)
-end
+Base.:|(a::S, b::T) where {T<:AbstractCondition, S<:AbstractCondition} = OrWhere(a, b)
 
 """ ACSetSQLNode
 
@@ -115,13 +112,8 @@ function (ac::AbstractCondition)(node::ACSetSQLNode)
   node
 end
 
-function Base.:&(n::ACSetSQLNode, a::AbstractCondition)
-  n.cond &= a
-end
-
-function Base.:|(n::ACSetSQLNode, a::AbstractCondition)
-  n.cond |= a
-end
+Base.:&(n::ACSetSQLNode, a::AbstractCondition) = n.cond &= a
+Base.:|(n::ACSetSQLNode, a::AbstractCondition) = n.cond |= a
 
 function From(table::Symbol; select=nothing)
   select = isnothing(select) ? [] : [select]
@@ -142,9 +134,7 @@ function Select(sql::ACSetSQLNode, columns::Vector)
   sql
 end
 
-function Select(columns...)
-  sql -> Select(sql, Any[columns...])
-end
+Select(columns...) = sql -> Select(sql, Any[columns...])
 
 function process_wheres(conds::Vector{<:AbstractCondition}, acset)
   isempty(conds) && return [Colon()]
@@ -160,11 +150,7 @@ function process_where(cond::WhereCondition, acset::ACSet)
   values = get_rows(acset, cond.lhs)
   map(values) do value
     @match (value, cond.rhs) begin
-      # TODO Find a more principled away of extracting the ACSetSQLNode
-      (_, ::ACSetSQLNode)   => begin
-        rhs = cond.rhs(acset)
-        rhs == [] ? cond.op(value, rhs) : cond.op(value, rhs[1].second)
-      end
+      (_, n::ACSetSQLNode)   => cond.rhs(acset) |> result -> cond.op(value, result[only(n.select)]) 
       (::Tuple, ::Function) => cond.rhs(value...) # tuples are splatted
       (_, ::Function)       => cond.rhs(value)
       (_, ::Vector)         => cond.op(iterable(value)..., cond.rhs)
@@ -184,7 +170,7 @@ function process_where(w::AndWhere, acset::ACSet)
 end
 
 function process_select(q::ACSetSQLNode, acset::ACSet, result::AbstractVector)
-  isempty(q.select) && return q.from => result
+  isempty(q.select) && return Dict(q.from => result)
   map(q.select) do select
     to_name(select) => @match select begin
       ::Val{T} where T           => [T for _ in eachindex(result)]
@@ -219,6 +205,14 @@ See also [`AbstractQueryFormatter`](@ref)
 """
 struct SimpleQueryFormatter <: AbstractQueryFormatter end
 
+"""  DictQueryFormatter <: AbstractQueryFormatter
+
+The callable method of this fieldless struct consumes an ACSetSQLNode, an ACSet, and the result selection and returns just a dictionary of the result selection.
+
+See also [`AbstractQueryFormatter`](@ref)
+"""
+struct DictQueryFormatter <: AbstractQueryFormatter end
+
 """  NamedQueryFormatter <: AbstractQueryFormatter
 
 The callable method of this fieldless struct consumes an ACSetSQLNode, an ACSet, and the result selection and returns a named tuple of the selection columns and their values.
@@ -238,6 +232,7 @@ See also [`AbstractQueryFormatter`](@ref)
 struct DFQueryFormatter <: AbstractQueryFormatter end
 
 (qf::SimpleQueryFormatter)(q, a, s) = s
+(qf::DictQueryFormatter)(q, a, s) = OrderedDict(s)
 (qf::NamedQueryFormatter)(q, a, s) = build_nt(q, s)
 # DFQueryFormatter is defined in an extension.
 
@@ -275,7 +270,7 @@ function process_query(q::ACSetSQLNode, acset::ACSet; formatter::AbstractQueryFo
   formatter(q, acset, selected)
 end
 
-(q::ACSetSQLNode)(acset::ACSet; formatter::AbstractQueryFormatter=SimpleQueryFormatter()) =
+(q::ACSetSQLNode)(acset::ACSet; formatter::AbstractQueryFormatter=DictQueryFormatter()) =
   process_query(q, acset; formatter)
 
 end
