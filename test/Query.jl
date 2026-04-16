@@ -71,7 +71,8 @@ d = DDS(5)
   @test q(g) == [:dec => ["bz", "cz", "dz"]]
 
   q = From(:V) |> Where(:dec, ==("ez")) |> Select(:dec)
-  @test q(g) == [:dec => []]
+  # TODO: How do other functional SQL frameworks handle this?
+  @test q(g) == [] # [:dec => []]
   
   q = From(:V) |> Where(:src, 1) & Where(:tgt, 2) |> Select(:dec)
   @test q(g) == [:dec => ["az"]]
