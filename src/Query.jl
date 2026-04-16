@@ -161,7 +161,10 @@ function process_where(cond::WhereCondition, acset::ACSet)
   map(values) do value
     @match (value, cond.rhs) begin
       # TODO Find a more principled away of extracting the ACSetSQLNode
-      (_, ::ACSetSQLNode)   => cond.op(value, cond.rhs(acset)[1].second)
+      (_, ::ACSetSQLNode)   => begin
+        rhs = cond.rhs(acset)
+        rhs == [] ? cond.op(value, rhs) : cond.op(value, rhs[1].second)
+      end
       (::Tuple, ::Function) => cond.rhs(value...) # tuples are splatted
       (_, ::Function)       => cond.rhs(value)
       (_, ::Vector)         => cond.op(iterable(value)..., cond.rhs)
