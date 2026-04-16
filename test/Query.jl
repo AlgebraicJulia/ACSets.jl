@@ -72,7 +72,7 @@ d = DDS(5)
 
   q = From(:V) |> Where(:dec, ==("ez")) |> Select(:dec)
   # TODO: How do other functional SQL frameworks handle this?
-  @test q(g) == [] # [:dec => []]
+  @test q(g) == [:dec => String[]]
   
   q = From(:V) |> Where(:src, 1) & Where(:tgt, 2) |> Select(:dec)
   @test q(g) == [:dec => ["az"]]

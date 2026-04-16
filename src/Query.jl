@@ -271,7 +271,6 @@ q = From(:Tri) |> Where([:∂e0, :∂e1, :∂e2], (x,y,z) -> StatsBase.var([x,y,
 function process_query(q::ACSetSQLNode, acset::ACSet; formatter::AbstractQueryFormatter)
   idx = process_wheres(q.cond, acset)
   result = parts(acset, q.from)[only(idx)]
-  isempty(result) && return []
   selected = process_select(q, acset, result)
   formatter(q, acset, selected)
 end
