@@ -5,7 +5,7 @@ export From, Where, Select, AbstractQueryFormatter, SimpleQueryFormatter, NamedQ
 using ..ACSetInterface, ..Schemas
 using MLStyle: @match
 using StructEquality
-using OrderedCollections: OrderedDict
+using DataStructures: OrderedDict
 
 to_name(x) = x
 """
