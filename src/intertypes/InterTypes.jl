@@ -238,8 +238,8 @@ export Object, Optional
   Object{T}(fields::OrderedDict{Symbol, T}) where {T} = new{T}(fields)
 end
 
-function Object{T}(fields::AbstractDict{Symbol, S}) where {T, S<:T}
-  Object{T}(OrderedDict{Symbol, T}(pairs(fields)))
+function Object{T}(fields::AbstractDict{Symbol}) where {T}
+  Object{T}(OrderedDict{Symbol, T}(k => convert(T, v) for (k, v) in pairs(fields)))
 end
 
 function Object{T}(pairs::(Pair{Symbol, S} where {S<:T})...) where {T}
