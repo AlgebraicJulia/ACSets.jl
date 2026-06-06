@@ -4,7 +4,7 @@ using ACSets
 using ACSets.InterTypes
 
 using Test
-using OrderedCollections
+using DataStructures: OrderedDict
 import JSON
 import JSON3
 import JSONSchema

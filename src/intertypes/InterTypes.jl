@@ -3,7 +3,7 @@ export InterType, InterTypeDecl, Object, Optional,
   LanguageTarget, SerializationTarget, generate_module, intertype, @intertypes
 
 using MLStyle
-using OrderedCollections
+using DataStructures: OrderedDict
 using ..Schemas
 import ..Schemas: toexpr
 
@@ -228,7 +228,7 @@ function generate_module(mod::Module, target::Type{<:ExportTarget}, path="."; ta
 end
 
 module InterTypeSupport
-using OrderedCollections
+using DataStructures: OrderedDict
 using StructEquality
 import StructTypes
 export Object, Optional
