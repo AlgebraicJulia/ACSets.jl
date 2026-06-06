@@ -55,6 +55,19 @@ json = generate_json_acset(ldds)
 
 @test_throws Exception read_json_acset(Graph, "badfile.json")
 
+# Test that SortedDict() on JSON3.read output works with parse_json_acset,
+# reducing the need for bespoke constructor code.
+using DataStructures: SortedDict
+import JSON3
+
+g_sorted = Graph()
+add_parts!(g_sorted, :V, 5)
+add_parts!(g_sorted, :E, 5, src=[1,2,3,4,5], tgt=[2,3,4,5,1])
+json_str = JSON3.write(g_sorted)
+raw = JSON3.read(json_str)
+sorted_input = SortedDict(raw)
+@test parse_json_acset(Graph, sorted_input) == g_sorted
+
 # Schema serialization
 ######################
 
