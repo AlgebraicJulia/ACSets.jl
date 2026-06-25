@@ -7,3 +7,7 @@ end
 @testset "Excel" begin
   include("ExcelACSets.jl")
 end
+
+@testset "CCL" begin
+  include("CCLACSets.jl")
+end
