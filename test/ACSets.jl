@@ -29,6 +29,15 @@ SchDDS = BasicSchema([:X], [(:Φ,:X,:X)])
 DDS(i::Int) = DDS(rand(1:i, i))
 DDS(v::Vector{Int}) = @acset DDS begin X=length(v); Φ=v end
 
+p = DDS(2)
+p′ = deepcopy(p)
+
+@test empty(p) == typeof(p)()
+
+p′[:, :Φ] = [0, 0]
+
+@test sprint(show, MIME"text/plain"(), similar(p)) == sprint(show, MIME"text/plain"(), p′)
+
 function cascading_delete_is_natural(i::Int)
   X = DDS(i)
   X′ = copy(X)
