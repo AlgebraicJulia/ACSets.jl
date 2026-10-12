@@ -108,34 +108,6 @@ function pi_type(types::Vector{Tuple{Symbol, Type}})
   NamedTuple{Tuple(map(t -> t[1], types)), Tuple{map(t -> t[2], types)...}}
 end
 
-""" Creates a quoted element of a named tuple
-"""
-function pi_type_elt(exprs::Vector{Tuple{Symbol, Expr}})
-  Expr(:tuple, Expr(:parameters, [Expr(:kw, f, e) for (f,e) in exprs]...))
-end
-
-"""
-The type variables that we have generated might not match up with the type
-variables that are created as generic parameters to the struct acset, this is a
-way of making the two line up
-"""
-function genericize(T::Type, tvars::Vector{TypeVar})
-  occuring_variables = []
-  cur = T
-  for tvar in reverse(tvars)
-    next = UnionAll(tvar, cur)
-    if typeof(next) == UnionAll && next.var == tvar
-      push!(occuring_variables, tvar)
-      cur = next
-    end
-  end
-  if length(occuring_variables) > 0
-    :($cur{$([tvar.name for tvar in reverse(occuring_variables)]...)})
-  else
-    cur
-  end
-end
-
 make_parts(s::Schema{Symbol}, part_type=IntParts) =  
   NamedTuple{Tuple(types(s)), Tuple{fill(part_type,length(types(s)))...}}
   
@@ -152,30 +124,49 @@ function make_columns(s::Schema{Symbol}, index, unique_index, Tvars)
   )
 end
 
+""" Expressions for the column types of a struct acset, in which an attribute
+type is referred to by the name of the corresponding type parameter of the
+struct. They are evaluated by the struct definition itself, with those names
+bound to the struct's own type variables, so no placeholder `TypeVar`s need to
+be passed around and turned back into expressions.
+"""
+function make_column_exprs(s::Schema{Symbol}, index, unique_index)
+  vcat(
+    Tuple{Symbol,Any}[
+      (f, column_type(HomChoice, indexchoice(f, index, unique_index)))
+      for f in homs(s; just_names=true)
+    ],
+    Tuple{Symbol,Any}[
+      (f, :($column_type($AttrChoice($c), $(indexchoice(f, index, unique_index)))))
+      for (f,_,c) in attrs(s)
+    ]
+  )
+end
+
 """ Create the struct declaration for a `StructACSet` from a Presentation
 """
 function struct_acset(name::Symbol, parent, s::Schema{Symbol};
                       index::Vector=[], unique_index::Vector=[], 
                       part_type::Type{<:PartsType}=IntParts)
-  Tvars = Dict(at => TypeVar(at) for at in attrtypes(s))
   parameterized_type, new_call = if length(attrtypes(s)) > 0
     (:($name{$(attrtypes(s)...)}), :(new{$(attrtypes(s)...)}))
   else
     name, :new
   end
   schema_type = typelevel(s)
-  columns = make_columns(s, index, unique_index, Tvars)
+  columns = make_column_exprs(s, index, unique_index)
   part_type = ACSetInterface.default_parts_type(part_type)
   Parts = make_parts(s, part_type)
-  Subparts = genericize(pi_type(columns), TypeVar[values(Tvars)...])
+  Subparts = :($NamedTuple{$(Tuple(first.(columns))), $Tuple{$(last.(columns)...)}})
   quote
     struct $parameterized_type <: $parent{$schema_type, Tuple{$(attrtypes(s)...)},$part_type}
       parts::$Parts
       subparts::$Subparts
       function $parameterized_type() where {$(attrtypes(s)...)}
+        S = $fieldtype($parameterized_type, :subparts)
         $new_call(
           $Parts(([$part_type() for _ in 1:$(length(types(s)))])),
-          $(pi_type_elt([(f,:($(genericize(T, TypeVar[values(Tvars)...]))())) for (f,T) in columns]))
+          S($map(C -> C(), $fieldtypes(S)))
         )
       end
       function $parameterized_type(parts::$Parts, subparts::$Subparts) where {$(attrtypes(s)...)}
